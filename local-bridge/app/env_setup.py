@@ -14,29 +14,31 @@ import sys
 from pathlib import Path
 from typing import Optional, Tuple
 
-from .config import BASE_DIR, DEFAULT_ENV_FILE
+from .config import DEFAULT_ENV_FILE
+from . import paths
 
-EXAMPLE_FILE = BASE_DIR / ".env.example"
+EXAMPLE_FILE = paths.resource_path(".env.example")
 
 
 def generate_token() -> str:
     return secrets.token_urlsafe(32)
 
 
-def ensure_env_file(env_path: Optional[Path] = None) -> Tuple[Path, Optional[str], bool]:
+def ensure_env_file(
+    env_path: Optional[Path] = None,
+) -> Tuple[Path, Optional[str], bool]:
     """Garantiza que exista el .env y que BRIDGE_TOKEN tenga valor.
 
     Devuelve ``(ruta, token_generado|None, fue_creado)``.
     """
     env_path = Path(env_path) if env_path else DEFAULT_ENV_FILE
+    env_path.parent.mkdir(parents=True, exist_ok=True)
     created = False
     if not env_path.exists():
         if EXAMPLE_FILE.exists():
             shutil.copyfile(EXAMPLE_FILE, env_path)
         else:
-            env_path.write_text(
-                "# Extdator bridge\nBRIDGE_TOKEN=\n", encoding="utf-8"
-            )
+            env_path.write_text("# Extdator bridge\nBRIDGE_TOKEN=\n", encoding="utf-8")
         created = True
 
     text = env_path.read_text(encoding="utf-8")

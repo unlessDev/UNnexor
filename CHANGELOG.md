@@ -14,6 +14,16 @@ usa [Semantic Versioning](https://semver.org/lang/es/).
   como alternativa evaluada, no como migración inmediata.
 - ADR-0003: PyInstaller + Inno Setup como estrategia de distribución.
 - ADR-0004: licencia principal pendiente de aprobación del propietario.
+- `app/paths.py` separa rutas de desarrollo e instalación
+  (`%LOCALAPPDATA%\Extdator`), con overrides para tests/portable.
+- El detector de hardware depende de un puerto (`RunningModelsSource`) y
+  no del cliente HTTP concreto.
+- Pruebas de arquitectura para límites de imports y ausencia de código
+  remoto/eval en la extensión.
+
+### Fixed
+- `app/__init__.py` declaraba `1.0.0` mientras el manifest declaraba
+  `1.2.0`; la versión queda unificada en `1.2.0`.
 
 ### Added
 - Auditoría inicial con línea base de pruebas y riesgos conocidos.

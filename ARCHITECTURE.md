@@ -93,6 +93,7 @@ La extensión no contiene claves de proveedores ni ejecuta código remoto.
 |---|---|
 | `config.py` | Configuración tipada desde `.env` + entorno; valida host loopback, límites y opciones. |
 | `env_setup.py` | Crea/repara `.env` y genera `BRIDGE_TOKEN`. |
+| `paths.py` | Rutas de desarrollo vs. instalado (`%LOCALAPPDATA%\Extdator`) y recursos empaquetados. |
 | `security.py` | Token en tiempo constante, validación de `Origin`, rate limit deslizante. |
 | `server.py` | Endpoints FastAPI, autenticación, CORS, validación Pydantic, cola. |
 | `pairing.py` | Códigos efímeros de 6 dígitos, un uso, 10 minutos, límite de intentos. |
@@ -146,15 +147,16 @@ transcripción y los pesos no se descargan sin consentimiento.
 
 | Dato | Ubicación | Sensibilidad |
 |---|---|---|
-| Configuración base | `local-bridge/.env` (desarrollo) / `%LOCALAPPDATA%\Extdator\.env` (instalado, previsto) | Token de puente |
-| Ajustes de UI | `app/data/user_settings.json` (desarrollo) / `%LOCALAPPDATA%\Extdator\` (instalado, previsto) | Baja |
+| Configuración base | `local-bridge/.env` (desarrollo) / `%LOCALAPPDATA%\Extdator\.env` (instalado) | Token de puente |
+| Ajustes de UI | `app/data/user_settings.json` (desarrollo) / `%LOCALAPPDATA%\Extdator\` (instalado) | Baja |
 | Proveedores | `providers.json` sin claves | Media (metadatos) |
 | Claves API | Windows Credential Manager (keyring) | Alta |
 | Historial | Memoria del worker; no se persiste | Alta |
-| Logs | `local-bridge/logs/` (desarrollo) / `%LOCALAPPDATA%\Extdator\logs\` (instalado, previsto) | Contenido prohibido por `LOG_PRIVACY=1` |
+| Logs | `local-bridge/logs/` (desarrollo) / `%LOCALAPPDATA%\Extdator\logs\` (instalado) | Contenido prohibido por `LOG_PRIVACY=1` |
 
-La ruta instalada se implementará en la fase de empaquetado mediante un
-módulo de rutas de runtime; el modo desarrollo conserva las rutas actuales.
+`app/paths.py` centraliza las rutas. En desarrollo conserva las rutas
+históricas; en un ejecutable PyInstaller usa `%LOCALAPPDATA%\Extdator`.
+`EXTDATOR_DATA_DIR` y `EXTDATOR_ENV_FILE` permiten tests y modo portable.
 
 ## 6. Flujos de información
 
@@ -244,8 +246,8 @@ La aplicación instalada escribe datos en `%LOCALAPPDATA%\Extdator`.
 2. La UI no tiene un ViewModel formal: la separación es por widgets,
    señales y worker. Introducir MVVM completo ahora duplicaría estado.
 3. El historial es en memoria; no hay persistencia de conversaciones.
-4. El modo instalado requiere rutas de runtime independientes del
-   workspace (fase 6).
+4. El modo instalado ya resuelve rutas escribibles con `app/paths.py`;
+   falta validarlo desde el ejecutable PyInstaller (fase 6).
 5. No hay firma de código ni certificado; los builds no firmados deben
    identificarse como tales.
 6. La licencia principal no está decidida; no se redistribuye públicamente

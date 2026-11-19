@@ -22,9 +22,16 @@ import socket
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Protocol
 
-from .ollama_client import OllamaClient
+
+class RunningModelsSource(Protocol):
+    """Puerto mínimo que necesita el detector para consultar Ollama.
+
+    Evita que el dominio de hardware dependa del cliente HTTP concreto.
+    """
+
+    def running_models(self) -> List[Dict[str, Any]]: ...
 
 
 # --------------------------------------------------------------------- #
@@ -320,7 +327,7 @@ def detect(models_dir: Optional[Path] = None) -> HardwareInfo:
 
 
 # --------------------------------------------------------------------- #
-def gpu_acceleration_active(ollama: OllamaClient) -> Optional[bool]:
+def gpu_acceleration_active(ollama: RunningModelsSource) -> Optional[bool]:
     """¿Ollama está usando GPU de verdad?
 
     Dato de terreno: ``GET /api/ps`` expone ``size_vram`` por modelo cargado.

@@ -22,10 +22,11 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from .config import Config
+from . import paths
 
 log = logging.getLogger("extdator.settings")
 
-SETTINGS_FILE = Path(__file__).resolve().parent / "data" / "user_settings.json"
+SETTINGS_FILE = paths.settings_file()
 
 # Clave → (tipo esperado, requiere reinicio, validador opcional)
 ALLOWED_KEYS: Dict[str, Dict[str, Any]] = {
