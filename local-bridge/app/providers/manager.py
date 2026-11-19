@@ -1,0 +1,250 @@
+"""Gestor de conexiones de proveedores: keyring + estado sin secretos.
+
+Seguridad:
+  * Las claves API viven EXCLUSIVAMENTE en el keyring del sistema
+    (Windows Credential Manager). ``data/providers.json`` guarda solo
+    estado no sensible (fecha de conexión, nº de modelos vistos).
+  * Los errores/mensajes jamás incluyen la clave.
+  * La validación se hace con ``GET /models`` (no consume tokens de chat).
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import threading
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+from .base import ProviderError
+from .openai_compat import OpenAICompatClient
+from .presets import PRESETS, preset
+
+log = logging.getLogger("extdator.providers")
+
+SERVICE = "Extdator"
+ACCOUNT_PREFIX = "provider-key"
+CONFIG_FILE = Path(__file__).resolve().parent.parent / "data" / "providers.json"
+CONF_LOCK = threading.Lock()
+
+
+# --------------------------------------------------------------------- #
+# Almacén de estado (SIN secretos)
+# --------------------------------------------------------------------- #
+def _read_config() -> Dict[str, Any]:
+    try:
+        data = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+        if isinstance(data, dict) and isinstance(data.get("providers"), dict):
+            return data
+    except FileNotFoundError:
+        pass
+    except (json.JSONDecodeError, OSError) as exc:
+        log.warning("providers.json corrupto o ilegible (%s); se repara.", exc)
+        try:
+            CONFIG_FILE.with_suffix(".json.bak").write_bytes(CONFIG_FILE.read_bytes())
+        except OSError:
+            pass
+    return {"version": 1, "providers": {}}
+
+
+def _write_config(data: Dict[str, Any]) -> None:
+    CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
+    tmp = CONFIG_FILE.with_suffix(".json.tmp")
+    tmp.write_text(
+        json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+    tmp.replace(CONFIG_FILE)
+
+
+# --------------------------------------------------------------------- #
+# Keyring (lazy: permite tests con stub)
+# --------------------------------------------------------------------- #
+def _account(provider_id: str) -> str:
+    return f"{ACCOUNT_PREFIX}:{provider_id}"
+
+
+def store_key(provider_id: str, key: str) -> None:
+    import keyring
+
+    keyring.set_password(SERVICE, _account(provider_id), key)
+
+
+def get_key(provider_id: str) -> Optional[str]:
+    import keyring
+
+    return keyring.get_password(SERVICE, _account(provider_id))
+
+
+def delete_key(provider_id: str) -> None:
+    import keyring
+
+    try:
+        keyring.delete_password(SERVICE, _account(provider_id))
+    except Exception:  # entry no existe en algunos backends
+        pass
+
+
+# --------------------------------------------------------------------- #
+# API pública del gestor
+# --------------------------------------------------------------------- #
+def connected_providers() -> List[str]:
+    """IDs de proveedores con conexión registrada (sin probar la clave)."""
+    with CONF_LOCK:
+        return sorted(_read_config()["providers"].keys())
+
+
+def provider_state(provider_id: str) -> Dict[str, Any]:
+    """Estado registrado: connected_at, model_count, preset."""
+    with CONF_LOCK:
+        entry = _read_config()["providers"].get(provider_id, {})
+    info = dict(entry)
+    info["connected"] = bool(entry) and get_key(provider_id) is not None
+    info["preset"] = preset(provider_id)
+    return info
+
+
+def connect(
+    provider_id: str,
+    key: str,
+    timeout: float = 20.0,
+    base_url: Optional[str] = None,
+    label: str = "",
+) -> Dict[str, Any]:
+    """Valida la clave consultando el catálogo y guarda la conexión.
+
+    ``base_url``/``label`` se usan para el proveedor "custom" (OpenAI-
+    compatible configurable por el usuario). Lanza ``ProviderError`` con
+    mensajes claros si la clave es inválida o no hay red. Devuelve el
+    resumen de la conexión (nº de modelos).
+    """
+    data = preset(provider_id)
+    if data is None and provider_id != "custom":
+        raise ProviderError(f"Proveedor desconocido: '{provider_id}'.")
+    if provider_id == "custom":
+        if not base_url or not base_url.startswith(("http://", "https://")):
+            raise ProviderError(
+                "Introduce la URL base del endpoint (p. ej. "
+                "https://mi-servidor/v1).",
+                "general",
+            )
+        resolved_base = base_url
+        resolved_label = label or "Personalizado"
+    else:
+        resolved_base = data["base_url"]  # type: ignore[index]
+        resolved_label = data["label"]  # type: ignore[index]
+    if not key.strip():
+        raise ProviderError("Introduce la clave API del proveedor.", "auth")
+    client = OpenAICompatClient(
+        provider_id, resolved_base, key.strip(), timeout=timeout
+    )
+    try:
+        result = client.test_connection()
+    finally:
+        client.close()
+
+    store_key(provider_id, key.strip())
+    with CONF_LOCK:
+        config = _read_config()
+        config["providers"][provider_id] = {
+            "connected_at": datetime.now(timezone.utc).isoformat(),
+            "model_count": result["model_count"],
+            "label": resolved_label,
+            "base_url": resolved_base,
+        }
+        _write_config(config)
+    log.info(
+        "Proveedor '%s' conectado (%d modelos).", provider_id, result["model_count"]
+    )
+    return result
+
+
+def disconnect(provider_id: str) -> None:
+    """Elimina credenciales y registro (no se puede deshacer)."""
+    delete_key(provider_id)
+    with CONF_LOCK:
+        config = _read_config()
+        config["providers"].pop(provider_id, None)
+        _write_config(config)
+    log.info("Proveedor '%s' desconectado.", provider_id)
+
+
+def get_client_for(provider_id: str, timeout: float = 120.0) -> OpenAICompatClient:
+    """Cliente listo para usar con la clave del keyring."""
+    key = get_key(provider_id)
+    if not key:
+        raise ProviderError(
+            "No hay clave guardada para este proveedor. Conéctalo desde "
+            "'Proveedores'.",
+            "auth",
+        )
+    if provider_id == "custom":
+        state = provider_state(provider_id)
+        base_url = state.get("base_url")
+        if not base_url:
+            raise ProviderError(
+                "El proveedor personalizado no tiene URL base guardada.",
+                "general",
+            )
+        return OpenAICompatClient(provider_id, base_url, key, timeout=timeout)
+    data = preset(provider_id)
+    if data is None:
+        raise ProviderError(f"Proveedor desconocido: '{provider_id}'.")
+    return OpenAICompatClient(provider_id, data["base_url"], key, timeout=timeout)
+
+
+def available_presets() -> List[Dict[str, Any]]:
+    """Catálogo de presets con el estado de conexión de cada uno."""
+    out: List[Dict[str, Any]] = []
+    for item in PRESETS:
+        entry = dict(item)
+        state = provider_state(item["id"])
+        entry["connected"] = state.get("connected", False)
+        entry["connected_at"] = state.get("connected_at", "")
+        entry["model_count"] = state.get("model_count", 0)
+        out.append(entry)
+    return out
+
+
+def migrate_from_env(env_path: Path) -> List[str]:
+    """Migración segura desde .env: claves *_API_KEY → keyring.
+
+    Solo migra claves de presets conocidos que NO estén ya conectadas.
+    Devuelve los IDs migrados (la clave se guarda en el keyring y nunca
+    se escribe de vuelta ni se loguea). Si no hay nada que migrar, [].
+    """
+    migrated: List[str] = []
+    try:
+        lines = env_path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return migrated
+    for line in lines:
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        raw_name, _, value = line.partition("=")
+        name = raw_name.strip().upper()
+        value = value.strip().strip('"').strip("'")
+        if not value:
+            continue
+        # OPENAI_API_KEY → openai · GROQ_API_KEY → groq · XAI_API_KEY → xai
+        if not name.endswith("_API_KEY"):
+            continue
+        provider_id = name[: -len("_API_KEY")].lower()
+        if provider_id == "gemini":
+            provider_id = "gemini"
+        if preset(provider_id) is None:
+            continue
+        if provider_id in connected_providers() or get_key(provider_id):
+            continue
+        try:
+            connect(provider_id, value)
+            migrated.append(provider_id)
+            log.info("Clave de '%s' migrada desde .env al keyring.", provider_id)
+        except ProviderError as exc:
+            log.warning(
+                "No se pudo migrar la clave de '%s' (queda en .env): %s",
+                provider_id,
+                exc.message,
+            )
+    return migrated

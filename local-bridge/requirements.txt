@@ -1,0 +1,23 @@
+# Extdator local bridge — dependencias Python
+# Justificadas una a una:
+#   fastapi        → servidor HTTP con validación Pydantic integrada
+#   uvicorn        → servidor ASGI ligero para FastAPI
+#   httpx          → cliente HTTP con streaming para la API de Ollama
+#   pydantic       → validación de datos (dependencia de FastAPI, usada directo)
+#   python-dotenv  → carga de .env
+#   PySide6        → ventana flotante (Qt 6)
+#   psutil         → detección de hardware (RAM, discos, CPU) sin permisos admin
+#   keyring        → almacenamiento seguro de credenciales (Windows Credential
+#                    Manager y equivalentes nativos en otros sistemas)
+#   pytest         → pruebas
+#   black          → formateo del código (herramienta de desarrollo)
+fastapi>=0.115,<1
+uvicorn>=0.30,<1
+httpx>=0.27,<1
+pydantic>=2.7,<3
+python-dotenv>=1.0,<2
+PySide6>=6.7,<7
+psutil>=5.9,<8
+keyring>=24,<27
+pytest>=8,<9
+black>=24,<27

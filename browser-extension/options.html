@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Extdator — Configuración</title>
+  <style>
+    :root {
+      --bg: #12141a; --panel: #171a21; --panel2: #0e1016; --border: #262b36;
+      --text: #d6dae2; --muted: #8a93a5; --accent: #8b7cff;
+      --green: #3ddc97; --red: #ff6b6b; --amber: #ffd166;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 0;
+      background: var(--bg); color: var(--text);
+      font: 14px/1.55 "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh;
+    }
+    .wrap { max-width: 660px; margin: 0 auto; padding: 28px 22px 40px; }
+
+    header { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+    .logo {
+      width: 38px; height: 38px; border-radius: 10px; flex: none;
+      display: grid; place-items: center;
+      background: linear-gradient(135deg, #1c1f2e, #14161f);
+      border: 1px solid rgba(139,124,255,.4);
+      color: var(--accent); font-size: 18px;
+    }
+    h1 { font-size: 19px; margin: 0; letter-spacing: .3px; }
+    .sub { color: var(--muted); font-size: 12.5px; margin: 0 0 22px 50px; }
+
+    /* -------- Stepper -------- */
+    .stepper { display: flex; gap: 6px; margin: 0 0 20px; }
+    .step-pill {
+      flex: 1; text-align: center; font-size: 11.5px; color: var(--muted);
+      padding: 7px 4px; border-radius: 8px;
+      border: 1px solid var(--border); background: var(--panel);
+    }
+    .step-pill.active { color: var(--text); border-color: var(--accent); }
+    .step-pill.done { color: var(--green); border-color: rgba(61,220,151,.45); }
+
+    .card {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 12px; padding: 20px; margin-bottom: 16px;
+    }
+    .card h2 { font-size: 15.5px; margin: 0 0 8px; }
+    .card p { color: var(--muted); font-size: 13px; margin: 0 0 14px; }
+    .step { display: none; }
+    .step.active { display: block; }
+
+    ul.features { margin: 0 0 4px; padding-left: 18px; color: var(--text); font-size: 13.5px; }
+    ul.features li { margin-bottom: 7px; }
+    ul.features b { color: var(--accent); }
+
+    label { display: block; font-size: 12px; color: var(--muted); margin: 0 0 6px; }
+    input[type="text"], input[type="password"], input[type="number"] {
+      width: 100%; padding: 9px 11px;
+      background: var(--panel2); color: var(--text);
+      border: 1px solid var(--border); border-radius: 8px;
+      font: 13px/1.4 Consolas, monospace; outline: none;
+    }
+    input:focus { border-color: var(--accent); }
+    .field { margin-bottom: 12px; }
+
+    button {
+      padding: 9px 16px; border-radius: 8px; cursor: pointer;
+      font: 600 13px/1 "Segoe UI", Roboto, sans-serif;
+      border: 1px solid var(--border);
+      background: #20242e; color: var(--text);
+      transition: border-color .15s, background .15s;
+    }
+    button:hover:not(:disabled) { border-color: var(--accent); }
+    button:disabled { opacity: .45; cursor: not-allowed; }
+    button.primary {
+      background: linear-gradient(135deg, #6f61e8, #8b7cff);
+      border-color: #6f61e8; color: #fff;
+    }
+    button.ghost { background: transparent; }
+    button.danger:hover:not(:disabled) { border-color: var(--red); color: var(--red); }
+    .row { display: flex; gap: 10px; align-items: center; }
+    .row .grow { flex: 1; }
+
+    .nav { display: flex; justify-content: space-between; margin-top: 18px; }
+
+    .statusline {
+      display: flex; gap: 9px; align-items: flex-start;
+      padding: 10px 12px; border-radius: 8px; font-size: 12.5px;
+      background: var(--panel2); border: 1px solid var(--border);
+      margin-bottom: 8px;
+    }
+    .statusline .ico { flex: none; font-size: 14px; }
+    .statusline.ok   { border-color: rgba(61,220,151,.5); }
+    .statusline.ok .ico, .statusline.ok .tx strong { color: var(--green); }
+    .statusline.err  { border-color: rgba(255,107,107,.55); }
+    .statusline.err .ico, .statusline.err .tx strong { color: var(--red); }
+    .statusline.wait { border-color: rgba(139,124,255,.4); }
+    .statusline.wait .ico, .statusline.wait .tx strong { color: var(--amber); }
+    .tx small { display: block; color: var(--muted); margin-top: 2px; }
+
+    code.hint {
+      display: inline-block; padding: 1px 6px; border-radius: 5px;
+      background: var(--panel2); border: 1px solid var(--border);
+      font: 11.5px/1.5 Consolas, monospace; color: var(--text);
+    }
+
+    /* -------- Toggle -------- */
+    .toggle-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 0; border-top: 1px solid var(--border);
+    }
+    .toggle-row:first-child { border-top: none; }
+    .toggle-row .grow { flex: 1; }
+    .toggle-title { font-size: 13.5px; }
+    .toggle-desc { color: var(--muted); font-size: 12px; margin-top: 2px; }
+    .switch { position: relative; width: 42px; height: 24px; flex: none; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; inset: 0; cursor: pointer;
+      background: #262b36; border: 1px solid var(--border); border-radius: 24px;
+      transition: .18s;
+    }
+    .slider:before {
+      content: ""; position: absolute; height: 16px; width: 16px;
+      left: 3px; top: 3px; background: var(--muted); border-radius: 50%;
+      transition: .18s;
+    }
+    .switch input:checked + .slider { background: rgba(139,124,255,.25); border-color: var(--accent); }
+    .switch input:checked + .slider:before { transform: translateX(18px); background: var(--accent); }
+
+    details.adv {
+      margin-top: 14px; border: 1px dashed var(--border); border-radius: 10px;
+      padding: 10px 14px;
+    }
+    details.adv summary {
+      cursor: pointer; color: var(--muted); font-size: 12.5px; user-select: none;
+    }
+    details.adv summary:hover { color: var(--text); }
+    .eye-btn { padding: 8px 11px; }
+
+    .pair-code-row { display: flex; gap: 10px; }
+    .pair-code-row input {
+      text-align: center; font-size: 20px; letter-spacing: 8px;
+      font-weight: 700;
+    }
+
+    .foot {
+      text-align: center; color: var(--muted); font-size: 11.5px; margin-top: 26px;
+    }
+    .foot a { color: var(--muted); }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="logo">✦</div>
+    <h1>Extdator</h1>
+  </header>
+  <p class="sub">Tu asistente de IA local: Ollama en tu equipo y respuestas en un panel flotante.</p>
+
+  <div class="stepper">
+    <div class="step-pill" data-pill="1">1 · Bienvenida</div>
+    <div class="step-pill" data-pill="2">2 · Conectar</div>
+    <div class="step-pill" data-pill="3">3 · Verificar</div>
+    <div class="step-pill" data-pill="4">4 · Preferencias</div>
+  </div>
+
+  <!-- ================= PASO 1: bienvenida ================= -->
+  <section class="step active" data-step="1">
+    <div class="card">
+      <h2>Bienvenido a Extdator</h2>
+      <p>Así funciona (todo queda en tu equipo):</p>
+      <ul class="features">
+        <li><b>Seleccionas texto</b> en cualquier web y pulsas el botón ✦.</li>
+        <li><b>La aplicación de escritorio</b> (Extdator Bridge) envía el texto a tu modelo de IA.</li>
+        <li><b>La respuesta aparece</b> en un panel flotante encima de tu navegador.</li>
+      </ul>
+      <p style="margin-top:14px">Este asistente conecta la extensión con la aplicación de escritorio
+        y comprueba que todo funciona. Solo necesita hacerse <b>una vez</b>.</p>
+    </div>
+    <div class="nav">
+      <span></span>
+      <button class="primary" data-goto="2">Comenzar →</button>
+    </div>
+  </section>
+
+  <!-- ================= PASO 2: conectar ================= -->
+  <section class="step" data-step="2">
+    <div class="card">
+      <h2>Conectar con la aplicación de escritorio</h2>
+      <p>Si Extdator (el panel flotante) está abierto, en su menú ⚙ elige
+        <b>«Emparejar extensión…»</b> y copia el código de 6 dígitos que aparece.</p>
+      <div class="field" style="margin-top:14px">
+        <label for="pairCode">Código de emparejamiento</label>
+        <div class="pair-code-row">
+          <input id="pairCode" type="text" inputmode="numeric" maxlength="6"
+                 placeholder="••••••" autocomplete="off" class="grow" />
+          <button id="pairBtn" class="primary">Conectar</button>
+        </div>
+      </div>
+      <div id="pairStatus"></div>
+    </div>
+
+    <details class="adv">
+      <summary>Conexión manual avanzada (pegar token a mano)</summary>
+      <div style="margin-top:12px">
+        <div class="field">
+          <label for="backendUrl">Dirección del puente local</label>
+          <input id="backendUrl" type="text" placeholder="http://127.0.0.1:5000" />
+        </div>
+        <div class="field">
+          <label for="token">Token de acceso (BRIDGE_TOKEN del archivo .env)</label>
+          <div class="row">
+            <input id="token" type="password" placeholder="Pega aquí el token…" class="grow" />
+            <button id="eyeBtn" class="eye-btn ghost" title="Mostrar u ocultar el token">👁</button>
+          </div>
+        </div>
+        <button id="saveManual" class="ghost">Guardar configuración manual</button>
+        <div id="manualStatus" style="margin-top:8px"></div>
+      </div>
+    </details>
+
+    <div class="nav">
+      <button class="ghost" data-goto="1">← Atrás</button>
+      <button class="primary" data-goto="3">Continuar sin emparejar →</button>
+    </div>
+  </section>
+
+  <!-- ================= PASO 3: verificar ================= -->
+  <section class="step" data-step="3">
+    <div class="card">
+      <h2>Diagnóstico de la conexión</h2>
+      <p>Comprobaremos que el puente local está activo, que tu token funciona
+        y que la comunicación con la extensión llega de punta a punta.</p>
+      <button id="diagBtn" class="primary">Ejecutar diagnóstico</button>
+      <div style="margin-top:14px">
+        <div class="statusline wait" id="stBridge">
+          <span class="ico">⏳</span>
+          <div class="tx"><strong>Puente local</strong><small>sin comprobar</small></div>
+        </div>
+        <div class="statusline wait" id="stAuth">
+          <span class="ico">⏳</span>
+          <div class="tx"><strong>Autenticación</strong><small>sin comprobar</small></div>
+        </div>
+        <div class="statusline wait" id="stSend">
+          <span class="ico">⏳</span>
+          <div class="tx"><strong>Envío de prueba</strong><small>sin comprobar</small></div>
+        </div>
+      </div>
+      <div id="diagExtra"></div>
+    </div>
+    <div class="nav">
+      <button class="ghost" data-goto="2">← Atrás</button>
+      <button class="primary" data-goto="4">Continuar →</button>
+    </div>
+  </section>
+
+  <!-- ================= PASO 4: preferencias ================= -->
+  <section class="step" data-step="4">
+    <div class="card">
+      <h2>Preferencias</h2>
+      <p>Opciones de la extensión. La configuración del modelo, la temperatura
+        y todo lo demás se hace en la <b>aplicación de escritorio</b> (menú ⚙),
+        que es la fuente única de configuración.</p>
+
+      <div class="toggle-row">
+        <div class="grow">
+          <div class="toggle-title">Mostrar el botón ✦ al seleccionar texto</div>
+          <div class="toggle-desc">Si lo desactivas, el botón no aparecerá; puedes reactivarlo aquí mismo en cualquier momento.</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="showFab" />
+          <span class="slider"></span>
+        </label>
+      </div>
+    </div>
+    <div class="card" id="finalCard" style="display:none; border-color: rgba(61,220,151,.5)">
+      <h2 style="color:var(--green)">✓ Todo listo</h2>
+      <p>Extdator está conectado y verificado. Selecciona texto en cualquier web
+        y pulsa ✦ — la respuesta llegará al panel flotante.</p>
+    </div>
+    <div class="nav">
+      <button class="ghost" data-goto="3">← Atrás</button>
+      <button id="finishBtn" class="primary">Finalizar</button>
+    </div>
+  </section>
+
+  <div class="foot">
+    Extdator · procesamiento 100% local con Ollama ·
+    <a href="https://ollama.com" target="_blank" rel="noreferrer">ollama.com</a>
+  </div>
+</div>
+
+<script src="options.js"></script>
+</body>
+</html>

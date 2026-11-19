@@ -1,0 +1,58 @@
+# --- Python / entornos virtuales ---
+local-bridge/.venv/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pyright/
+*.egg-info/
+
+# --- Configuración local y secretos ---
+local-bridge/.env
+.env
+*.key
+*.pem
+*.pfx
+*.p12
+
+# --- Datos de usuario (nunca versionar) ---
+local-bridge/app/data/
+local-bridge/data/
+%LOCALAPPDATA%/Extdator/
+
+# --- Logs y estado de ejecución ---
+local-bridge/logs/
+*.log
+*.pid
+
+# --- Artefactos de build y distribución ---
+build/
+dist/
+release/
+*.spec.bak
+local-bridge/build/
+local-bridge/dist/
+local-bridge/release/
+deployment/installer/output/
+deployment/build/output/
+*.msi
+*.msix
+*.exe
+*.zip
+
+# --- Diagnóstico manual (se conservan los scripts) ---
+tests-manual/*.png
+tests-manual/*.log
+tests-manual/*.txt
+tests-manual/*.json
+tests-manual/*.html
+
+# --- Sistema / editores ---
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+.idea/
+*.swp
