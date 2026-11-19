@@ -125,6 +125,7 @@ Los logs no registran el contenido de las selecciones por defecto.
 * [OCR local para capturas](docs/OCR.md)
 * [Catálogo de modelos y evaluador](docs/MODELS_CATALOG.md)
 * [Solución de problemas](docs/TROUBLESHOOTING.md)
+* [Mapa de dependencias](docs/DEPENDENCY_MAP.md)
 * [Auditoría inicial](docs/AUDIT_2026-11-19.md)
 * [Registro de cambios](CHANGELOG.md)
 

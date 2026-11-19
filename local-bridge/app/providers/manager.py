@@ -12,11 +12,13 @@ from __future__ import annotations
 
 import json
 import logging
+import shutil
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from .. import paths
 from .base import ProviderError
 from .openai_compat import OpenAICompatClient
 from .presets import PRESETS, preset
@@ -25,7 +27,7 @@ log = logging.getLogger("extdator.providers")
 
 SERVICE = "Extdator"
 ACCOUNT_PREFIX = "provider-key"
-CONFIG_FILE = Path(__file__).resolve().parent.parent / "data" / "providers.json"
+CONFIG_FILE = paths.providers_file()
 CONF_LOCK = threading.Lock()
 
 
