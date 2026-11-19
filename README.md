@@ -11,6 +11,20 @@ nube, sin servicios externos.
 > visión u OCR local, emparejamiento de la extensión por código de 6
 > dígitos y asistente de puesta en marcha en options.
 
+## Estado del proyecto
+
+| Área | Estado |
+|---|---|
+| Extensión MV3 | Funcional; empaquetado de tienda en preparación |
+| Puente local + panel | Funcional; rutas de runtime para instalación en preparación |
+| Pruebas | `202 passed, 1 skipped` (2026-11-19) |
+| Instalador Windows | En preparación (PyInstaller + Inno Setup) |
+| Publicación en tiendas | No iniciada; requiere IDs, licencia y revisión |
+| Licencia | **Pendiente de decisión del propietario** (ver abajo) |
+
+El repositorio remoto es privado. No se publican releases ni se cambia la
+visibilidad sin autorización expresa.
+
 ```
 Selección en el navegador → Botón ✦ → Puente local (FastAPI)
                               → Ollama local (streaming HTTP)
@@ -24,7 +38,7 @@ Selección en el navegador → Botón ✦ → Puente local (FastAPI)
 | `browser-extension/` | Extensión Manifest V3 (Chrome/Brave/Edge): botón contextual sobre la selección + envío al puente. |
 | `local-bridge/` | Servidor local Python (FastAPI) + panel flotante PySide6 + cliente Ollama con streaming real. |
 | `scripts/` | PowerShell: `install.ps1`, `start.ps1`, `stop.ps1`, `check_environment.ps1` (+ helper opcional AHK v2). |
-| `docs/` | `ARCHITECTURE.md`, `INSTALLATION.md`, `CONFIGURATION.md`, `TROUBLESHOOTING.md`, `PROVIDERS.md`, `OCR.md`, `MODELS_CATALOG.md`. |
+| `docs/` | `INSTALLATION.md`, `CONFIGURATION.md`, `TROUBLESHOOTING.md`, `PROVIDERS.md`, `OCR.md`, `MODELS_CATALOG.md`, ADR y auditoría. |
 
 ## Inicio rápido
 
@@ -104,13 +118,15 @@ Los logs no registran el contenido de las selecciones por defecto.
 
 ## Documentación
 
-* [Arquitectura y decisiones técnicas](docs/ARCHITECTURE.md)
+* [Arquitectura y decisiones técnicas](ARCHITECTURE.md)
 * [Instalación paso a paso](docs/INSTALLATION.md)
 * [Configuración completa](docs/CONFIGURATION.md)
 * [Proveedores de IA remotos](docs/PROVIDERS.md)
 * [OCR local para capturas](docs/OCR.md)
 * [Catálogo de modelos y evaluador](docs/MODELS_CATALOG.md)
 * [Solución de problemas](docs/TROUBLESHOOTING.md)
+* [Auditoría inicial](docs/AUDIT_2026-11-19.md)
+* [Registro de cambios](CHANGELOG.md)
 
 ## Pruebas
 
@@ -124,3 +140,13 @@ evaluador de modelos, emparejamiento, proveedores (transporte simulado),
 OCR (motores opcionales con mocks) y una prueba de integración real de
 Hover Scroll/no-activación sobre Windows. Complemento GUI offscreen:
 `local-bridge\scripts\gui_smoke.py` (abre los cinco diálogos sin pantalla).
+
+## Licencia
+
+El proyecto **no tiene todavía una licencia principal aprobada**. Hasta que
+el propietario lo decida, el código queda bajo copyright y no se concede
+permiso de redistribución pública. Ver
+[ADR-0004](docs/adr/0004-project-license-pending.md).
+
+Las dependencias de terceros conservan sus licencias; el inventario y los
+avisos se mantienen en [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
