@@ -156,7 +156,7 @@
     <div class="logo">✦</div>
     <h1>Extdator</h1>
   </header>
-  <p class="sub">Tu asistente de IA local: Ollama en tu equipo y respuestas en un panel flotante.</p>
+  <p class="sub">Tu asistente de IA local: tus modelos en tu equipo y respuestas en un panel flotante.</p>
 
   <div class="stepper">
     <div class="step-pill" data-pill="1">1 · Bienvenida</div>
@@ -169,10 +169,10 @@
   <section class="step active" data-step="1">
     <div class="card">
       <h2>Bienvenido a Extdator</h2>
-      <p>Así funciona (todo queda en tu equipo):</p>
+      <p>Así funciona (por defecto, todo queda en tu equipo):</p>
       <ul class="features">
         <li><b>Seleccionas texto</b> en cualquier web y pulsas el botón ✦.</li>
-        <li><b>La aplicación de escritorio</b> (Extdator Bridge) envía el texto a tu modelo de IA.</li>
+        <li><b>La aplicación de escritorio</b> envía el texto a tu modelo de IA.</li>
         <li><b>La respuesta aparece</b> en un panel flotante encima de tu navegador.</li>
       </ul>
       <p style="margin-top:14px">Este asistente conecta la extensión con la aplicación de escritorio
@@ -205,11 +205,11 @@
       <summary>Conexión manual avanzada (pegar token a mano)</summary>
       <div style="margin-top:12px">
         <div class="field">
-          <label for="backendUrl">Dirección del puente local</label>
+          <label for="backendUrl">Dirección de la aplicación local</label>
           <input id="backendUrl" type="text" placeholder="http://127.0.0.1:5000" />
         </div>
         <div class="field">
-          <label for="token">Token de acceso (BRIDGE_TOKEN del archivo .env)</label>
+          <label for="token">Token de acceso (solo conexión manual avanzada)</label>
           <div class="row">
             <input id="token" type="password" placeholder="Pega aquí el token…" class="grow" />
             <button id="eyeBtn" class="eye-btn ghost" title="Mostrar u ocultar el token">👁</button>
@@ -230,8 +230,8 @@
   <section class="step" data-step="3">
     <div class="card">
       <h2>Diagnóstico de la conexión</h2>
-      <p>Comprobaremos que el puente local está activo, que tu token funciona
-        y que la comunicación con la extensión llega de punta a punta.</p>
+      <p>Comprobaremos que la aplicación de escritorio está activa, que la
+        vinculación funciona y que el envío llega de punta a punta.</p>
       <button id="diagBtn" class="primary">Ejecutar diagnóstico</button>
       <div style="margin-top:14px">
         <div class="statusline wait" id="stBridge">
@@ -286,8 +286,8 @@
   </section>
 
   <div class="foot">
-    Extdator · procesamiento 100% local con Ollama ·
-    <a href="https://ollama.com" target="_blank" rel="noreferrer">ollama.com</a>
+    Extdator · procesamiento local por defecto; los proveedores remotos son
+    opcionales · <a href="privacy.html" target="_blank" rel="noreferrer">Privacidad</a>
   </div>
 </div>
 

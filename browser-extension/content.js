@@ -113,8 +113,8 @@
   const btn = document.createElement("button");
   btn.className = "btn";
   btn.type = "button";
-  btn.title = "Enviar a Ollama (Extdator)";
-  btn.setAttribute("aria-label", "Enviar selección a Ollama");
+  btn.title = "Enviar a Extdator";
+  btn.setAttribute("aria-label", "Enviar selección a Extdator");
   btn.innerHTML = SPARKLE_SVG;
 
   const toast = document.createElement("div");
@@ -270,7 +270,7 @@
         sourceUrl: location.href,
       });
       if (response && response.ok) {
-        showToast(response.message || "Texto enviado a Ollama.", "success");
+        showToast(response.message || "Texto enviado a la aplicación.", "success");
       } else {
         showToast((response && response.error) || "No se pudo enviar la selección.", "error");
       }

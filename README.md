@@ -2,8 +2,8 @@
 
 **Asistente local inmediato**: selecciona texto en Chrome, Brave o Edge,
 pulsa el botón ✦ y recibe la respuesta de tu modelo local (Ollama) en un
-panel flotante **siempre visible** — sin perder el foco del navegador, sin
-nube, sin servicios externos.
+panel flotante **siempre visible** — sin perder el foco del navegador. Por
+defecto no usa la nube; los proveedores remotos son opcionales.
 
 > **v1.2.0** — selector de modelos con semáforo según tu hardware,
 > proveedores de IA remotos (clave en el keyring del sistema),
@@ -15,11 +15,11 @@ nube, sin servicios externos.
 
 | Área | Estado |
 |---|---|
-| Extensión MV3 | Funcional; empaquetado de tienda en preparación |
-| Puente local + panel | Funcional; rutas de runtime para instalación en preparación |
-| Pruebas | `202 passed, 1 skipped` (2026-11-19) |
+| Extensión MV3 | Funcional; paquete de tienda generado y validado localmente |
+| Puente local + panel | Funcional; rutas de runtime listas para empaquetado |
+| Pruebas | `222 passed, 1 skipped` (2026-11-19) |
 | Instalador Windows | En preparación (PyInstaller + Inno Setup) |
-| Publicación en tiendas | No iniciada; requiere IDs, licencia y revisión |
+| Publicación en tiendas | No iniciada; requiere cuentas, URL de privacidad, capturas y licencia |
 | Licencia | **Pendiente de decisión del propietario** (ver abajo) |
 
 El repositorio remoto es privado. No se publican releases ni se cambia la
@@ -37,8 +37,9 @@ Selección en el navegador → Botón ✦ → Puente local (FastAPI)
 |---|---|
 | `browser-extension/` | Extensión Manifest V3 (Chrome/Brave/Edge): botón contextual sobre la selección + envío al puente. |
 | `local-bridge/` | Servidor local Python (FastAPI) + panel flotante PySide6 + cliente Ollama con streaming real. |
+| `deployment/` | Validación y empaquetado reproducible de la extensión (Chrome/Edge) y, más adelante, del instalador. |
 | `scripts/` | PowerShell: `install.ps1`, `start.ps1`, `stop.ps1`, `check_environment.ps1` (+ helper opcional AHK v2). |
-| `docs/` | `INSTALLATION.md`, `CONFIGURATION.md`, `TROUBLESHOOTING.md`, `PROVIDERS.md`, `OCR.md`, `MODELS_CATALOG.md`, ADR y auditoría. |
+| `docs/` | Instalación, configuración, proveedores, OCR, guías de tienda, ADR y auditoría. |
 
 ## Inicio rápido
 
@@ -60,6 +61,21 @@ powershell -ExecutionPolicy Bypass -File scripts\start.ps1
 
 Detalles completos: [`docs/INSTALLATION.md`](docs/INSTALLATION.md).
 
+### Empaquetar la extensión
+
+```powershell
+python deployment\extension\build.py --check   # validación de manifest y recursos
+python deployment\extension\build.py           # ZIPs + SHA-256 + informe
+```
+
+Genera `release/browser-extension/chrome.zip` y `edge.zip` (ignorados por
+Git) con `SHA256SUMS.txt` y `build-report.json`. Los paquetes solo incluyen
+archivos de producción. Estado de tiendas:
+[Chrome Web Store](docs/stores/CHROME_WEB_STORE.md),
+[Edge Add-ons](docs/stores/EDGE_ADDONS.md),
+[permisos](docs/stores/PERMISSIONS.md) y
+[matriz de cumplimiento](docs/stores/COMPLIANCE_MATRIX.md).
+
 ## Características
 
 **Extensión**
@@ -67,14 +83,16 @@ Detalles completos: [`docs/INSTALLATION.md`](docs/INSTALLATION.md).
   animación, hover/active, reposicionado en scroll y ocultado automático.
 * Texto enviado tal cual: acentos, símbolos, saltos de línea.
 * Estados de error claros (backend caído, timeout, token, 413, 429...).
-* Permisos mínimos: `storage` + host solo para `127.0.0.1`.
+* Permisos mínimos: `storage` + acceso solo a `127.0.0.1`/`localhost`.
+* Primer arranque guiado: abre el asistente de vinculación si aún no hay
+  conexión.
 
 **Puente local**
 * `POST /api/selection` con validación estricta, token compartido, CORS por
   origen autorizado, límite de tamaño y de tasa. Solo `127.0.0.1`.
 * Cola FIFO thread-safe → Ollama nunca bloquea el servidor HTTP.
-* Streaming real de `/api/chat` (NDJSON), historial conversacional
-  persistente (como `ollama run`) y limpieza de contexto.
+* Streaming real de `/api/chat` (NDJSON), historial conversacional en
+  memoria (como `ollama run`) y limpieza de contexto.
 * Cambio de modelo en caliente (`POST /api/config`) o por `.env`.
 * Ajustes persistentes desde la UI (`GET/POST /api/settings`) con
   validación, aplicación en vivo y `reset` a los valores del `.env`.
@@ -114,7 +132,10 @@ salvo que conectes expresamente un proveedor remoto (entonces va a ese
 proveedor y únicamente a él). Las claves API viven en el keyring del
 sistema y las capturas de pantalla se borran de `%TEMP%` tras
 procesarlas. Ninguna petición sale de tu máquina sin que tú lo configures.
-Los logs no registran el contenido de las selecciones por defecto.
+Los logs no registran el contenido de las selecciones por defecto. No hay
+analítica ni publicidad. Política completa:
+[`browser-extension/privacy.html`](browser-extension/privacy.html) (su
+publicación en una URL pública para las tiendas está pendiente).
 
 ## Documentación
 
@@ -126,6 +147,10 @@ Los logs no registran el contenido de las selecciones por defecto.
 * [Catálogo de modelos y evaluador](docs/MODELS_CATALOG.md)
 * [Solución de problemas](docs/TROUBLESHOOTING.md)
 * [Mapa de dependencias](docs/DEPENDENCY_MAP.md)
+* [Preparación para Chrome Web Store](docs/stores/CHROME_WEB_STORE.md)
+* [Preparación para Edge Add-ons](docs/stores/EDGE_ADDONS.md)
+* [Permisos de la extensión](docs/stores/PERMISSIONS.md)
+* [Matriz de cumplimiento](docs/stores/COMPLIANCE_MATRIX.md)
 * [Auditoría inicial](docs/AUDIT_2026-11-19.md)
 * [Registro de cambios](CHANGELOG.md)
 
@@ -138,8 +163,9 @@ Los logs no registran el contenido de las selecciones por defecto.
 Cubre: validación/seguridad del servidor, CORS, streaming de Ollama
 (simulado), historial, configuración, ajustes persistentes, hardware y
 evaluador de modelos, emparejamiento, proveedores (transporte simulado),
-OCR (motores opcionales con mocks) y una prueba de integración real de
-Hover Scroll/no-activación sobre Windows. Complemento GUI offscreen:
+OCR (motores opcionales con mocks), límites de arquitectura, rutas de
+runtime, validación/empaquetado de la extensión y una prueba de integración
+real de Hover Scroll/no-activación sobre Windows. Complemento GUI offscreen:
 `local-bridge\scripts\gui_smoke.py` (abre los cinco diálogos sin pantalla).
 
 ## Licencia

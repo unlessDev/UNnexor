@@ -58,6 +58,17 @@ function normalizeUrl(raw) {
   return (raw || "").trim().replace(/\/+$/, "") || DEFAULT_CONFIG.backendUrl;
 }
 
+function isLoopbackUrl(url) {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return false;
+    const host = parsed.hostname.toLowerCase();
+    return host === "127.0.0.1" || host === "localhost";
+  } catch (_) {
+    return false;
+  }
+}
+
 function statusLine(id, tone, title, detail) {
   const line = $(id);
   line.className = "statusline " + tone;
@@ -88,7 +99,7 @@ $("pairBtn").addEventListener("click", async () => {
   }
   $("pairBtn").disabled = true;
   statusBox("pairStatus", "wait",
-    "<strong>Conectando…</strong><small>Validando el código contra el puente local.</small>");
+    "<strong>Conectando…</strong><small>Validando el código con la aplicación Extdator.</small>");
   try {
     const resp = await fetch(url + "/api/pair/confirm", {
       method: "POST",
@@ -105,7 +116,7 @@ $("pairBtn").addEventListener("click", async () => {
       });
       paired = true;
       statusBox("pairStatus", "ok",
-        "<strong>¡Conectado!</strong><small>La extensión ya tiene su token de acceso guardado.</small>");
+        "<strong>¡Conectado!</strong><small>La extensión ya está vinculada con la aplicación.</small>");
       setTimeout(() => gotoStep(3), 900);
     } else if (resp.status === 403) {
       statusBox("pairStatus", "err",
@@ -119,7 +130,7 @@ $("pairBtn").addEventListener("click", async () => {
     }
   } catch (err) {
     statusBox("pairStatus", "err",
-      "<strong>No se alcanza el puente local.</strong><small>¿Está abierto el panel de Extdator? Ejecuta <code class='hint'>scripts\\start.ps1</code> si no.</small>");
+      "<strong>No se alcanza la aplicación Extdator.</strong><small>Ábrela desde el menú Inicio y vuelve a intentarlo. Si acabas de instalarla, espera unos segundos.</small>");
   } finally {
     $("pairBtn").disabled = false;
   }
@@ -133,6 +144,11 @@ $("eyeBtn").addEventListener("click", () => {
 
 $("saveManual").addEventListener("click", async () => {
   const backendUrl = normalizeUrl($("backendUrl").value);
+  if (!isLoopbackUrl(backendUrl)) {
+    statusBox("manualStatus", "err",
+      "<strong>Dirección no válida.</strong><small>La aplicación debe estar en este equipo: usa 127.0.0.1 o localhost.</small>");
+    return;
+  }
   const token = $("token").value.trim();
   await savePartial({ backendUrl, token, wizardDone: true });
   paired = Boolean(token);
@@ -169,17 +185,17 @@ async function runDiagnostic() {
       bridgeOk = true;
       const o = body.ollama || {};
       ollamaDetail = o.reachable
-        ? "puente activo · Ollama conectado"
-        : "puente activo · ⚠ Ollama sin conexión (revisa que esté en marcha)";
-      statusLine("stBridge", "ok", "Puente local", ollamaDetail);
+        ? "aplicación activa · proveedor local conectado"
+        : "aplicación activa · aviso: Ollama no responde (puede que uses un proveedor remoto)";
+      statusLine("stBridge", "ok", "Aplicación Extdator", ollamaDetail);
     } else {
-      statusLine("stBridge", "err", "Puente local",
-        "el puerto responde pero no es Extdator. ¿Otro programa usa el " +
+      statusLine("stBridge", "err", "Aplicación Extdator",
+        "el puerto responde pero no es Extdator. ¿Otra aplicación usa el " +
         "puerto 5000?");
     }
   } catch (err) {
-    statusLine("stBridge", "err", "Puente local",
-      "sin conexión en " + url + " — abre el panel o ejecuta scripts\\start.ps1");
+    statusLine("stBridge", "err", "Aplicación Extdator",
+      "sin conexión en " + url + " — abre la aplicación Extdator y reintenta");
   }
 
   // 2) Autenticación (GET /api/status con token).
@@ -193,10 +209,10 @@ async function runDiagnostic() {
           cfg.token ? "token válido" : "token válido (sin token configurado)");
       } else if (resp.status === 401) {
         statusLine("stAuth", "err", "Autenticación",
-          "token inválido — usa el emparejamiento (paso 2) o revisa BRIDGE_TOKEN");
+          "vinculación no válida — vuelve al paso 2 y usa el emparejamiento");
       } else if (resp.status === 403) {
         statusLine("stAuth", "err", "Autenticación",
-          "origen no autorizado — añade esta extensión a ALLOWED_ORIGINS en .env");
+          "la aplicación rechazó el origen — vuelve a emparejar la extensión");
       } else {
         statusLine("stAuth", "err", "Autenticación", "error HTTP " + resp.status);
       }
@@ -204,7 +220,7 @@ async function runDiagnostic() {
       statusLine("stAuth", "err", "Autenticación", "fallo de red inesperado");
     }
   } else {
-    statusLine("stAuth", "err", "Autenticación", "omitido: el puente no responde");
+    statusLine("stAuth", "err", "Autenticación", "omitido: la aplicación no responde");
   }
 
   // 3) Envío de prueba de punta a punta (POST /api/selection).
