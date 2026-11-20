@@ -36,6 +36,13 @@ usa [Semantic Versioning](https://semver.org/lang/es/).
 - Guías de tienda, justificación de permisos y matriz de cumplimiento en
   `docs/stores/`.
 - Pruebas del paquete de extensión (validación, generación y reproducibilidad).
+- Ejecutable one-folder de Windows con PyInstaller: `deployment/windows/build.py`,
+  spec, icono `.ico`, recurso de versión generado y supresión controlada de
+  módulos Qt/OCR no usados.
+- Auto-chequeo `--check` con informe `self-check.json` en el directorio de
+  datos, útil sin consola y para validar el build.
+- Prueba de humo del EXE y arranque GUI con `QT_QPA_PLATFORM=offscreen`.
+- `requirements-build.txt` para PyInstaller y Pillow (herramientas, no runtime).
 
 ### Changed
 - `docs/ARCHITECTURE.md` se traslada a `ARCHITECTURE.md` (raíz) para que
@@ -52,10 +59,14 @@ usa [Semantic Versioning](https://semver.org/lang/es/).
 - Paquetes `chrome.zip` y `edge.zip` generados y validados localmente;
   pendientes de cuenta de tienda, URL pública de privacidad, capturas y
   autorización.
+- Ejecutable `Extdator.exe` one-folder (≈79 MB) y ZIP sin firma (≈36 MB)
+  generados y verificados con auto-chequeo y GUI offscreen. El OCR local
+  pesado no se incluye en este build; la visión del modelo sigue disponible.
 
 ### Tests
 - Línea base: `202 passed, 1 skipped` (2026-11-19).
 - Tras rutas de runtime y pruebas de arquitectura: `212 passed, 1 skipped`.
+- Tras extensión y empaquetado: `224 passed, 1 skipped` (2026-11-19).
 
 ## [1.2.0] - 2026-11-19
 

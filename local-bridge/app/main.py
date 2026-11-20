@@ -14,14 +14,16 @@ El panel flotante nunca bloquea su hilo con Ollama: la generación vive en el
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 import logging.handlers
 import sys
 import threading
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 
-from . import __version__
+from . import __version__, paths
 from .config import LOG_DIR, Config, ConfigError, load_config
 from .env_setup import ensure_env_file
 from .ollama_client import OllamaClient
@@ -40,12 +42,28 @@ def setup_logging(cfg: Config) -> None:
         LOG_DIR / "bridge.log", maxBytes=1_000_000, backupCount=3, encoding="utf-8"
     )
     file_handler.setFormatter(fmt)
-    console = logging.StreamHandler()
-    console.setFormatter(fmt)
     root = logging.getLogger()
     root.setLevel(cfg.log_level)
     root.addHandler(file_handler)
-    root.addHandler(console)
+    # En el ejecutable windowed no hay consola: un StreamHandler sobre
+    # sys.stderr=None fallaría al emitir.
+    if not paths.is_frozen() and sys.stderr is not None:
+        console = logging.StreamHandler()
+        console.setFormatter(fmt)
+        root.addHandler(console)
+
+
+def report_error(message: str) -> None:
+    """Muestra un error al usuario aunque no haya consola."""
+    if paths.is_frozen() and sys.platform == "win32":
+        try:
+            import ctypes
+
+            ctypes.windll.user32.MessageBoxW(None, message, "Extdator", 0x10)
+            return
+        except Exception:  # pragma: no cover - fallback defensivo
+            pass
+    print(message)
 
 
 def start_uvicorn_thread(
@@ -127,6 +145,36 @@ def run_server_only(
     return 0
 
 
+def write_self_check_report(results: dict, ok: bool) -> Path | None:
+    """Escribe un informe legible del auto-chequeo para soporte y builds.
+
+    En un ejecutable sin consola el informe es la única salida visible, y
+    permite validar rutas de instalación desde el proceso empaquetado.
+    """
+    report = {
+        "app": "extdator-bridge",
+        "version": __version__,
+        "frozen": paths.is_frozen(),
+        "data_dir": str(paths.data_dir()),
+        "env_file": str(paths.env_file()),
+        "logs_dir": str(paths.logs_dir()),
+        "ok": ok,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "results": results,
+    }
+    try:
+        paths.ensure_data_dir()
+        target = paths.data_dir() / "self-check.json"
+        target.write_text(
+            json.dumps(report, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+        return target
+    except OSError as exc:
+        log.warning("No se pudo escribir el informe de auto-chequeo: %s", exc)
+        return None
+
+
 def run_check(cfg: Config, bus: Bus, state: RuntimeState, ollama: OllamaClient) -> int:
     """Auto-verificación: arranca el servidor, prueba endpoints y termina."""
     import httpx
@@ -163,14 +211,17 @@ def run_check(cfg: Config, bus: Bus, state: RuntimeState, ollama: OllamaClient) 
         )
     server.should_exit = True
     thread.join(timeout=5)
-    print(results)
-    return (
-        0
-        if results.get("health")
+    ok = bool(
+        results.get("health")
         and results["selection"]
         and results["selection"].get("status") == 202
-        else 1
     )
+    report_path = write_self_check_report(results, ok)
+    if not paths.is_frozen():
+        print(results)
+        if report_path:
+            print(f"Informe de auto-chequeo: {report_path}")
+    return 0 if ok else 1
 
 
 def run_bridge(
@@ -183,21 +234,30 @@ def run_bridge(
 ) -> int:
     """Modo completo: servidor HTTP en hilo + GUI PySide6 en el hilo principal."""
     from PySide6.QtCore import Qt
-    from PySide6.QtGui import QFont
+    from PySide6.QtGui import QFont, QIcon
     from PySide6.QtWidgets import QApplication
 
     in_use, who = port_in_use(cfg)
     if in_use:
         if who == "extdator-bridge":
-            print(
-                "Extdator ya se está ejecutando (puerto %d). Usa scripts\\stop.ps1 "
-                "para detenerlo." % cfg.port
-            )
+            if paths.is_frozen():
+                report_error("Extdator ya se está ejecutando.")
+            else:
+                report_error(
+                    "Extdator ya se está ejecutando (puerto %d). Usa "
+                    "scripts\\stop.ps1 para detenerlo." % cfg.port
+                )
             return 3
-        print(
-            f"El puerto {cfg.port} está ocupado por otra aplicación. "
-            "Cambia BRIDGE_PORT en local-bridge\\.env o detén ese proceso."
-        )
+        if paths.is_frozen():
+            report_error(
+                f"El puerto {cfg.port} está ocupado por otra aplicación. "
+                "Ciérrala y vuelve a abrir Extdator."
+            )
+        else:
+            report_error(
+                f"El puerto {cfg.port} está ocupado por otra aplicación. "
+                "Cambia BRIDGE_PORT en local-bridge\\.env o detén ese proceso."
+            )
         return 2
 
     thread, server = start_uvicorn_thread(
@@ -205,10 +265,16 @@ def run_bridge(
     )
     body = wait_for_health(cfg)
     if body is None:
-        print(
-            f"El servidor HTTP no arrancó en {cfg.host}:{cfg.port}. "
-            "Revisa logs/bridge.log"
-        )
+        if paths.is_frozen():
+            report_error(
+                "No se pudo iniciar el servidor local de Extdator. "
+                "Revisa el registro en la carpeta de datos de la aplicación."
+            )
+        else:
+            report_error(
+                f"El servidor HTTP no arrancó en {cfg.host}:{cfg.port}. "
+                "Revisa logs/bridge.log"
+            )
         server.should_exit = True
         thread.join(timeout=3)
         return 2
@@ -218,6 +284,9 @@ def run_bridge(
     app.setApplicationName("Extdator")
     app.setOrganizationName("Extdator")
     app.setStyle("Fusion")
+    icon_path = paths.resource_path("assets/extdator.ico")
+    if icon_path.is_file():
+        app.setWindowIcon(QIcon(str(icon_path)))
     font = QFont()
     font.setFamilies(["Cascadia Mono", "Consolas", "DejaVu Sans Mono", "Courier New"])
     font.setPointSize(10)
