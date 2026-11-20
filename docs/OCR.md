@@ -89,9 +89,10 @@ fórmulas con RapidOCR/Tesseract quedarán como texto plano (sin LaTeX).
   site-packages: cualquier proyecto con su propio directorio `scripts/`
   debe importar por ruta de archivo, no como paquete (colisión de
   nombres; no afecta al código de Extdator, que usa `app.*`).
-* Suite completa: **202 passed, 1 skipped** (el test real de Pix2Text
-  corre con el motor instalado; queda 1 skip: `rapidocr_onnxruntime`
-  clásico no instalado — el paquete nuevo `rapidocr` sí lo está).
+* Suite completa: **222 passed, 1 skipped** (2026-11-19; el test real de
+  Pix2Text corre con el motor instalado; queda 1 skip:
+  `rapidocr_onnxruntime` clásico no instalado — el paquete nuevo `rapidocr`
+  sí lo está).
 * Las consultas OCR con LaTeX y las respuestas matemáticas del modelo se
   verificaron E2E: `qwen3:8b` devolvió la fórmula cuadrática en LaTeX y
   el panel la mostró como `x = (-b ± √(b² - 4ac))/(2a)`.

@@ -29,13 +29,33 @@ usa [Semantic Versioning](https://semver.org/lang/es/).
 - Auditoría inicial con línea base de pruebas y riesgos conocidos.
 - Higiene de repositorio: `.editorconfig`, `.gitattributes` y `.gitignore`
   ampliado para datos de usuario, artefactos y credenciales.
+- `privacy.html` empaquetado con la política de privacidad de la extensión.
+- Script `deployment/extension/build.py` con validación de Manifest V3,
+  permisos, CSP, iconos, código remoto y sintaxis JavaScript; genera ZIP
+  reproducibles para Chrome y Edge con `SHA256SUMS.txt` y `build-report.json`.
+- Guías de tienda, justificación de permisos y matriz de cumplimiento en
+  `docs/stores/`.
+- Pruebas del paquete de extensión (validación, generación y reproducibilidad).
 
 ### Changed
 - `docs/ARCHITECTURE.md` se traslada a `ARCHITECTURE.md` (raíz) para que
   sea el documento canónico; se actualizan los enlaces.
+- La extensión deja de solicitar `scripting` y permisos de host para webs
+  arbitrarias; solo conserva `storage` y acceso a `127.0.0.1`/`localhost`.
+- El primer arranque sin vinculación abre el asistente de opciones.
+- Los mensajes de extensión y opciones evitan rutas de desarrollo y
+  terminología técnica innecesaria.
+- La conexión manual solo acepta direcciones locales (`127.0.0.1` o
+  `localhost`).
+
+### Distribution
+- Paquetes `chrome.zip` y `edge.zip` generados y validados localmente;
+  pendientes de cuenta de tienda, URL pública de privacidad, capturas y
+  autorización.
 
 ### Tests
 - Línea base: `202 passed, 1 skipped` (2026-11-19).
+- Tras rutas de runtime y pruebas de arquitectura: `212 passed, 1 skipped`.
 
 ## [1.2.0] - 2026-11-19
 

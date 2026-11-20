@@ -76,12 +76,11 @@ Verificación automática:
 
 Verificado con diagnóstico CDP sobre Chromium real (v1.1.0, `tests-manual/`):
 
-**1. Pestañas abiertas ANTES de instalar/recargar la extensión** (causa más
+**1. Pestañas abiertas ANTES de instalar la extensión** (causa más
 común). Los content scripts de MV3 solo se inyectan en páginas cargadas a
-partir de ese momento. Desde v1.1.0 no hace falta recargar nada: al instalar
-(o recargar) la extensión, su service worker re-inyecta el content script en
-todas las pestañas http/https ya abiertas (`chrome.scripting` en
-`onInstalled`). Si usas la v1.0.0: recarga las pestañas o actualiza a v1.1.0.
+partir de ese momento. Para no solicitar permisos de host globales, la
+extensión no re-inyecta en pestañas existentes: recarga esas pestañas (F5)
+o abre una nueva. Las páginas nuevas reciben el script automáticamente.
 
 **2. Contenido dentro de iframes** (Google Docs, algunos foros/editores).
 Desde v1.1.0 el content script corre con `all_frames: true`; en la v1.0.0

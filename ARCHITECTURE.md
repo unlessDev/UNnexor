@@ -80,12 +80,17 @@ Reglas:
 
 | Archivo | Responsabilidad |
 |---|---|
-| `manifest.json` | MV3, permisos, content scripts, service worker, iconos. |
+| `manifest.json` | MV3, permisos mínimos (`storage` + loopback), CSP explícita, content scripts, service worker, iconos. |
 | `content.js` | Detección de selección, botón en Shadow DOM cerrado, toast; única UI inyectada. |
-| `background.js` | Único punto de red de la extensión; configuración en `chrome.storage.local`; mapeo de errores. |
+| `background.js` | Único punto de red de la extensión; configuración en `chrome.storage.local`; mapeo de errores de usuario. |
 | `options.html/js` | Asistente de conexión, emparejamiento por código, diagnóstico y preferencias. |
+| `privacy.html` | Política de privacidad empaquetada; su publicación en URL pública está pendiente. |
 
-La extensión no contiene claves de proveedores ni ejecuta código remoto.
+La extensión no contiene claves de proveedores ni ejecuta código remoto. No
+solicita `scripting`, `tabs` ni acceso de host a webs arbitrarias: el acceso
+a páginas se limita al content script y la red al puente local. El paquete
+de tienda se genera con `deployment/extension/build.py` (validación +
+ZIP reproducibles + SHA-256). Las guías de tienda están en `docs/stores/`.
 
 ### Puente y dominio (`local-bridge/app/`)
 
@@ -216,14 +221,20 @@ seguridad de una aplicación local.
 
 ## 8. Distribución
 
-| Artefacto | Herramienta prevista | Estado |
+| Artefacto | Herramienta | Estado |
 |---|---|---|
-| ZIP Chrome | script reproducible + validación de manifest | En preparación |
-| ZIP Edge | mismo paquete, verificación de compatibilidad | En preparación |
+| ZIP Chrome | `deployment/extension/build.py` + validación estática | **Generado y verificado localmente** |
+| ZIP Edge | mismo paquete, validación de manifiesto | **Generado y verificado localmente** |
 | EXE/one-folder | PyInstaller (PySide6, FastAPI, keyring, psutil) | En preparación |
 | Instalador | Inno Setup por usuario, sin admin | En preparación |
 | Actualizaciones | GitHub Releases + SHA-256 | Diseño pendiente |
 | Firma | Authenticode si el propietario obtiene certificado | Pendiente de decisión |
+
+Los paquetes se escriben en `release/browser-extension/` (ignorado por Git)
+junto con `SHA256SUMS.txt` y `build-report.json`. No se declaran publicados:
+las tiendas requieren cuenta, URL pública de privacidad, capturas reales y
+aprobación del propietario. La matriz de cumplimiento está en
+`docs/stores/COMPLIANCE_MATRIX.md`.
 
 El instalador no incluye modelos de Ollama, pesos OCR, claves ni historiales.
 La aplicación instalada escribe datos en `%LOCALAPPDATA%\Extdator`.
@@ -250,6 +261,8 @@ La aplicación instalada escribe datos en `%LOCALAPPDATA%\Extdator`.
    falta validarlo desde el ejecutable PyInstaller (fase 6).
 5. No hay firma de código ni certificado; los builds no firmados deben
    identificarse como tales.
+6. La política de privacidad está empaquetada, pero falta una URL pública
+   para las tiendas; tampoco existen capturas reales ni IDs de tienda.
 6. La licencia principal no está decidida; no se redistribuye públicamente
    hasta que el propietario la confirme.
 7. La extensión solicita acceso a todos los sitios http/https porque la
