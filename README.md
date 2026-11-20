@@ -16,9 +16,9 @@ defecto no usa la nube; los proveedores remotos son opcionales.
 | Área | Estado |
 |---|---|
 | Extensión MV3 | Funcional; paquete de tienda generado y validado localmente |
-| Puente local + panel | Funcional; rutas de runtime listas para empaquetado |
-| Pruebas | `222 passed, 1 skipped` (2026-11-19) |
-| Instalador Windows | En preparación (PyInstaller + Inno Setup) |
+| Puente local + panel | Funcional; ejecutable one-folder generado y validado |
+| Pruebas | `224 passed, 1 skipped` (2026-11-19, tras añadir auto-chequeo) |
+| Instalador Windows | En preparación (Inno Setup por usuario) |
 | Publicación en tiendas | No iniciada; requiere cuentas, URL de privacidad, capturas y licencia |
 | Licencia | **Pendiente de decisión del propietario** (ver abajo) |
 
@@ -75,6 +75,19 @@ archivos de producción. Estado de tiendas:
 [Edge Add-ons](docs/stores/EDGE_ADDONS.md),
 [permisos](docs/stores/PERMISSIONS.md) y
 [matriz de cumplimiento](docs/stores/COMPLIANCE_MATRIX.md).
+
+### Empaquetar la aplicación de escritorio
+
+```powershell
+cd local-bridge
+.venv\Scripts\python.exe -m pip install -r requirements-build.txt
+.venv\Scripts\python.exe ..\deployment\windows\build.py
+```
+
+Genera `release/windows/Extdator/Extdator.exe` (one-folder, sin consola),
+un ZIP `Extdator-<versión>-win64-unsigned.zip`, `SHA256SUMS.txt` y un
+informe con pruebas de humo headless y GUI offscreen. El build no está
+firmado con Authenticode y no incluye modelos, claves ni OCR pesado.
 
 ## Características
 

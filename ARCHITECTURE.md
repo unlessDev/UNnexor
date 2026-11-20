@@ -225,7 +225,7 @@ seguridad de una aplicación local.
 |---|---|---|
 | ZIP Chrome | `deployment/extension/build.py` + validación estática | **Generado y verificado localmente** |
 | ZIP Edge | mismo paquete, validación de manifiesto | **Generado y verificado localmente** |
-| EXE/one-folder | PyInstaller (PySide6, FastAPI, keyring, psutil) | En preparación |
+| EXE/one-folder | `deployment/windows/build.py` + PyInstaller 6 | **Generado y validado (smoke + GUI offscreen)** |
 | Instalador | Inno Setup por usuario, sin admin | En preparación |
 | Actualizaciones | GitHub Releases + SHA-256 | Diseño pendiente |
 | Firma | Authenticode si el propietario obtiene certificado | Pendiente de decisión |
@@ -238,6 +238,14 @@ aprobación del propietario. La matriz de cumplimiento está en
 
 El instalador no incluye modelos de Ollama, pesos OCR, claves ni historiales.
 La aplicación instalada escribe datos en `%LOCALAPPDATA%\Extdator`.
+
+El ejecutable se construye en modo one-folder (`Extdator/Extdator.exe` +
+`_internal/`). El self-check (`Extdator.exe --check`) escribe
+`self-check.json` en el directorio de datos y permite validar rutas y
+servidor sin consola. El build poda módulos Qt no usados (Qml/Quick/PDF/
+OpenGL) y ejecuta una prueba GUI con `QT_QPA_PLATFORM=offscreen`. El OCR
+local pesado no se empaqueta en esta fase; la visión del modelo sigue
+disponible.
 
 ## 9. Decisiones registradas
 
@@ -257,12 +265,17 @@ La aplicación instalada escribe datos en `%LOCALAPPDATA%\Extdator`.
 2. La UI no tiene un ViewModel formal: la separación es por widgets,
    señales y worker. Introducir MVVM completo ahora duplicaría estado.
 3. El historial es en memoria; no hay persistencia de conversaciones.
-4. El modo instalado ya resuelve rutas escribibles con `app/paths.py`;
-   falta validarlo desde el ejecutable PyInstaller (fase 6).
+4. El modo instalado ya resuelve rutas escribibles con `app/paths.py` y
+   se validó desde el EXE PyInstaller con datos temporales; falta probar la
+   instalación real en `%LOCALAPPDATA%\Programs` (fase 7).
 5. No hay firma de código ni certificado; los builds no firmados deben
    identificarse como tales.
 6. La política de privacidad está empaquetada, pero falta una URL pública
    para las tiendas; tampoco existen capturas reales ni IDs de tienda.
+7. El ejecutable base no incluye motores OCR locales pesados
+   (Pix2Text/RapidOCR/Tesseract): el OCR local queda para la versión de
+   desarrollo o una futura edición opcional. La visión multimodal del
+   modelo activo sí está disponible.
 6. La licencia principal no está decidida; no se redistribuye públicamente
    hasta que el propietario la confirme.
 7. La extensión solicita acceso a todos los sitios http/https porque la
