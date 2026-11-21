@@ -4,15 +4,65 @@
 
 | Componente | Versión mínima | Comprobación |
 |---|---|---|
-| Windows | 10 / 11 | — |
-| Python | 3.10+ | `python --version` |
+| Windows | 10 / 11 de 64 bits | — |
+| Python | 3.10+ (solo desarrollo) | `python --version` |
 | Ollama | cualquier versión con API HTTP (0.1.x+) | `ollama --version` |
 | Un modelo en Ollama | p. ej. `llama3` | `ollama list` |
 | Navegador | Chrome, Brave o Edge (Chromium ≥ 110) | — |
 
 Puedes ejecutar `scripts\check_environment.ps1` para un diagnóstico completo.
 
-## 1. Instalar el puente
+## Instalación con el instalador (recomendada para usuarios)
+
+El instalador permite usar Extdator sin Python ni el entorno de desarrollo.
+Todavía **no hay release pública**: se genera localmente y no se ha enviado
+a ninguna tienda ni publicado en GitHub Releases.
+
+```powershell
+cd G:\Proyectos\Extdator\local-bridge
+.venv\Scripts\python.exe ..\deployment\installer\build.py
+```
+
+Requiere Inno Setup 6 instalado (o la variable `ISCC` apuntando a
+`ISCC.exe`). El comando compila, prueba el ciclo completo en directorios
+temporales y deja el resultado en `release\installer\`:
+
+* `Extdator-<versión>-win64-setup.exe`
+* `SHA256SUMS.txt`
+* `build-report.json` y `build.log`
+
+Pasos:
+
+1. Ejecuta el instalador. Es **por usuario**, no pide administrador y
+   instala en `%LOCALAPPDATA%\Programs\Extdator`.
+2. Si SmartScreen advierte que no hay firma, comprueba el SHA-256 con
+   `SHA256SUMS.txt` antes de continuar. El instalador no está firmado con
+   Authenticode.
+3. Los datos (ajustes, logs, `.env`, estado de proveedores) se guardan en
+   `%LOCALAPPDATA%\Extdator`. Las claves conectadas desde el panel viven en
+   el Administrador de credenciales de Windows; las que pongas manualmente
+   en `.env` pueden retirarse con `--purge-secrets`.
+4. Continúa con el **paso 2** (Ollama) y el **paso 4** (cargar la extensión)
+   de esta guía. El paso 1 es solo para desarrollo.
+
+### Desinstalar y limpiar datos
+
+* Desinstala desde **Configuración > Aplicaciones** o desde el menú Inicio.
+* Por defecto, tus datos y credenciales se conservan para una futura
+  reinstalación.
+* Si eliges la **limpieza completa**, el desinstalador ejecuta
+  `Extdator.exe --purge-secrets` y borra `%LOCALAPPDATA%\Extdator`.
+
+Para borrar solo credenciales y el token sin desinstalar:
+
+```powershell
+& "$env:LOCALAPPDATA\Programs\Extdator\Extdator.exe" --purge-secrets
+```
+
+El token se regenera en el siguiente arranque y la extensión deberá volver
+a emparejarse. Los ajustes no sensibles se conservan.
+
+## 1. Instalar el puente (solo desarrollo)
 
 Abre PowerShell **en la carpeta del proyecto** y ejecuta:
 
@@ -121,6 +171,16 @@ powershell -ExecutionPolicy Bypass -File scripts\start.ps1 -ServerOnly
 
 Arranca el servidor, prueba `/health`, `POST /api/selection` y
 `POST /api/clear`, imprime el resultado y termina.
+
+En la versión instalada (sin consola):
+
+```powershell
+& "$env:LOCALAPPDATA\Programs\Extdator\Extdator.exe" --check
+```
+
+El resultado se escribe en
+`%LOCALAPPDATA%\Extdator\self-check.json`; el código de salida es 0 si
+todo funciona.
 
 ## Pruebas
 

@@ -24,6 +24,60 @@ def generate_token() -> str:
     return secrets.token_urlsafe(32)
 
 
+def clear_env_secrets(env_path: Optional[Path] = None) -> dict:
+    """Retira secretos del ``.env`` conservando el resto de la configuración.
+
+    Vacía ``BRIDGE_TOKEN`` (se regenera en el siguiente arranque) y elimina
+    las líneas ``*_API_KEY``. Devuelve un resumen sin incluir valores.
+    """
+    path = Path(env_path) if env_path else paths.env_file()
+    result = {
+        "found": path.is_file(),
+        "token_cleared": False,
+        "keys_removed": [],
+        "error": "",
+    }
+    if not result["found"]:
+        return result
+    try:
+        original = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        # El archivo existe pero no se pudo leer: hay que informar del fallo.
+        # Devolver "no encontrado" haría creer que no quedan secretos.
+        result["error"] = str(exc)
+        return result
+
+    kept = []
+    for line in original.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            kept.append(line)
+            continue
+        name = stripped.split("=", 1)[0].strip().upper()
+        if name == "BRIDGE_TOKEN":
+            kept.append("BRIDGE_TOKEN=")
+            result["token_cleared"] = True
+        elif name.endswith("_API_KEY"):
+            result["keys_removed"].append(name)
+        else:
+            kept.append(line)
+
+    new_text = "\n".join(kept) + ("\n" if kept else "")
+    if new_text != original:
+        tmp = path.with_suffix(path.suffix + ".tmp")
+        try:
+            tmp.write_text(new_text, encoding="utf-8")
+            shutil.copymode(path, tmp)
+            tmp.replace(path)
+        except OSError as exc:
+            result["error"] = str(exc)
+            try:
+                tmp.unlink()
+            except OSError:
+                pass
+    return result
+
+
 def ensure_env_file(
     env_path: Optional[Path] = None,
 ) -> Tuple[Path, Optional[str], bool]:

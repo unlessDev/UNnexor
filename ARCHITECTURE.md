@@ -16,7 +16,7 @@ El proyecto es un **monolito modular** con cuatro superficies:
 | Extensión de navegador | Implementada | Manifest V3, JavaScript sin build |
 | Puente HTTP local | Implementado | Python 3.10+, FastAPI, uvicorn |
 | Aplicación de escritorio | Implementada | PySide6/Qt 6, hilos Qt |
-| Distribución | En preparación | PyInstaller + Inno Setup (fase 6/7) |
+| Distribución | Empaquetada y probada localmente | PyInstaller + Inno Setup 6 |
 
 La arquitectura sigue un enfoque pragmático de Clean/Hexagonal: las reglas
 de negocio no conocen Qt, HTTP ni proveedores concretos; las integraciones
@@ -155,7 +155,7 @@ transcripción y los pesos no se descargan sin consentimiento.
 | Configuración base | `local-bridge/.env` (desarrollo) / `%LOCALAPPDATA%\Extdator\.env` (instalado) | Token de puente |
 | Ajustes de UI | `app/data/user_settings.json` (desarrollo) / `%LOCALAPPDATA%\Extdator\` (instalado) | Baja |
 | Proveedores | `providers.json` sin claves | Media (metadatos) |
-| Claves API | Windows Credential Manager (keyring) | Alta |
+| Claves API | Windows Credential Manager (keyring); posibles copias en `.env` hasta purgar | Alta |
 | Historial | Memoria del worker; no se persiste | Alta |
 | Logs | `local-bridge/logs/` (desarrollo) / `%LOCALAPPDATA%\Extdator\logs\` (instalado) | Contenido prohibido por `LOG_PRIVACY=1` |
 
@@ -209,9 +209,13 @@ historial. Se implementará y documentará antes de declararlo disponible.
 - Límite de texto y rate limit por cliente.
 - Emparejamiento por código efímero, un solo uso, caducidad y límite de
   intentos; solo acepta orígenes de extensión.
-- Claves de proveedores exclusivamente en el keyring del sistema.
+- Claves de proveedores en el keyring del sistema. La migración desde
+  `.env` es no destructiva; `--purge-secrets` retira también esas copias.
 - `LOG_PRIVACY=1` evita registrar contenido; los errores no incluyen claves.
 - Capturas en `%TEMP%` se eliminan tras procesar.
+- `Extdator.exe --purge-secrets` elimina las claves del keyring, vacía el
+  token del puente y retira `*_API_KEY` del `.env`; el instalador lo usa en
+  la limpieza completa.
 - No hay código remoto ejecutable en la extensión ni en el escritorio.
 
 Riesgos residuales: cualquier proceso local del mismo usuario puede leer el
@@ -226,7 +230,7 @@ seguridad de una aplicación local.
 | ZIP Chrome | `deployment/extension/build.py` + validación estática | **Generado y verificado localmente** |
 | ZIP Edge | mismo paquete, validación de manifiesto | **Generado y verificado localmente** |
 | EXE/one-folder | `deployment/windows/build.py` + PyInstaller 6 | **Generado y validado (smoke + GUI offscreen)** |
-| Instalador | Inno Setup por usuario, sin admin | En preparación |
+| Instalador | `deployment/installer/build.py` + Inno Setup 6 por usuario | **Generado y probado (instalación, preservación, purga y desinstalación)** |
 | Actualizaciones | GitHub Releases + SHA-256 | Diseño pendiente |
 | Firma | Authenticode si el propietario obtiene certificado | Pendiente de decisión |
 
@@ -238,6 +242,14 @@ aprobación del propietario. La matriz de cumplimiento está en
 
 El instalador no incluye modelos de Ollama, pesos OCR, claves ni historiales.
 La aplicación instalada escribe datos en `%LOCALAPPDATA%\Extdator`.
+
+El instalador de Inno Setup 6 se instala **por usuario** en
+`%LOCALAPPDATA%\Programs\Extdator`, no solicita administrador y crea
+accesos directos opcionales. Al desinstalar conserva
+`%LOCALAPPDATA%\Extdator` por defecto; si el usuario elige la limpieza
+completa, ejecuta `Extdator.exe --purge-secrets` y borra el directorio de
+datos. La purga de secretos también puede ejecutarse manualmente y no toca
+ajustes no sensibles.
 
 El ejecutable se construye en modo one-folder (`Extdator/Extdator.exe` +
 `_internal/`). El self-check (`Extdator.exe --check`) escribe
@@ -265,9 +277,9 @@ disponible.
 2. La UI no tiene un ViewModel formal: la separación es por widgets,
    señales y worker. Introducir MVVM completo ahora duplicaría estado.
 3. El historial es en memoria; no hay persistencia de conversaciones.
-4. El modo instalado ya resuelve rutas escribibles con `app/paths.py` y
-   se validó desde el EXE PyInstaller con datos temporales; falta probar la
-   instalación real en `%LOCALAPPDATA%\Programs` (fase 7).
+4. El modo instalado se validó desde el EXE PyInstaller y el instalador
+   Inno en directorios temporales; falta una prueba manual en un equipo
+   limpio, la firma Authenticode y un mecanismo de actualización.
 5. No hay firma de código ni certificado; los builds no firmados deben
    identificarse como tales.
 6. La política de privacidad está empaquetada, pero falta una URL pública
@@ -276,8 +288,5 @@ disponible.
    (Pix2Text/RapidOCR/Tesseract): el OCR local queda para la versión de
    desarrollo o una futura edición opcional. La visión multimodal del
    modelo activo sí está disponible.
-6. La licencia principal no está decidida; no se redistribuye públicamente
+8. La licencia principal no está decidida; no se redistribuye públicamente
    hasta que el propietario la confirme.
-7. La extensión solicita acceso a todos los sitios http/https porque la
-   selección puede ocurrir en cualquier página; es una necesidad funcional
-   documentada, no un permiso accidental.
