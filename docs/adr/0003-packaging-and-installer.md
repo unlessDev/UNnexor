@@ -1,6 +1,6 @@
 # ADR-0003 — Empaquetado de escritorio e instalador
 
-- **Estado:** aceptado (implementación en curso)
+- **Estado:** aceptado (implementado y probado localmente)
 - **Fecha:** 2026-11-19
 
 ## Contexto
@@ -44,5 +44,9 @@ instalador para Windows 10/11, preferiblemente por usuario y sin admin.
 ## Consecuencias
 
 - El build debe ejecutarse en Windows y verificarse fuera del workspace.
+  `deployment/installer/build.py` automatiza la instalación silenciosa en
+  un directorio temporal, el auto-chequeo, la preservación de datos, la
+  purga de secretos y la desinstalación.
 - La firma Authenticode queda pendiente de certificado del propietario.
 - Los artefactos no firmados se etiquetarán como tales.
+- No se publica nada hasta que el propietario lo autorice.

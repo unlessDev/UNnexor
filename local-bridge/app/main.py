@@ -25,7 +25,7 @@ from pathlib import Path
 
 from . import __version__, paths
 from .config import LOG_DIR, Config, ConfigError, load_config
-from .env_setup import ensure_env_file
+from .env_setup import clear_env_secrets, ensure_env_file
 from .ollama_client import OllamaClient
 from .pairing import PairingManager
 from .queue_manager import Bus, RuntimeState
@@ -64,6 +64,35 @@ def report_error(message: str) -> None:
         except Exception:  # pragma: no cover - fallback defensivo
             pass
     print(message)
+
+
+def purge_secrets() -> int:
+    """Elimina credenciales de proveedores y secretos del ``.env``.
+
+    Se ejecuta antes de cargar la configuración para funcionar incluso con
+    un ``.env`` ausente o dañado. En modo empaquetado no imprime nada: el
+    desinstalador lo invoca con la ventana oculta.
+    """
+    from .providers import manager
+
+    env_path = paths.env_file()
+    providers = manager.purge_all_keys()
+    env_result = clear_env_secrets(env_path)
+    if not paths.is_frozen():
+        print(f"Credenciales de proveedores eliminadas ({len(providers)} revisadas).")
+        if env_result["found"]:
+            if env_result["token_cleared"]:
+                print(f"Token del puente eliminado de {env_path}.")
+            if env_result["keys_removed"]:
+                print(
+                    "Claves API retiradas del .env: "
+                    + ", ".join(env_result["keys_removed"])
+                )
+            if env_result["error"]:
+                print(f"No se pudo reescribir {env_path}: {env_result['error']}")
+        else:
+            print(f"No existe {env_path}; no había secretos en el archivo.")
+    return 1 if env_result["error"] else 0
 
 
 def start_uvicorn_thread(
@@ -325,17 +354,25 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--check", action="store_true", help="Auto-verificación headless y salida."
     )
+    parser.add_argument(
+        "--purge-secrets",
+        action="store_true",
+        help="Elimina las claves API del keyring y los secretos del .env y sale.",
+    )
     parser.add_argument("--port", type=int, default=None, help="Puerto del servidor.")
     parser.add_argument("--host", type=str, default=None, help="Host del servidor.")
     args = parser.parse_args(argv)
 
+    if args.purge_secrets:
+        return purge_secrets()
+
     try:
         env_path, generated_token, created = ensure_env_file()
-        if generated_token:
+        if generated_token and not paths.is_frozen():
             print(f"Token generado y guardado en {env_path} (clave BRIDGE_TOKEN).")
         cfg = load_config(env_path)
     except ConfigError as exc:
-        print(f"Configuración inválida: {exc}")
+        report_error(f"Configuración inválida: {exc}")
         return 2
     if args.port is not None:
         cfg.port = args.port
@@ -344,7 +381,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         cfg.validate()
     except ConfigError as exc:
-        print(f"Configuración inválida: {exc}")
+        report_error(f"Configuración inválida: {exc}")
         return 2
 
     setup_logging(cfg)

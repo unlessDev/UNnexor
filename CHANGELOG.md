@@ -43,6 +43,15 @@ usa [Semantic Versioning](https://semver.org/lang/es/).
   datos, útil sin consola y para validar el build.
 - Prueba de humo del EXE y arranque GUI con `QT_QPA_PLATFORM=offscreen`.
 - `requirements-build.txt` para PyInstaller y Pillow (herramientas, no runtime).
+- Instalador Windows por usuario con Inno Setup 6 en `deployment/installer/`:
+  instalación sin administrador, accesos directos, desinstalador,
+  preservación de datos y limpieza completa opcional.
+- `Extdator.exe --purge-secrets`: elimina las claves de proveedores del
+  keyring, vacía `BRIDGE_TOKEN` y retira `*_API_KEY` del `.env` sin tocar
+  ajustes no sensibles.
+- `deployment/installer/build.py` compila el instalador y prueba el ciclo
+  completo (instalación silenciosa, self-check, preservación, purga y
+  desinstalación) antes de generar SHA-256 e informe.
 
 ### Changed
 - `docs/ARCHITECTURE.md` se traslada a `ARCHITECTURE.md` (raíz) para que
@@ -62,11 +71,15 @@ usa [Semantic Versioning](https://semver.org/lang/es/).
 - Ejecutable `Extdator.exe` one-folder (≈79 MB) y ZIP sin firma (≈36 MB)
   generados y verificados con auto-chequeo y GUI offscreen. El OCR local
   pesado no se incluye en este build; la visión del modelo sigue disponible.
+- Instalador `Extdator-1.2.0-win64-setup.exe` (≈29 MB, sin firma) generado
+  y probado localmente: instalación por usuario, datos preservados al
+  desinstalar, purga de secretos y limpieza completa. No se ha publicado.
 
 ### Tests
 - Línea base: `202 passed, 1 skipped` (2026-11-19).
 - Tras rutas de runtime y pruebas de arquitectura: `212 passed, 1 skipped`.
 - Tras extensión y empaquetado: `224 passed, 1 skipped` (2026-11-19).
+- Tras purga de secretos e instalador: `231 passed, 1 skipped` (2026-11-20).
 
 ## [1.2.0] - 2026-11-19
 

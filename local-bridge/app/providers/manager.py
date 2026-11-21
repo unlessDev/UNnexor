@@ -1,9 +1,11 @@
 """Gestor de conexiones de proveedores: keyring + estado sin secretos.
 
 Seguridad:
-  * Las claves API viven EXCLUSIVAMENTE en el keyring del sistema
+  * Las claves conectadas desde la app viven en el keyring del sistema
     (Windows Credential Manager). ``data/providers.json`` guarda solo
     estado no sensible (fecha de conexión, nº de modelos vistos).
+  * Las copias manuales en ``.env`` se migran sin borrarse; la purga de
+    secretos las retira.
   * Los errores/mensajes jamás incluyen la clave.
   * La validación se hace con ``GET /models`` (no consume tokens de chat).
 """
@@ -85,6 +87,26 @@ def delete_key(provider_id: str) -> None:
         keyring.delete_password(SERVICE, _account(provider_id))
     except Exception:  # entry no existe en algunos backends
         pass
+
+
+def purge_all_keys() -> List[str]:
+    """Elimina las claves de todos los proveedores conocidos y su estado.
+
+    Se usa antes de una desinstalación completa y desde
+    ``Extdator.exe --purge-secrets``. Incluye presets aunque no figuren en
+    ``providers.json`` para retirar credenciales huérfanas. No crea el
+    directorio de datos si no existe y nunca registra las claves.
+    """
+    known = {item["id"] for item in PRESETS} | {"custom"}
+    with CONF_LOCK:
+        known.update(_read_config()["providers"].keys())
+    for provider_id in sorted(known):
+        delete_key(provider_id)
+    with CONF_LOCK:
+        if CONFIG_FILE.exists():
+            _write_config({"version": 1, "providers": {}})
+    log.info("Credenciales de proveedores eliminadas (%d revisadas).", len(known))
+    return sorted(known)
 
 
 # --------------------------------------------------------------------- #

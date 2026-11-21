@@ -27,6 +27,32 @@
   tu `ALLOWED_ORIGINS` no incluye `chrome-extension://<TU_ID>`. Copia el ID
   desde las opciones de la extensión y ponlo en el `.env`.
 
+## Instalador, SmartScreen y desinstalación
+
+**SmartScreen muestra "aplicación desconocida"**
+
+El instalador no está firmado con Authenticode. Verifica el SHA-256 con el
+`SHA256SUMS.txt` que acompaña al instalador; si coincide, elige
+**Más información > Ejecutar de todos modos**. No ejecutes un instalador
+cuya suma no coincida.
+
+**Quiero borrar el token y las claves API sin desinstalar**
+
+```powershell
+& "$env:LOCALAPPDATA\Programs\Extdator\Extdator.exe" --purge-secrets
+```
+
+Elimina las claves de proveedores del Administrador de credenciales,
+vacía `BRIDGE_TOKEN` y retira `*_API_KEY` del `.env`; conserva el resto de
+ajustes. Al volver a abrir Extdator se genera un token nuevo y hay que
+volver a emparejar la extensión.
+
+**Al desinstalar se conservan mis datos**
+
+Es el comportamiento por defecto. Si querías borrarlos, desinstala de nuevo
+(o usa Configuración > Aplicaciones) y elige la limpieza completa. También
+puedes borrar manualmente `%LOCALAPPDATA%\Extdator`.
+
 ## Ollama
 
 **"No se pudo conectar con Ollama" / indicador rojo**

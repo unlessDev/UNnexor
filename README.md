@@ -17,8 +17,8 @@ defecto no usa la nube; los proveedores remotos son opcionales.
 |---|---|
 | Extensión MV3 | Funcional; paquete de tienda generado y validado localmente |
 | Puente local + panel | Funcional; ejecutable one-folder generado y validado |
-| Pruebas | `224 passed, 1 skipped` (2026-11-19, tras añadir auto-chequeo) |
-| Instalador Windows | En preparación (Inno Setup por usuario) |
+| Pruebas | `231 passed, 1 skipped` (2026-11-20) |
+| Instalador Windows | **Generado y probado localmente** (Inno Setup por usuario) |
 | Publicación en tiendas | No iniciada; requiere cuentas, URL de privacidad, capturas y licencia |
 | Licencia | **Pendiente de decisión del propietario** (ver abajo) |
 
@@ -37,7 +37,7 @@ Selección en el navegador → Botón ✦ → Puente local (FastAPI)
 |---|---|
 | `browser-extension/` | Extensión Manifest V3 (Chrome/Brave/Edge): botón contextual sobre la selección + envío al puente. |
 | `local-bridge/` | Servidor local Python (FastAPI) + panel flotante PySide6 + cliente Ollama con streaming real. |
-| `deployment/` | Validación y empaquetado reproducible de la extensión (Chrome/Edge) y, más adelante, del instalador. |
+| `deployment/` | Empaquetado reproducible de la extensión, ejecutable one-folder e instalador Windows, con pruebas de humo e integridad. |
 | `scripts/` | PowerShell: `install.ps1`, `start.ps1`, `stop.ps1`, `check_environment.ps1` (+ helper opcional AHK v2). |
 | `docs/` | Instalación, configuración, proveedores, OCR, guías de tienda, ADR y auditoría. |
 
@@ -89,6 +89,31 @@ un ZIP `Extdator-<versión>-win64-unsigned.zip`, `SHA256SUMS.txt` y un
 informe con pruebas de humo headless y GUI offscreen. El build no está
 firmado con Authenticode y no incluye modelos, claves ni OCR pesado.
 
+### Generar el instalador de Windows
+
+```powershell
+cd local-bridge
+.venv\Scripts\python.exe ..\deployment\installer\build.py
+```
+
+Requiere Inno Setup 6. Compila y prueba el ciclo completo en directorios
+temporales: instalación silenciosa por usuario, `Extdator.exe --check`,
+desinstalación con datos preservados, `--purge-secrets` y limpieza
+completa. Genera `release/installer/Extdator-<versión>-win64-setup.exe`,
+`SHA256SUMS.txt` y un informe. El instalador se instala por usuario en
+`%LOCALAPPDATA%\Programs\Extdator` y guarda los datos en
+`%LOCALAPPDATA%\Extdator`.
+
+No hay release pública todavía. Para borrar solo credenciales y el token
+sin desinstalar:
+
+```powershell
+& "$env:LOCALAPPDATA\Programs\Extdator\Extdator.exe" --purge-secrets
+```
+
+El token se regenera en el siguiente arranque y la extensión deberá
+volver a emparejarse.
+
 ## Características
 
 **Extensión**
@@ -122,8 +147,10 @@ firmado con Authenticode y no incluye modelos, claves ni OCR pesado.
 * 12 presets OpenAI-compatible verificados (OpenAI, Groq, OpenRouter,
   Mistral, Cerebras, Together, xAI, Moonshot, HF Router, Z.ai, NVIDIA
   NIM, Gemini) + proveedor `custom`.
-* Claves solo en el Windows Credential Manager (keyring);
-  `data\providers.json` guarda estado sin claves.
+* Claves conectadas desde el panel en el Windows Credential Manager
+  (keyring); `data\providers.json` guarda estado sin claves. Las
+  `*_API_KEY` que pongas manualmente en `.env` se migran sin borrarse y
+  pueden retirarse con `--purge-secrets`.
 * Streaming SSE, errores traducidos a mensajes claros, cambio
   local↔remoto en caliente desde el panel.
 
@@ -142,9 +169,10 @@ firmado con Authenticode y no incluye modelos, claves ni OCR pesado.
 
 El texto seleccionado va **solo** a tu Ollama local (`127.0.0.1`),
 salvo que conectes expresamente un proveedor remoto (entonces va a ese
-proveedor y únicamente a él). Las claves API viven en el keyring del
-sistema y las capturas de pantalla se borran de `%TEMP%` tras
-procesarlas. Ninguna petición sale de tu máquina sin que tú lo configures.
+proveedor y únicamente a él). Las claves API conectadas desde el panel
+viven en el keyring del sistema; las que pongas manualmente en `.env`
+pueden retirarse con `--purge-secrets`. Las capturas de pantalla se borran
+de `%TEMP%` tras procesarlas. Ninguna petición sale de tu máquina sin que tú lo configures.
 Los logs no registran el contenido de las selecciones por defecto. No hay
 analítica ni publicidad. Política completa:
 [`browser-extension/privacy.html`](browser-extension/privacy.html) (su
@@ -177,9 +205,12 @@ Cubre: validación/seguridad del servidor, CORS, streaming de Ollama
 (simulado), historial, configuración, ajustes persistentes, hardware y
 evaluador de modelos, emparejamiento, proveedores (transporte simulado),
 OCR (motores opcionales con mocks), límites de arquitectura, rutas de
-runtime, validación/empaquetado de la extensión y una prueba de integración
-real de Hover Scroll/no-activación sobre Windows. Complemento GUI offscreen:
-`local-bridge\scripts\gui_smoke.py` (abre los cinco diálogos sin pantalla).
+runtime, validación/empaquetado de la extensión, purga de secretos y una
+prueba de integración real de Hover Scroll/no-activación sobre Windows.
+El instalador añade su propia prueba de ciclo completo (instalar,
+auto-chequeo, preservar datos, purgar y desinstalar). Complemento GUI
+offscreen: `local-bridge\scripts\gui_smoke.py` (abre los cinco diálogos sin
+pantalla).
 
 ## Licencia
 
