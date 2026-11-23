@@ -138,6 +138,23 @@ def _zip_folder(folder: Path, target: Path) -> None:
                 archive.write(path, path.relative_to(folder).as_posix())
 
 
+def _bridge_log_tail(data_dir: Path, lines: int = 40) -> str:
+    """Devuelve el final del log del puente para diagnósticos de build."""
+    log_file = data_dir / "logs" / "bridge.log"
+    if not log_file.is_file():
+        return ""
+    try:
+        content = log_file.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return ""
+    return "\n".join(content[-lines:])
+
+
+def _with_log(message: str, data_dir: Path) -> str:
+    tail = _bridge_log_tail(data_dir)
+    return f"{message}\nbridge.log:\n{tail}" if tail else message
+
+
 def smoke_test(exe: Path, timeout: int = 180) -> Dict[str, object]:
     """Ejecuta el EXE con --check en un directorio de datos aislado."""
     with tempfile.TemporaryDirectory(prefix="extdator-smoke-") as tmp:
@@ -165,12 +182,15 @@ def smoke_test(exe: Path, timeout: int = 180) -> Dict[str, object]:
         report_path = data_dir / "self-check.json"
         if not report_path.is_file():
             raise RuntimeError(
-                "El EXE no escribió self-check.json. "
-                f"exit={result.returncode}; stderr={result.stderr[-800:]}"
+                _with_log(
+                    "El EXE no escribió self-check.json. "
+                    f"exit={result.returncode}; stderr={result.stderr[-800:]}",
+                    data_dir,
+                )
             )
         report = json.loads(report_path.read_text(encoding="utf-8"))
         if not report.get("ok"):
-            raise RuntimeError(f"Auto-chequeo falló: {report}")
+            raise RuntimeError(_with_log(f"Auto-chequeo falló: {report}", data_dir))
         if report.get("frozen") is not True:
             raise RuntimeError("El EXE no detecta modo empaquetado (frozen)")
         if Path(report.get("data_dir", "")) != data_dir:
@@ -225,20 +245,29 @@ def gui_smoke(exe: Path, timeout: int = 90) -> Dict[str, object]:
             while time.monotonic() < deadline:
                 if process.poll() is not None:
                     raise RuntimeError(
-                        f"La GUI terminó antes de estar lista (exit={process.returncode})"
+                        _with_log(
+                            "La GUI terminó antes de estar lista "
+                            f"(exit={process.returncode})",
+                            data_dir,
+                        )
                     )
                 if _health_ok(port):
                     healthy = True
                     break
                 time.sleep(0.4)
             if not healthy:
-                raise RuntimeError(f"La GUI no respondió en {timeout}s")
+                raise RuntimeError(
+                    _with_log(f"La GUI no respondió en {timeout}s", data_dir)
+                )
             # El servidor arranca antes que QApplication: damos margen a Qt.
             time.sleep(1.5)
             if process.poll() is not None:
                 raise RuntimeError(
-                    "Qt falló al crear la ventana; el proceso terminó "
-                    f"(exit={process.returncode})"
+                    _with_log(
+                        "Qt falló al crear la ventana; el proceso terminó "
+                        f"(exit={process.returncode})",
+                        data_dir,
+                    )
                 )
             return {
                 "ok": True,

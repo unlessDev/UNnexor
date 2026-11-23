@@ -24,6 +24,10 @@ usa [Semantic Versioning](https://semver.org/lang/es/).
 ### Fixed
 - `app/__init__.py` declaraba `1.0.0` mientras el manifest declaraba
   `1.2.0`; la versión queda unificada en `1.2.0`.
+- El auto-chequeo espera hasta 30 s al servidor para tolerar arranques
+  fríos con Defender o carga inicial de módulos; antes fallaba a los 12 s
+  en runners limpios. Los smoke tests del escritorio adjuntan el final de
+  `bridge.log` a los errores para facilitar el diagnóstico.
 
 ### Added
 - Auditoría inicial con línea base de pruebas y riesgos conocidos.
@@ -93,6 +97,8 @@ usa [Semantic Versioning](https://semver.org/lang/es/).
 - Tras purga de secretos e instalador: `231 passed, 1 skipped` (2026-11-20).
 - Tras CI, SBOM y verificación de artefactos: `241 passed, 1 skipped`
   (2026-11-21).
+- Tras tolerancia de arranque en frío y diagnósticos: `244 passed,
+  1 skipped` (2026-11-22).
 
 ## [1.2.0] - 2026-11-19
 

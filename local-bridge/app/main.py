@@ -130,8 +130,12 @@ def start_uvicorn_thread(
     return thread, server
 
 
-def wait_for_health(cfg: Config, timeout: float = 12.0) -> dict | None:
-    """Espera a que /health responda; devuelve el JSON o None."""
+def wait_for_health(cfg: Config, timeout: float = 30.0) -> dict | None:
+    """Espera a que /health responda; devuelve el JSON o None.
+
+    En un equipo recién instalado, Defender y la carga inicial de módulos
+    pueden retrasar el arranque más de 12 s; el auto-chequeo debe tolerarlo.
+    """
     import httpx
 
     deadline = time.monotonic() + timeout
