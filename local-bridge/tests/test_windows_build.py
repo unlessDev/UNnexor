@@ -5,6 +5,8 @@ from __future__ import annotations
 import importlib.util
 from pathlib import Path
 
+from app.ollama_client import OLLAMA_HEALTH_TIMEOUT
+
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 BUILD_SCRIPT = PROJECT_ROOT / "deployment" / "windows" / "build.py"
 
@@ -32,3 +34,7 @@ def test_with_log_appends_last_lines_of_bridge_log(tmp_path: Path) -> None:
 
 def test_with_log_without_log_keeps_original_message(tmp_path: Path) -> None:
     assert windows_build._with_log("sin log", tmp_path) == "sin log"
+
+
+def test_gui_health_timeout_covers_ollama_probe() -> None:
+    assert windows_build.HEALTH_HTTP_TIMEOUT > OLLAMA_HEALTH_TIMEOUT

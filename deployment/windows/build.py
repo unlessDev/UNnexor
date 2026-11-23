@@ -41,6 +41,9 @@ SPEC_FILE = PROJECT_ROOT / "deployment" / "windows" / "Extdator.spec"
 DIST_ROOT = PROJECT_ROOT / "release" / "windows"
 WORK_ROOT = PROJECT_ROOT / "build" / "windows"
 APP_INIT = LOCAL_BRIDGE / "app" / "__init__.py"
+# /health sondea Ollama de forma síncrona; el sondeo externo debe esperar
+# más que ese trabajo para no descartar una respuesta 200 válida.
+HEALTH_HTTP_TIMEOUT = 5.0
 
 
 def app_version() -> str:
@@ -213,7 +216,7 @@ def smoke_test(exe: Path, timeout: int = 180) -> Dict[str, object]:
 def _health_ok(port: int) -> bool:
     try:
         with urllib.request.urlopen(
-            f"http://127.0.0.1:{port}/health", timeout=1.5
+            f"http://127.0.0.1:{port}/health", timeout=HEALTH_HTTP_TIMEOUT
         ) as response:
             return response.status == 200
     except (urllib.error.URLError, TimeoutError, OSError):

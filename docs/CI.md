@@ -27,9 +27,9 @@ El trabajo de artefactos ejecuta, en orden:
 
 1. `python deployment/extension/build.py` — ZIP Chrome/Edge + hashes.
 2. `python deployment/windows/build.py` — EXE one-folder, ZIP, smoke
-   headless y GUI offscreen. El auto-chequeo espera hasta 30 s (5 s por
-   sondeo, porque `/health` consulta Ollama) y, si falla, el error incluye
-   el final de `bridge.log`.
+   headless y GUI offscreen. Ambos sondeos esperan 5 s por petición porque
+   `/health` consulta Ollama; el auto-chequeo tolera hasta 30 s en total.
+   Si el smoke falla, el error incluye el final de `bridge.log`.
 3. `choco install innosetup --yes --no-progress` — Inno Setup 6.
 4. `python deployment/installer/build.py` — instalador y prueba de ciclo
    completo (instalar, self-check, preservar datos, purgar, desinstalar).
