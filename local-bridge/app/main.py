@@ -26,13 +26,17 @@ from pathlib import Path
 from . import __version__, paths
 from .config import LOG_DIR, Config, ConfigError, load_config
 from .env_setup import clear_env_secrets, ensure_env_file
-from .ollama_client import OllamaClient
+from .ollama_client import OLLAMA_HEALTH_TIMEOUT, OllamaClient
 from .pairing import PairingManager
 from .queue_manager import Bus, RuntimeState
 from .server import create_app
 from .settings_store import SettingsStore
 
 log = logging.getLogger("extdator.main")
+
+# /health consulta Ollama de forma síncrona. El cliente debe esperar más
+# que ese sondeo para no descartar una respuesta 200 válida y lenta.
+HEALTH_REQUEST_TIMEOUT = OLLAMA_HEALTH_TIMEOUT + 3.0
 
 
 def setup_logging(cfg: Config) -> None:
@@ -135,6 +139,7 @@ def wait_for_health(cfg: Config, timeout: float = 30.0) -> dict | None:
 
     En un equipo recién instalado, Defender y la carga inicial de módulos
     pueden retrasar el arranque más de 12 s; el auto-chequeo debe tolerarlo.
+    La espera por petición cubre el sondeo de Ollama que hace /health.
     """
     import httpx
 
@@ -142,7 +147,7 @@ def wait_for_health(cfg: Config, timeout: float = 30.0) -> dict | None:
     url = f"http://{cfg.host}:{cfg.port}/health"
     while time.monotonic() < deadline:
         try:
-            response = httpx.get(url, timeout=1.5)
+            response = httpx.get(url, timeout=HEALTH_REQUEST_TIMEOUT)
             if response.status_code == 200:
                 return response.json()
         except httpx.HTTPError:
@@ -155,7 +160,9 @@ def port_in_use(cfg: Config) -> tuple[bool, str]:
     import httpx
 
     try:
-        response = httpx.get(f"http://{cfg.host}:{cfg.port}/health", timeout=1.5)
+        response = httpx.get(
+            f"http://{cfg.host}:{cfg.port}/health", timeout=HEALTH_REQUEST_TIMEOUT
+        )
         body = response.json() if response.status_code == 200 else {}
         if body.get("app") == "extdator-bridge":
             return True, "extdator-bridge"

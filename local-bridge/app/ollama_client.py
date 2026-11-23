@@ -90,6 +90,11 @@ def _finalize_stats(
     return text, stats
 
 
+# Tiempo máximo del sondeo de versión usado por /health. El cliente que
+# consume /health debe esperar más que este valor (ver main.HEALTH_REQUEST_TIMEOUT).
+OLLAMA_HEALTH_TIMEOUT = 2.0
+
+
 class OllamaClient:
     """Fachada síncrona sobre la API HTTP de Ollama (uso desde QThread)."""
 
@@ -133,7 +138,7 @@ class OllamaClient:
             pass
 
     # ------------------------------------------------------------------
-    def is_reachable(self, timeout: float = 2.0) -> Tuple[bool, str]:
+    def is_reachable(self, timeout: float = OLLAMA_HEALTH_TIMEOUT) -> Tuple[bool, str]:
         try:
             response = self._client.get("/api/version", timeout=timeout)
         except httpx.HTTPError as exc:
