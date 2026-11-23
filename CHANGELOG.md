@@ -24,6 +24,11 @@ usa [Semantic Versioning](https://semver.org/lang/es/).
 ### Fixed
 - `app/__init__.py` declaraba `1.0.0` mientras el manifest declaraba
   `1.2.0`; la versión queda unificada en `1.2.0`.
+- El auto-chequeo y el smoke GUI fallaban en equipos sin Ollama porque
+  `/health` puede tardar hasta 2 s en sondearlo y los clientes cortaban a
+  1,5 s. Ahora esperan 5 s por sondeo (30 s en total en el auto-chequeo)
+  para tolerar arranques fríos. Los smoke tests del escritorio adjuntan el
+  final de `bridge.log` a los errores para facilitar el diagnóstico.
 
 ### Added
 - Auditoría inicial con línea base de pruebas y riesgos conocidos.
@@ -52,6 +57,17 @@ usa [Semantic Versioning](https://semver.org/lang/es/).
 - `deployment/installer/build.py` compila el instalador y prueba el ciclo
   completo (instalación silenciosa, self-check, preservación, purga y
   desinstalación) antes de generar SHA-256 e informe.
+- CI de Windows en `.github/workflows/ci.yml`: pruebas y empaquetado
+  completo (extensión, escritorio, instalador y SBOM) en push/PR a `main`
+  y `develop`, con permisos de solo lectura y sin publicación.
+- `deployment/sbom/build.py`: SBOM CycloneDX 1.5 del entorno Python y los
+  productos, con `SHA256SUMS.txt` e identidad determinista.
+- `deployment/verify_artifacts.py`: verificación de checksums, informes de
+  build y SBOM, con protección contra rutas inseguras y symlinks; genera
+  `release/verification-report.json`.
+- Pruebas del SBOM y del verificador, incluidas manipulación de artefactos,
+  hashes incorrectos, rutas inseguras y licencia pendiente.
+- Documentación de la cadena en `docs/CI.md`.
 
 ### Changed
 - `docs/ARCHITECTURE.md` se traslada a `ARCHITECTURE.md` (raíz) para que
@@ -80,6 +96,10 @@ usa [Semantic Versioning](https://semver.org/lang/es/).
 - Tras rutas de runtime y pruebas de arquitectura: `212 passed, 1 skipped`.
 - Tras extensión y empaquetado: `224 passed, 1 skipped` (2026-11-19).
 - Tras purga de secretos e instalador: `231 passed, 1 skipped` (2026-11-20).
+- Tras CI, SBOM y verificación de artefactos: `241 passed, 1 skipped`
+  (2026-11-21).
+- Tras tolerancia de arranque en frío y diagnósticos: `246 passed,
+  1 skipped` (2026-11-23).
 
 ## [1.2.0] - 2026-11-19
 

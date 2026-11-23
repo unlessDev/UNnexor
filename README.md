@@ -114,6 +114,28 @@ sin desinstalar:
 El token se regenera en el siguiente arranque y la extensión deberá
 volver a emparejarse.
 
+### CI, SBOM y verificación de artefactos
+
+GitHub Actions ejecuta en Windows la suite de pruebas y el empaquetado
+completo (extensión, escritorio, instalador y SBOM) en cada push o pull
+request a `main` y `develop`. El flujo está en `.github/workflows/ci.yml`.
+No publica releases ni firma artefactos: solo construye, prueba y sube
+artefactos temporales de CI.
+
+Para reproducirlo en local, después de compilar los tres paquetes:
+
+```powershell
+cd local-bridge
+.venv\Scripts\python.exe ..\deployment\sbom\build.py
+.venv\Scripts\python.exe ..\deployment\verify_artifacts.py
+```
+
+El SBOM es CycloneDX 1.5 e inventaría el entorno Python de build/runtime,
+la extensión y el puente. La verificación comprueba los SHA-256, los
+informes de build y el propio SBOM, y escribe
+`release/verification-report.json`. Detalles y límites:
+[`docs/CI.md`](docs/CI.md).
+
 ## Características
 
 **Extensión**
@@ -188,6 +210,7 @@ publicación en una URL pública para las tiendas está pendiente).
 * [Catálogo de modelos y evaluador](docs/MODELS_CATALOG.md)
 * [Solución de problemas](docs/TROUBLESHOOTING.md)
 * [Mapa de dependencias](docs/DEPENDENCY_MAP.md)
+* [CI, SBOM y verificación](docs/CI.md)
 * [Preparación para Chrome Web Store](docs/stores/CHROME_WEB_STORE.md)
 * [Preparación para Edge Add-ons](docs/stores/EDGE_ADDONS.md)
 * [Permisos de la extensión](docs/stores/PERMISSIONS.md)

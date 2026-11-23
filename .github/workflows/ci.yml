@@ -1,0 +1,119 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.12"
+  PYTHONIOENCODING: utf-8
+  PYTHONUTF8: "1"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+jobs:
+  tests:
+    name: Pruebas
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: Descargar código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: |
+            local-bridge/requirements.txt
+            local-bridge/requirements-build.txt
+
+      - name: Instalar dependencias
+        run: python -m pip install -r local-bridge/requirements.txt
+
+      - name: Ejecutar la suite
+        working-directory: local-bridge
+        run: python -m pytest tests -q
+
+  artifacts:
+    name: Empaquetar y verificar
+    needs: tests
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - name: Descargar código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: |
+            local-bridge/requirements.txt
+            local-bridge/requirements-build.txt
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install -r local-bridge/requirements.txt
+          python -m pip install -r local-bridge/requirements-build.txt
+
+      - name: Empaquetar la extensión
+        run: python deployment/extension/build.py
+
+      - name: Empaquetar la aplicación de escritorio
+        run: python deployment/windows/build.py
+
+      - name: Instalar Inno Setup 6
+        run: choco install innosetup --yes --no-progress
+
+      - name: Compilar y probar el instalador
+        run: python deployment/installer/build.py
+
+      - name: Generar SBOM CycloneDX
+        run: python deployment/sbom/build.py
+
+      - name: Verificar artefactos y checksums
+        run: python deployment/verify_artifacts.py
+
+      - name: Publicar artefactos verificados
+        uses: actions/upload-artifact@v4
+        with:
+          name: extdator-windows-artifacts
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            release/browser-extension/*.zip
+            release/browser-extension/SHA256SUMS.txt
+            release/browser-extension/build-report.json
+            release/windows/*.zip
+            release/windows/SHA256SUMS.txt
+            release/windows/build-report.json
+            release/installer/*.exe
+            release/installer/SHA256SUMS.txt
+            release/installer/build-report.json
+            release/sbom/*.json
+            release/sbom/SHA256SUMS.txt
+            release/verification-report.json
+
+      - name: Publicar informes si algo falla
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: extdator-ci-reports
+          if-no-files-found: ignore
+          retention-days: 7
+          path: |
+            release/**/build-report.json
+            release/**/build.log
+            release/verification-report.json

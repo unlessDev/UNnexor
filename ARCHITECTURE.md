@@ -231,6 +231,9 @@ seguridad de una aplicación local.
 | ZIP Edge | mismo paquete, validación de manifiesto | **Generado y verificado localmente** |
 | EXE/one-folder | `deployment/windows/build.py` + PyInstaller 6 | **Generado y validado (smoke + GUI offscreen)** |
 | Instalador | `deployment/installer/build.py` + Inno Setup 6 por usuario | **Generado y probado (instalación, preservación, purga y desinstalación)** |
+| SBOM | `deployment/sbom/build.py` (CycloneDX 1.5) | **Generado y verificado localmente** |
+| Verificación | `deployment/verify_artifacts.py` | **Checksums, informes y SBOM** |
+| CI | `.github/workflows/ci.yml` (GitHub Actions, Windows) | Pruebas + empaquetado + verificación |
 | Actualizaciones | GitHub Releases + SHA-256 | Diseño pendiente |
 | Firma | Authenticode si el propietario obtiene certificado | Pendiente de decisión |
 
@@ -258,6 +261,16 @@ servidor sin consola. El build poda módulos Qt no usados (Qml/Quick/PDF/
 OpenGL) y ejecuta una prueba GUI con `QT_QPA_PLATFORM=offscreen`. El OCR
 local pesado no se empaqueta en esta fase; la visión del modelo sigue
 disponible.
+
+La cadena de CI es deliberadamente de solo lectura: `permissions:
+contents: read`, sin secretos de firma ni de tiendas. El trabajo de
+pruebas instala dependencias y ejecuta pytest; el de artefactos compila la
+extensión, el EXE, el instalador (Inno Setup instalado con Chocolatey),
+genera el SBOM y ejecuta `deployment/verify_artifacts.py`. Los artefactos
+se conservan 14 días como adjuntos del flujo y no se publican. El SBOM
+CycloneDX 1.5 cubre el entorno Python de build/runtime y declara
+explícitamente la licencia como pendiente; no incluye modelos, claves ni
+datos de usuario. Límites y comandos: `docs/CI.md`.
 
 ## 9. Decisiones registradas
 
