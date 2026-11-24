@@ -68,13 +68,21 @@ usa [Semantic Versioning](https://semver.org/lang/es/).
 - Pruebas del SBOM y del verificador, incluidas manipulación de artefactos,
   hashes incorrectos, rutas inseguras y licencia pendiente.
 - Documentación de la cadena en `docs/CI.md`.
+- Asistente de primer inicio del escritorio en tres pasos (bienvenida y
+  privacidad, requisitos de Ollama/modelo y emparejamiento por código).
+  Comprueba Ollama en segundo plano sin bloquear la UI, permite reintentar,
+  abrir el selector de modelos o Ajustes, detecta la vinculación y se puede
+  reabrir desde el menú ⚙. No se muestra en pruebas `offscreen`.
+- `PairingManager.is_confirmed()` para que la interfaz detecte que la
+  extensión completó el emparejamiento sin volver a exponer el token.
 
 ### Changed
 - `docs/ARCHITECTURE.md` se traslada a `ARCHITECTURE.md` (raíz) para que
   sea el documento canónico; se actualizan los enlaces.
 - La extensión deja de solicitar `scripting` y permisos de host para webs
   arbitrarias; solo conserva `storage` y acceso a `127.0.0.1`/`localhost`.
-- El primer arranque sin vinculación abre el asistente de opciones.
+- El primer arranque de la extensión sin vinculación abre el asistente de
+  opciones.
 - Los mensajes de extensión y opciones evitan rutas de desarrollo y
   terminología técnica innecesaria.
 - La conexión manual solo acepta direcciones locales (`127.0.0.1` o
@@ -99,6 +107,8 @@ usa [Semantic Versioning](https://semver.org/lang/es/).
 - Tras CI, SBOM y verificación de artefactos: `241 passed, 1 skipped`
   (2026-11-21).
 - Tras tolerancia de arranque en frío y diagnósticos: `246 passed,
+  1 skipped` (2026-11-23).
+- Tras el asistente de primer inicio del escritorio: `262 passed,
   1 skipped` (2026-11-23).
 
 ## [1.2.0] - 2026-11-19

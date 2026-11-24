@@ -121,7 +121,8 @@ ZIP reproducibles + SHA-256). Las guías de tienda están en `docs/stores/`.
 | `window.py` | Ventana frameless, always-on-top, no-activación, menú, opacidad, copia, historial visual. |
 | `widgets.py` | Burbujas, Markdown final, matemática Unicode, autoscroll y recálculo de altura. |
 | `workers.py` | Consumo de cola, streaming, cancelación, visión/OCR y sondeo de estado. |
-| `dialogs.py` | Ajustes, selector de modelos, emparejamiento, primer uso y diagnóstico. |
+| `dialogs.py` | Ajustes, selector de modelos y emparejamiento. |
+| `onboarding.py` | Asistente de primer inicio: privacidad, requisitos y código de vinculación. |
 | `providers_dialog.py` | Alta/baja de proveedores; claves al keyring. |
 | `screenshot.py` | Overlay de captura por monitor, DPI y preview visión/OCR. |
 | `window_manager.py` | Win32: hook de rueda, `WS_EX_NOACTIVATE`, `WM_MOUSEACTIVATE`, DPI. |

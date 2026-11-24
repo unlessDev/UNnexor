@@ -146,6 +146,23 @@ Las imágenes temporales (`%TEMP%\extdator_capture_*.png`) se borran tras
 procesar. La imagen no sale de la máquina salvo que uses un proveedor
 remoto con un modelo de visión (y solo hacia ese proveedor).
 
+## Asistente de primer inicio (escritorio)
+
+En el primer arranque real, el panel abre un asistente modal de tres pasos
+(se puede reabrir desde **⚙ → Asistente de inicio**):
+
+1. **Bienvenida y privacidad** — qué hace Extdator y qué datos salen del
+   equipo (por defecto, solo hacia Ollama en `127.0.0.1`).
+2. **Requisitos** — comprueba Ollama y el modelo activo en segundo plano,
+   sin descargar nada. Permite reintentar, elegir otro modelo o abrir
+   Ajustes; se puede continuar aunque falte algo para configurarlo luego.
+3. **Conectar extensión** — muestra el código efímero de 6 dígitos y
+   detecta automáticamente cuándo la extensión completa la vinculación.
+
+Se muestra una sola vez (clave `onboarding/seen` en `QSettings`). En
+pruebas y smoke tests con plataforma `offscreen` no se abre. No modifica
+el `.env`, no descarga modelos y no envía datos a terceros.
+
 ## Extensión (opciones — asistente v1.2.0)
 
 La página de opciones es un asistente de 4 pasos:

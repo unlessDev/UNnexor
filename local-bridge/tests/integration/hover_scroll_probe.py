@@ -90,7 +90,7 @@ def main() -> int:
     bus, state = Bus(), RuntimeState(model="probe")
     ollama = OllamaClient(cfg, base_url="http://127.0.0.1:9")  # no llamado en la sonda
 
-    window = BridgeWindow(cfg, bus, state, ollama)
+    window = BridgeWindow(cfg, bus, state, ollama, show_onboarding=False)
     screen = QGuiApplication.primaryScreen().availableGeometry()
     window.resize(cfg.window_width, cfg.window_height)
     window.move(

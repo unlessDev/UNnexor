@@ -30,6 +30,7 @@ class PairingManager:
         self._lock = threading.Lock()
         self._code = ""
         self._expires_at = 0.0
+        self._confirmed = False
 
     def current_code(self) -> str:
         """Devuelve el código vigente (lo crea si no existe o caducó)."""
@@ -54,12 +55,19 @@ class PairingManager:
             # Un solo uso: rota inmediatamente tras confirmar.
             self._code = ""
             self._expires_at = 0.0
+            self._confirmed = True
             return self._token
 
     def revoke(self) -> None:
         with self._lock:
             self._code = ""
             self._expires_at = 0.0
+            self._confirmed = False
+
+    def is_confirmed(self) -> bool:
+        """Indica si se confirmó un emparejamiento desde el último ``revoke``."""
+        with self._lock:
+            return self._confirmed
 
     def seconds_left(self) -> int:
         with self._lock:
