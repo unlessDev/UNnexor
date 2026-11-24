@@ -50,6 +50,11 @@ from ..settings_store import (
     SettingsValidationError,
     restart_required_for,
 )
+from .onboarding import (
+    ONBOARDING_SEEN_KEY,
+    OnboardingDialog,
+    should_show_onboarding,
+)
 from .styles import APP_QSS
 from .widgets import (
     AssistantMessage,
@@ -87,6 +92,7 @@ class BridgeWindow(QMainWindow):
         parent: Optional[QWidget] = None,
         settings_store: Optional[SettingsStore] = None,
         pairing=None,
+        show_onboarding: bool = True,
     ) -> None:
         flags = (
             Qt.WindowType.Window
@@ -104,6 +110,9 @@ class BridgeWindow(QMainWindow):
         self._ollama = ollama
         self._settings_store = settings_store
         self._pairing = pairing
+        self._show_onboarding = show_onboarding
+        self._onboarding_scheduled = False
+        self._onboarding_dialog: Optional[OnboardingDialog] = None
         self._on_top = cfg.always_on_top
         self._opacity = cfg.window_opacity
         self._settings = QSettings("Extdator", "Bridge")
@@ -232,6 +241,10 @@ class BridgeWindow(QMainWindow):
                 self._hook.install(hwnd)
             else:
                 self._hook.update_target(hwnd)
+        if self._show_onboarding and not self._onboarding_scheduled:
+            self._onboarding_scheduled = True
+            # Dejar que la ventana se pinte antes de abrir el diálogo modal.
+            QTimer.singleShot(700, self._maybe_show_onboarding)
 
     def closeEvent(self, event) -> None:  # noqa: N802 (PySide)
         self._save_geometry()
@@ -537,13 +550,15 @@ class BridgeWindow(QMainWindow):
         menu = QMenu(self)
 
         models_action = menu.addAction("🤖  Modelos de IA…")
-        models_action.triggered.connect(self._open_model_selector)
+        models_action.triggered.connect(lambda: self._open_model_selector())
         providers_action = menu.addAction("🔌  Proveedores de API…")
         providers_action.triggered.connect(self._open_providers)
         settings_action = menu.addAction("⚙  Ajustes…")
-        settings_action.triggered.connect(self._open_settings)
+        settings_action.triggered.connect(lambda: self._open_settings())
         pairing_action = menu.addAction("🔗  Emparejar extensión…")
         pairing_action.triggered.connect(self._open_pairing)
+        onboarding_action = menu.addAction("🚀  Asistente de inicio…")
+        onboarding_action.triggered.connect(self._open_onboarding)
 
         menu.addSeparator()
 
@@ -588,10 +603,12 @@ class BridgeWindow(QMainWindow):
     # ------------------------------------------------------------------ #
     # Selector de modelos / proveedores / ajustes / emparejamiento
     # ------------------------------------------------------------------ #
-    def _open_model_selector(self) -> None:
+    def _open_model_selector(self, parent: Optional[QWidget] = None) -> None:
         from .dialogs import ModelSelectorDialog
 
-        dialog = ModelSelectorDialog(self._ollama, self._cfg.ollama_model, parent=self)
+        dialog = ModelSelectorDialog(
+            self._ollama, self._cfg.ollama_model, parent=parent or self
+        )
         dialog.modelSelected.connect(self.apply_model)
         dialog.exec()
 
@@ -640,10 +657,10 @@ class BridgeWindow(QMainWindow):
         dialog.providerChosen.connect(self._use_remote_provider)
         dialog.exec()
 
-    def _open_settings(self) -> None:
+    def _open_settings(self, parent: Optional[QWidget] = None) -> None:
         from .dialogs import SettingsDialog
 
-        dialog = SettingsDialog(self._cfg, parent=self)
+        dialog = SettingsDialog(self._cfg, parent=parent or self)
         dialog.settingsChanged.connect(self.apply_settings)
         dialog.exec()
 
@@ -703,6 +720,38 @@ class BridgeWindow(QMainWindow):
             return
         dialog = PairingDialog(self._pairing, parent=self)
         dialog.exec()
+
+    # ------------------------------------------------------------------ #
+    # Asistente de primer inicio
+    # ------------------------------------------------------------------ #
+    def _maybe_show_onboarding(self) -> None:
+        """Abre el asistente una sola vez, tras pintar la ventana."""
+        if not self.isVisible() or self._onboarding_dialog is not None:
+            return
+        seen = bool(self._settings.value(ONBOARDING_SEEN_KEY, False, type=bool))
+        if not should_show_onboarding(
+            seen=seen, platform_name=QGuiApplication.platformName()
+        ):
+            return
+        self._open_onboarding()
+
+    def _open_onboarding(self, _checked: bool = False) -> None:
+        if self._onboarding_dialog is not None:
+            return
+        dialog = OnboardingDialog(self._cfg, self._ollama, self._pairing, parent=self)
+        dialog.openModelsRequested.connect(
+            lambda: self._open_model_selector(parent=dialog)
+        )
+        dialog.openSettingsRequested.connect(lambda: self._open_settings(parent=dialog))
+        # Se marca como visto al mostrarlo: cerrar el asistente no debe
+        # hacer que reaparezca en cada arranque. Sigue disponible en ⚙.
+        self._settings.setValue(ONBOARDING_SEEN_KEY, True)
+        self._settings.sync()
+        self._onboarding_dialog = dialog
+        try:
+            dialog.exec()
+        finally:
+            self._onboarding_dialog = None
 
     # ------------------------------------------------------------------ #
     # Captura de pantalla por región

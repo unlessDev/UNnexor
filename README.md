@@ -9,7 +9,7 @@ defecto no usa la nube; los proveedores remotos son opcionales.
 > proveedores de IA remotos (clave en el keyring del sistema),
 > configuración desde la propia app (menú ⚙), captura por región con
 > visión u OCR local, emparejamiento de la extensión por código de 6
-> dígitos y asistente de puesta en marcha en options.
+> dígitos y asistentes de primer inicio en la extensión y en el escritorio.
 
 ## Estado del proyecto
 
@@ -17,7 +17,7 @@ defecto no usa la nube; los proveedores remotos son opcionales.
 |---|---|
 | Extensión MV3 | Funcional; paquete de tienda generado y validado localmente |
 | Puente local + panel | Funcional; ejecutable one-folder generado y validado |
-| Pruebas | `231 passed, 1 skipped` (2026-11-20) |
+| Pruebas | `262 passed, 1 skipped` (2026-11-23) |
 | Instalador Windows | **Generado y probado localmente** (Inno Setup por usuario) |
 | Publicación en tiendas | No iniciada; requiere cuentas, URL de privacidad, capturas y licencia |
 | Licencia | **Pendiente de decisión del propietario** (ver abajo) |
@@ -161,6 +161,9 @@ informes de build y el propio SBOM, y escribe
 * Emparejamiento seguro: `POST /api/pair/confirm` con código efímero de
   6 dígitos (un solo uso, 10 min, límite de intentos, solo orígenes de
   extensión).
+* Asistente de primer inicio del escritorio: privacidad, comprobación de
+  Ollama y del modelo activo con reintento, y emparejamiento con detección
+  de la conexión. Se muestra una vez y se reabre desde ⚙.
 * Capturas por región: `POST /api/image` (PNG validado, tamaño limitado)
   → cola de imagen → visión multimodal u OCR local opcional.
 * Logs sin contenido privado por defecto (`LOG_PRIVACY=1`).

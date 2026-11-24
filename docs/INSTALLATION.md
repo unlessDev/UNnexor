@@ -156,6 +156,9 @@ Idéntico a Chrome con `brave://extensions`.
 4. Rueda del ratón sobre el panel → desplazamiento sin clic.
 5. Botones del panel: 📌 siempre visible · ⧉ copiar · ⟲ nueva conversación ·
    ⚙ menú (opacidad…) · — minimizar · ✕ cerrar.
+6. En el primer arranque, el panel abre el **asistente de inicio**:
+   privacidad, comprobación de Ollama/modelo y código de emparejamiento.
+   Se puede reabrir desde `⚙ → Asistente de inicio`.
 
 ## Modo solo servidor (sin GUI)
 
