@@ -16,9 +16,9 @@ validación real · 🟡 parcial · ⏳ pendiente · ⛔ no viable (motivo).
 | 4 Estabilización + calidad (Black/Ruff/Mypy en CI) | ✅ | PR #9: 3 bugs reales corregidos con regresión |
 | 5 Captura y segmentación de audio | ✅ | ver abajo |
 | 6 Reconocimiento de voz | ✅ | ver abajo y `docs/SPEECH.md` |
-| 7 Catálogo de proveedores | ⏳ | |
+| 7 Catálogo de proveedores | ✅ | ver abajo |
 | 8 Compatibilidad de modelos y hardware | ⏳ | |
-| 9 Model Router | ⏳ | |
+| 9 Model Router | ✅ | ver abajo |
 | 10 Perfiles y base de conocimiento (RAG) | ⏳ | |
 | 11 Asistencia en conversaciones | ⏳ | |
 | 12 Traducción en tiempo real | ⏳ | |
@@ -60,6 +60,21 @@ STA (no probado).
 | Recomendación por hardware | ✅ | Pruebas + ejecución sobre el hardware real detectado |
 | Filtro de alucinaciones y bucles | ✅ | Pruebas unitarias y silencio real con Whisper base |
 | Variantes regionales del español | 🟡 | Solo voz TTS es-MX; falta voz humana de distintas regiones |
+
+## Etapas 7 y 9 — Catálogo de proveedores y Model Router
+
+| Capacidad | Estado | Cómo se validó |
+|---|---|---|
+| Niveles de acceso estructurados y estados honestos | ✅ | Pruebas; diálogo agrupado por nivel |
+| Groq (chat) a través del router y el ejecutor | ✅ | 1 petición real: `openai/gpt-oss-20b`, 27 fragmentos, 0,43 s |
+| Anthropic (adaptador nativo) | 🧪 | Respuestas simuladas (SSE, errores, paginación); sin clave real |
+| Deepgram: validación de clave sin coste | 🧪 | Simulado; sin clave real |
+| Consentimientos remote_data / costs / documents | ✅ | Pruebas de persistencia y del router |
+| Historial de uso y límites informados | ✅ | Pruebas + registro real tras la petición a Groq |
+| Router: solo local por defecto, estrategias, fijación, explicación | ✅ | `tests/test_routing.py` |
+| Alternativas sin cambios silenciosos; sin cambio tras emitir texto | ✅ | `tests/test_routing.py` |
+| Candidatos de Ollama con capacidades reales | 🧪 | Ollama simulado; validar con Ollama en marcha en la etapa 11 |
+| Interfaz del catálogo/consentimientos en el copiloto | ⏳ | Etapa 14 |
 
 ## Bloqueantes registrados para la distribución
 

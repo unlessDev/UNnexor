@@ -24,6 +24,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 import httpx
 
 from .base import ProviderError, ProviderModel
+from .usage import extract_rate_limit_headers
 
 # Imágenes: mensaje estilo multimodal OpenAI (data URL base64).
 _KIND_HTTP = {
@@ -65,6 +66,9 @@ class OpenAICompatClient:
             base += "/"
         self.provider_id = provider_id
         self.base_url = base
+        # Últimos encabezados de límites informados (p. ej. x-ratelimit-* de
+        # Groq): se registran en el historial de uso, nunca se inventan.
+        self.last_rate_limits: Dict[str, str] = {}
         self._client = httpx.Client(
             base_url=base,
             headers={
@@ -162,6 +166,7 @@ class OpenAICompatClient:
             with self._client.stream(
                 "POST", "chat/completions", json=payload
             ) as response:
+                self.last_rate_limits = extract_rate_limit_headers(response.headers)
                 if response.status_code in _KIND_HTTP:
                     message, kind = _KIND_HTTP[response.status_code]
                     raise ProviderError(message, kind)
@@ -249,6 +254,9 @@ def _extract_delta(obj: Dict[str, Any]) -> str:
 
 def _read_error(response: httpx.Response) -> str:
     try:
+        # En una respuesta en streaming el cuerpo no está cargado: sin read()
+        # httpx lanza ResponseNotRead y se perdía el mensaje del proveedor.
+        response.read()
         body = response.json()
         if isinstance(body, dict):
             error = body.get("error")

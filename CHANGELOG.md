@@ -50,8 +50,24 @@ usa [Semantic Versioning](https://semver.org/lang/es/).
   1,03 s y small 3,48 s por intervención; Groq turbo 0,47 s; los tres
   transcriben exacto el español de prueba. Prueba en vivo: captura loopback
   + Whisper base con 1,3–2,0 s de retraso por intervención.
+- Catálogo unificado de proveedores: nivel de acceso estructurado (local,
+  gratuito con límites, créditos, mixto, pago por consumo, desconocido),
+  capacidades, protocolo y fecha de verificación; estado honesto de la
+  conexión ("clave válida · acceso sin confirmar"). El diálogo de
+  proveedores agrupa por nivel de acceso automáticamente.
+- Adaptador nativo de Anthropic (Messages API) y Deepgram como proveedor
+  solo de voz (validación con `GET /v1/projects`).
+- Consentimientos explícitos por proveedor (`remote_data`, `costs`,
+  `documents`) e historial local de uso con límites informados por el
+  proveedor, sin contenido.
+- Model Router (`app/routing`): tareas, estrategias, política solo-local por
+  defecto, descarte explicado, alternativas sin cambios silenciosos a
+  remoto y ejecutor en streaming. Validado con una petición real a Groq.
 
 ### Fixed
+- Proveedores OpenAI-compatible: con un error HTTP no tabulado (p. ej. 400)
+  durante el streaming, el cuerpo no se leía y se mostraba un error interno
+  de httpx (`ResponseNotRead`) en lugar del mensaje del proveedor.
 - `--server-only` no podía funcionar: pasaba un `uvicorn.Config` a
   `uvicorn.run()` (que espera una app ASGI), así que arrancaba en
   `127.0.0.1:8000` con una "aplicación" no invocable e ignoraba

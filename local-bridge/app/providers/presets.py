@@ -6,8 +6,12 @@ describe el acceso según lo documentado; NUNCA precios ni cuotas
 exactas no verificables: donde el límite no está publicado se indica
 "consultar documentación".
 
-Adaptadores nativos PENDIENTES (protocolo propio, sin implementar):
-  * Anthropic  — x-api-key + anthropic-version, POST /v1/messages.
+Campos estructurados (2026-11-24): ``access`` (``AccessTier``),
+``capabilities`` (chat / vision / stt; la visión depende del modelo
+concreto), ``protocol`` (openai · anthropic · deepgram) y ``verified_at``.
+
+Adaptadores nativos: Anthropic (``anthropic.py``) y Deepgram (solo voz,
+``app/stt/deepgram_engine.py``). PENDIENTES (protocolo propio):
   * Cohere     — POST /v2/chat (v2), Bearer.
   * Cloudflare — REST por-account, Bearer token.
 Gemini se incluye vía su capa de compatibilidad OpenAI OFICIAL
@@ -18,9 +22,15 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
+from .access import AccessTier
+
 PRESETS: List[Dict[str, Any]] = [
     {
         "id": "openai",
+        "access": AccessTier.PAY_AS_YOU_GO.value,
+        "capabilities": ["chat", "vision", "stt"],
+        "protocol": "openai",
+        "verified_at": "2026-11-16",
         "label": "OpenAI",
         "base_url": "https://api.openai.com/v1",
         "kind": "de pago",
@@ -31,6 +41,10 @@ PRESETS: List[Dict[str, Any]] = [
     },
     {
         "id": "groq",
+        "access": AccessTier.FREE_LIMITED.value,
+        "capabilities": ["chat", "vision", "stt"],
+        "protocol": "openai",
+        "verified_at": "2026-11-16",
         "label": "Groq",
         "base_url": "https://api.groq.com/openai/v1",
         "kind": "free tier documentado (límites por modelo)",
@@ -42,6 +56,10 @@ PRESETS: List[Dict[str, Any]] = [
     },
     {
         "id": "openrouter",
+        "access": AccessTier.MIXED.value,
+        "capabilities": ["chat", "vision"],
+        "protocol": "openai",
+        "verified_at": "2026-11-16",
         "label": "OpenRouter",
         "base_url": "https://openrouter.ai/api/v1",
         "kind": "mixto: modelos ':free' (20 rpm/50 req-día sin créditos) y de pago",
@@ -52,6 +70,10 @@ PRESETS: List[Dict[str, Any]] = [
     },
     {
         "id": "mistral",
+        "access": AccessTier.FREE_LIMITED.value,
+        "capabilities": ["chat", "vision"],
+        "protocol": "openai",
+        "verified_at": "2026-11-16",
         "label": "Mistral AI",
         "base_url": "https://api.mistral.ai/v1",
         "kind": "free mode documentado (límites: consultar docs)",
@@ -63,6 +85,10 @@ PRESETS: List[Dict[str, Any]] = [
     },
     {
         "id": "cerebras",
+        "access": AccessTier.FREE_LIMITED.value,
+        "capabilities": ["chat"],
+        "protocol": "openai",
+        "verified_at": "2026-11-16",
         "label": "Cerebras",
         "base_url": "https://api.cerebras.ai/v1",
         "kind": "free tier existe (límites: consultar docs)",
@@ -73,6 +99,10 @@ PRESETS: List[Dict[str, Any]] = [
     },
     {
         "id": "together",
+        "access": AccessTier.PAY_AS_YOU_GO.value,
+        "capabilities": ["chat", "vision"],
+        "protocol": "openai",
+        "verified_at": "2026-11-16",
         "label": "Together AI",
         "base_url": "https://api.together.ai/v1",
         "kind": "de pago",
@@ -83,6 +113,10 @@ PRESETS: List[Dict[str, Any]] = [
     },
     {
         "id": "xai",
+        "access": AccessTier.PAY_AS_YOU_GO.value,
+        "capabilities": ["chat", "vision"],
+        "protocol": "openai",
+        "verified_at": "2026-11-16",
         "label": "xAI (Grok)",
         "base_url": "https://api.x.ai/v1",
         "kind": "de pago",
@@ -93,6 +127,10 @@ PRESETS: List[Dict[str, Any]] = [
     },
     {
         "id": "moonshot",
+        "access": AccessTier.PAY_AS_YOU_GO.value,
+        "capabilities": ["chat"],
+        "protocol": "openai",
+        "verified_at": "2026-11-16",
         "label": "Moonshot AI (Kimi)",
         "base_url": "https://api.moonshot.ai/v1",
         "kind": "de pago",
@@ -103,6 +141,10 @@ PRESETS: List[Dict[str, Any]] = [
     },
     {
         "id": "hf_router",
+        "access": AccessTier.CREDITS.value,
+        "capabilities": ["chat", "vision"],
+        "protocol": "openai",
+        "verified_at": "2026-11-16",
         "label": "Hugging Face Router",
         "base_url": "https://router.huggingface.co/v1",
         "kind": "créditos según plan (PRO/Team/Enterprise)",
@@ -113,6 +155,10 @@ PRESETS: List[Dict[str, Any]] = [
     },
     {
         "id": "zai",
+        "access": AccessTier.PAY_AS_YOU_GO.value,
+        "capabilities": ["chat", "vision"],
+        "protocol": "openai",
+        "verified_at": "2026-11-16",
         "label": "Z.ai (GLM)",
         "base_url": "https://api.z.ai/api/paas/v4/",
         "kind": "de pago",
@@ -123,6 +169,10 @@ PRESETS: List[Dict[str, Any]] = [
     },
     {
         "id": "nvidia_nim",
+        "access": AccessTier.CREDITS.value,
+        "capabilities": ["chat", "vision"],
+        "protocol": "openai",
+        "verified_at": "2026-11-16",
         "label": "NVIDIA NIM",
         "base_url": "https://integrate.api.nvidia.com/v1",
         "kind": "créditos de prueba (límites: consultar docs)",
@@ -133,6 +183,10 @@ PRESETS: List[Dict[str, Any]] = [
     },
     {
         "id": "gemini",
+        "access": AccessTier.FREE_LIMITED.value,
+        "capabilities": ["chat", "vision"],
+        "protocol": "openai",
+        "verified_at": "2026-11-16",
         "label": "Google AI Studio (Gemini)",
         "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
         "kind": "free tier documentado (acceso limitado a ciertos modelos)",
@@ -142,13 +196,43 @@ PRESETS: List[Dict[str, Any]] = [
         "Google (NO es Vertex AI).",
         "models_endpoint": True,
     },
+    {
+        "id": "anthropic",
+        "access": AccessTier.PAY_AS_YOU_GO.value,
+        "capabilities": ["chat", "vision"],
+        "protocol": "anthropic",
+        "verified_at": "2026-11-24",
+        "label": "Anthropic (Claude)",
+        "base_url": "https://api.anthropic.com/v1",
+        "kind": "de pago",
+        "key_format": "sk-ant-…",
+        "docs": "https://docs.anthropic.com/en/api/messages",
+        "description": "Modelos Claude con su API nativa (Messages API); "
+        "requiere saldo de créditos en la consola de Anthropic.",
+        "models_endpoint": True,
+    },
+    {
+        "id": "deepgram",
+        "access": AccessTier.CREDITS.value,
+        "capabilities": ["stt"],
+        "protocol": "deepgram",
+        "verified_at": "2026-11-24",
+        "label": "Deepgram (solo voz)",
+        "base_url": "https://api.deepgram.com/v1",
+        "kind": "200 $ de crédito inicial; luego pago por consumo",
+        "key_format": "…",
+        "docs": "https://developers.deepgram.com/docs/pre-recorded-audio",
+        "description": "Reconocimiento de voz Nova-3 (español: es, es-419). "
+        "No ofrece modelos de chat: se usa en el copiloto para transcribir.",
+        "models_endpoint": False,
+    },
 ]
 
 PRESET_IDS = [p["id"] for p in PRESETS]
 
 # Proveedores que solo ofrecen voz (no chat OpenAI-compatible). Sus claves
 # viven en el mismo keyring y se incluyen en la purga de secretos.
-SPEECH_ONLY_PROVIDER_IDS = ["deepgram"]
+SPEECH_ONLY_PROVIDER_IDS = [p["id"] for p in PRESETS if p["capabilities"] == ["stt"]]
 
 
 def preset(provider_id: str) -> Optional[Dict[str, Any]]:
