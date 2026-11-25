@@ -48,6 +48,7 @@ module = [
     "app.copilot.*",
     "app.knowledge.*",
     "app.routing.*",
+    "app.compat.*",
 ]
 disallow_untyped_defs = true
 disallow_incomplete_defs = true

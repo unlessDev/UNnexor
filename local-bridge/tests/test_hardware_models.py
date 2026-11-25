@@ -14,6 +14,7 @@ from app.model_evaluator import (
     TIER_IMPOSIBLE,
     TIER_PERFECTO,
     TIER_REGULAR,
+    TIER_SIN_EVALUAR,
     assess_model,
     context_warning,
     estimate_requirements,
@@ -143,9 +144,10 @@ def test_no_disk_space_for_pull_is_imposible():
     assert any("espacio" in r.lower() for r in a.reasons)
 
 
-def test_unknown_data_falls_back_to_regular():
+def test_unknown_data_is_not_evaluated():
     a = assess_model("modelo-misterioso", None, None, None, _hw_gpu())
-    assert a.tier == TIER_REGULAR
+    assert a.tier == TIER_SIN_EVALUAR
+    assert a.label == "NO EVALUADO"
     assert any("sin datos" in r.lower() for r in a.reasons)
 
 

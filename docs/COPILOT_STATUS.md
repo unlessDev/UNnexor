@@ -17,7 +17,7 @@ validación real · 🟡 parcial · ⏳ pendiente · ⛔ no viable (motivo).
 | 5 Captura y segmentación de audio | ✅ | ver abajo |
 | 6 Reconocimiento de voz | ✅ | ver abajo y `docs/SPEECH.md` |
 | 7 Catálogo de proveedores | ✅ | ver abajo |
-| 8 Compatibilidad de modelos y hardware | ⏳ | |
+| 8 Compatibilidad de modelos y hardware | ✅ | ver abajo |
 | 9 Model Router | ✅ | ver abajo |
 | 10 Perfiles y base de conocimiento (RAG) | ✅ | ver abajo |
 | 11 Asistencia en conversaciones | ✅ | Núcleo + interfaz probados en vivo |
@@ -137,6 +137,19 @@ la compatibilidad de la etapa 8 debe reconocer Vulkan además de CUDA/ROCm.
 | Desafíos en la interfaz (región, pantalla, varias, periódico) | 🟡 | Pruebas de señales; la selección de región real requiere interacción humana |
 | Permisos por servicio, estrategia y modelos por tarea | ✅ | Pruebas offscreen (permiso concedido y revocado) |
 | Descarga consentida de modelos de voz con progreso | 🟡 | Implementada (progreso por señal); probada la descarga por script, no desde el botón |
+
+## Etapa 8 — Compatibilidad de modelos y hardware
+
+| Capacidad | Estado | Cómo se validó |
+|---|---|---|
+| Cinco clases con explicación, incl. "No evaluado" | ✅ | Pruebas |
+| Backends: CUDA, Vulkan, HIP/ROCm, AVX/AVX2/AVX-512 | ✅ | Equipo real: Vulkan sí, HIP presente (Polaris no soportado por ROCm), CUDA no, AVX2 sí |
+| GPU sin backend utilizable → evaluación en CPU | ✅ | Pruebas |
+| Carga combinada (voz + LLM + visión + OCR) | ✅ | Pruebas + equipo real (coincide con lo observado: alternancia de modelos y el cierre con Pix2Text) |
+| Medición STT (latencia, RTF, RSS) con voz real | ✅ | base 1,42 s / 217 MB, small 4,94 s / 582 MB |
+| Medición LLM (carga, primer token, tokens/s, VRAM) | 🧪 | Prueba con Ollama simulado; la ejecución real falló porque otras aplicaciones ocupaban la VRAM (`ErrorOutOfDeviceMemory`, Vulkan) |
+| VRAM libre real en tiempo de carga | ⏳ | El evaluador usa la VRAM total; la libre varía con otras aplicaciones (limitación documentada) |
+| Catálogo visual por modelo (semáforo) | ✅ | Diálogo de modelos existente con las nuevas etiquetas |
 
 ## Bloqueantes registrados para la distribución
 

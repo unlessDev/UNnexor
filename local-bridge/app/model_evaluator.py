@@ -40,12 +40,15 @@ TIER_PERFECTO = "perfecto"
 TIER_REGULAR = "regular"
 TIER_ALTO = "alto"
 TIER_IMPOSIBLE = "imposible"
+TIER_SIN_EVALUAR = "sin_evaluar"
 
 TIER_META: Dict[str, Tuple[str, str, str]] = {
-    TIER_PERFECTO: ("🟢", "PERFECTO", "#3ddc97"),
-    TIER_REGULAR: ("🟡", "REGULAR", "#ffd166"),
-    TIER_ALTO: ("🟠", "ALTO CONSUMO", "#ff9f43"),
-    TIER_IMPOSIBLE: ("🔴", "IMPOSIBLE", "#ff6b6b"),
+    # Identificadores internos estables; etiquetas = clasificación pública.
+    TIER_PERFECTO: ("🟢", "ÓPTIMO", "#3ddc97"),
+    TIER_REGULAR: ("🟡", "COMPATIBLE", "#ffd166"),
+    TIER_ALTO: ("🟠", "EXIGENTE", "#ff9f43"),
+    TIER_IMPOSIBLE: ("🔴", "NO COMPATIBLE", "#ff6b6b"),
+    TIER_SIN_EVALUAR: ("⚪", "NO EVALUADO", "#8a93a5"),
 }
 
 DEFAULT_CONTEXT = 8192
@@ -124,6 +127,21 @@ def estimate_requirements(
     }
 
 
+def gpu_backend_available(vendor: str, backends: Dict[str, Any]) -> bool:
+    """¿Hay un backend de inferencia plausible para una GPU de ``vendor``?
+
+    No se asume compatibilidad por fabricante: NVIDIA necesita el driver
+    CUDA o Vulkan; AMD/Intel, Vulkan o el runtime HIP (ROCm). La palabra
+    final la tiene la medición real (``ollama_gpu_active``).
+    """
+    vendor = (vendor or "").upper()
+    if vendor == "NVIDIA":
+        return bool(backends.get("cuda_driver") or backends.get("vulkan"))
+    if vendor in ("AMD", "INTEL"):
+        return bool(backends.get("vulkan") or backends.get("hip_runtime"))
+    return bool(backends.get("vulkan"))
+
+
 def gpu_budget(hw_dict: Dict[str, Any]) -> Tuple[Optional[float], bool]:
     """VRAM usable (GB) de la mejor GPU y si es dato fiable.
 
@@ -131,7 +149,12 @@ def gpu_budget(hw_dict: Dict[str, Any]) -> Tuple[Optional[float], bool]:
     utilizable (se evaluará como solo-CPU).
     """
     best: Optional[int] = None
+    backends = hw_dict.get("backends") or {}
     for gpu in hw_dict.get("gpus", []):
+        # Sin un backend utilizable para esa GPU (CUDA en NVIDIA; Vulkan o
+        # ROCm/HIP en AMD/Intel), su VRAM no cuenta: se evalúa en CPU.
+        if backends and not gpu_backend_available(gpu.get("vendor", ""), backends):
+            continue
         vram = gpu.get("vram_total_mb")
         # Ignora iGPU diminutas (≤ 256 MB).
         if isinstance(vram, int) and vram > 256 and (best is None or vram > best):
@@ -198,6 +221,10 @@ TIER_EXPLANATIONS = {
         "incompatibilidad con tu entorno de ejecución. Por seguridad, la "
         "selección está deshabilitada."
     ),
+    TIER_SIN_EVALUAR: (
+        "Todavía no hay datos suficientes (tamaño o parámetros) para emitir una "
+        "recomendación fiable. Puedes probarlo con una medición de rendimiento."
+    ),
 }
 
 
@@ -241,9 +268,8 @@ def assess_model(
         reasons.append("Sin datos de tamaño suficientes para una evaluación fiable.")
         return Assessment(
             model=model_name,
-            tier=TIER_REGULAR,
-            explanation=TIER_EXPLANATIONS[TIER_REGULAR]
-            + " No se pudo estimar su consumo con precisión.",
+            tier=TIER_SIN_EVALUAR,
+            explanation=TIER_EXPLANATIONS[TIER_SIN_EVALUAR],
             reasons=reasons,
             metrics=metrics,
         )

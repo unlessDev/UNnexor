@@ -99,6 +99,16 @@ usa [Semantic Versioning](https://semver.org/lang/es/).
   configurables; botón 🧭 y entrada de menú en el panel principal.
   Validada en Windows real: sesión iniciada desde la página, pregunta TTS
   por altavoces → sugerencia de qwen3:8b en el panel flotante.
+- Compatibilidad (etapa 8): clasificación pública en cinco clases
+  (Óptimo, Compatible, Exigente, No compatible, No evaluado — antes, sin
+  datos se mostraba "Regular"); detección de backends (CUDA, Vulkan,
+  HIP/ROCm, AVX2/AVX-512) que decide si la VRAM de una GPU cuenta;
+  evaluación de la carga combinada voz + respuesta + visión + OCR; y
+  mediciones opcionales con consentimiento desde "Motores y modelos". En
+  el equipo de referencia: Whisper + qwen3:8b → Óptimo; añadir
+  qwen2.5vl:7b → Exigente (Ollama alterna modelos en la VRAM).
+  Mediciones reales con voz TTS: Whisper base 1,42 s y 217 MB, small
+  4,94 s y 582 MB por intervención de ~6,5 s.
 - Router: desempate por especialización (modelos de visión o de código
   penalizados en tareas de texto; los de código preferidos en desafíos).
 
