@@ -24,7 +24,8 @@ validación real · 🟡 parcial · ⏳ pendiente · ⛔ no viable (motivo).
 | 12 Traducción en tiempo real | ✅ | Núcleo real + interfaz (pruebas offscreen) |
 | 13 Desafíos en pantalla | 🟡 | Núcleo real; captura en la interfaz sin prueba manual de selección de región |
 | 14 Interfaz y experiencia | ✅ | ver abajo |
-| 15–20 Seguridad, pruebas integrales, distribución, CI, auditoría final | ⏳ | |
+| 17 Distribución (EXE + instalador con el copiloto) | ✅ | Build + smoke + GUI offscreen + instalador con ciclo completo (2026-11-25) |
+| 15, 16, 18–20 Seguridad, pruebas integrales, extensión, CI, auditoría final | ⏳ | |
 
 ## Etapa 5 — Captura y segmentación de audio
 
@@ -139,8 +140,11 @@ la compatibilidad de la etapa 8 debe reconocer Vulkan además de CUDA/ROCm.
 
 ## Bloqueantes registrados para la distribución
 
-- `deployment/windows/Extdator.spec` excluye hoy `numpy` y `onnxruntime`
-  (por el OCR). Cuando el copiloto se conecte a la interfaz, el ejecutable
-  debe incluir NumPy, SoundCard (y sus `.h` de cffi), CTranslate2, PyAV,
-  ONNX Runtime y los assets de faster-whisper; medir el tamaño resultante.
-- Revisar la configuración LGPL de las DLL de FFmpeg de PyAV.
+- ~~El ejecutable excluía NumPy y ONNX Runtime~~ → **resuelto**: el EXE y el
+  instalador incluyen el copiloto y el auto-chequeo del build lo verifica
+  (Silero en ONNX Runtime, CTranslate2 int8, transcripción real con
+  Whisper base dentro del EXE). Tamaños: carpeta 302 MB, ZIP 121 MB,
+  instalador 84,5 MB.
+- Revisar la configuración LGPL de las DLL de FFmpeg de PyAV antes de
+  redistribuir públicamente (pendiente de la auditoría de licencias).
+- Firma Authenticode: pendiente de decisión del propietario.

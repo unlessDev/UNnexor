@@ -672,9 +672,22 @@ class BridgeWindow(QMainWindow):
     def open_copilot(self, _checked: bool = False) -> None:
         """Abre (o trae al frente) la ventana del copiloto en tiempo real."""
         if self._copilot_window is None:
-            from .copilot.window import CopilotWindow
+            try:
+                from .copilot.window import CopilotWindow
 
-            self._copilot_window = CopilotWindow(self._cfg)
+                self._copilot_window = CopilotWindow(self._cfg)
+            except ImportError as exc:
+                # Edición sin los componentes de audio/voz (p. ej. un build
+                # que no los empaqueta): se informa en lugar de cerrarse.
+                log.exception("El copiloto no está disponible en esta edición")
+                QMessageBox.warning(
+                    self,
+                    "Copiloto no disponible",
+                    "Esta instalación no incluye los componentes del copiloto "
+                    f"en tiempo real ({exc.name or exc}). Reinstala la versión "
+                    "completa de Extdator.",
+                )
+                return
         self._copilot_window.bring_to_front()
 
     def _open_providers(self) -> None:

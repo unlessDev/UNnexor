@@ -103,6 +103,8 @@ usa [Semantic Versioning](https://semver.org/lang/es/).
   penalizados en tareas de texto; los de código preferidos en desafíos).
 
 ### Fixed
+- Si una edición no incluyera los componentes del copiloto, el botón 🧭
+  muestra un aviso en lugar de cerrar la aplicación.
 - Las burbujas de respuesta programaban su repintado con temporizadores no
   ligados al widget: si se borraban mientras llegaba texto, Qt lanzaba
   "objeto C++ ya eliminado". Los temporizadores usan ahora el widget como
@@ -197,6 +199,14 @@ usa [Semantic Versioning](https://semver.org/lang/es/).
   `localhost`).
 
 ### Distribution
+- El ejecutable y el instalador incluyen ya el copiloto en tiempo real:
+  carpeta 302 MB (antes ≈79 MB), ZIP 121 MB, instalador 84,5 MB (antes
+  ≈29 MB). El smoke test del build exige que el auto-chequeo del EXE
+  confirme los componentes del copiloto: Silero VAD ejecutado en ONNX
+  Runtime, CTranslate2 con int8 y, si hay un modelo Whisper descargado,
+  una transcripción real (0,94 s con base en el equipo de referencia). Se
+  excluyen SciPy, pandas y otros paquetes que arrastraba el entorno.
+  Instalador probado en su ciclo completo. Sin firma Authenticode.
 - Paquetes `chrome.zip` y `edge.zip` generados y validados localmente;
   pendientes de cuenta de tienda, URL pública de privacidad, capturas y
   autorización.
