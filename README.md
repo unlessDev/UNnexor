@@ -17,7 +17,8 @@ defecto no usa la nube; los proveedores remotos son opcionales.
 |---|---|
 | Extensión MV3 | Funcional; paquete de tienda generado y validado localmente |
 | Puente local + panel | Funcional; ejecutable one-folder generado y validado |
-| Pruebas | `272 passed, 1 skipped` (2026-11-24) |
+| Copiloto en tiempo real | Funcional desde el código fuente (conversación, traducción, desafíos); aún no incluido en el ejecutable |
+| Pruebas | `428 passed, 1 skipped` (2026-11-25) |
 | Instalador Windows | **Generado y probado localmente** (Inno Setup por usuario) |
 | Publicación en tiendas | No iniciada; requiere cuentas, URL de privacidad, capturas y licencia |
 | Licencia | **Pendiente de decisión del propietario** (ver abajo) |
@@ -36,7 +37,7 @@ Selección en el navegador → Botón ✦ → Puente local (FastAPI)
 | Carpeta | Qué es |
 |---|---|
 | `browser-extension/` | Extensión Manifest V3 (Chrome/Brave/Edge): botón contextual sobre la selección + envío al puente. |
-| `local-bridge/` | Servidor local Python (FastAPI) + panel flotante PySide6 + cliente Ollama con streaming real. |
+| `local-bridge/` | Servidor local Python (FastAPI) + panel flotante PySide6 + cliente Ollama con streaming real + copiloto en tiempo real (`app/audio`, `app/stt`, `app/copilot`, `app/knowledge`, `app/routing`, `app/desktop/copilot`). |
 | `deployment/` | Empaquetado reproducible de la extensión, ejecutable one-folder e instalador Windows, con pruebas de humo e integridad. |
 | `scripts/` | PowerShell: `install.ps1`, `start.ps1`, `stop.ps1`, `check_environment.ps1` (+ helper opcional AHK v2). |
 | `docs/` | Instalación, configuración, proveedores, OCR, guías de tienda, ADR y auditoría. |
@@ -194,6 +195,20 @@ informes de build y el propio SBOM, y escribe
   Asistente de inicio y Exportar diagnóstico; botón 📷 para capturar una
   región de la pantalla.
 
+**Copiloto en tiempo real** (botón 🧭; guía: [`docs/COPILOT.md`](docs/COPILOT.md))
+* Asistencia en conversaciones: captura del audio del sistema (WASAPI
+  loopback) y/o micrófono, transcripción local (Whisper) o remota, detección
+  de preguntas y sugerencias con tu perfil y documentos, sin inventar datos.
+* Traducción en tiempo real con texto provisional/confirmado, exportación
+  TXT/Markdown/PDF y resumen.
+* Desafíos en pantalla: región, pantalla completa, varias regiones o
+  análisis periódico; visión del modelo u OCR + texto.
+* Perfiles y base de conocimiento (TXT, MD, PDF, DOCX) con búsqueda por
+  palabras y semántica local.
+* Motores y servicios: catálogo con modalidad de acceso y costes, permisos
+  explícitos por servicio, estrategia de modelos por tarea, historial de uso.
+* Panel flotante siempre visible sin robar el foco y atajos globales.
+
 ## Privacidad
 
 El texto seleccionado va **solo** a tu Ollama local (`127.0.0.1`),
@@ -202,6 +217,7 @@ proveedor y únicamente a él). Las claves API conectadas desde el panel
 viven en el keyring del sistema; las que pongas manualmente en `.env`
 pueden retirarse con `--purge-secrets`. Las capturas de pantalla se borran
 de `%TEMP%` tras procesarlas. Ninguna petición sale de tu máquina sin que tú lo configures.
+El copiloto procesa el audio en memoria (nunca lo guarda) y solo envía contenido a un servicio externo si le diste permiso expreso en 'Motores y modelos'.
 Los logs no registran el contenido de las selecciones por defecto. No hay
 analítica ni publicidad. El diagnóstico exportable desde ⚙ se redacta antes
 de guardarse y no incluye token, claves API, `.env`, historial ni capturas;
@@ -215,6 +231,9 @@ publicación en una URL pública para las tiendas está pendiente).
 * [Instalación paso a paso](docs/INSTALLATION.md)
 * [Configuración completa](docs/CONFIGURATION.md)
 * [Proveedores de IA remotos](docs/PROVIDERS.md)
+* [Guía del copiloto en tiempo real](docs/COPILOT.md)
+* [Reconocimiento de voz: motores, costes y mediciones](docs/SPEECH.md)
+* [Estado del copiloto por etapas](docs/COPILOT_STATUS.md)
 * [OCR local para capturas](docs/OCR.md)
 * [Catálogo de modelos y evaluador](docs/MODELS_CATALOG.md)
 * [Solución de problemas](docs/TROUBLESHOOTING.md)

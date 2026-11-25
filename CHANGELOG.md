@@ -91,10 +91,22 @@ usa [Semantic Versioning](https://semver.org/lang/es/).
   plan, pasos, código, explicación, resultado, advertencias, alternativas);
   detector de cambios por hash perceptual para el análisis periódico. Real:
   qwen2.5vl:7b resolvió un sistema de ecuaciones desde una imagen.
+- Interfaz del copiloto (`app/desktop/copilot`): ventana con Inicio
+  (configuración guiada), Conversación, Traducción, Desafíos, Perfiles y
+  documentos, Motores y modelos (motor de voz y descarga consentida,
+  estrategia, modelos por tarea, permisos por servicio, uso) y Privacidad;
+  panel flotante siempre visible sin robar el foco; atajos globales
+  configurables; botón 🧭 y entrada de menú en el panel principal.
+  Validada en Windows real: sesión iniciada desde la página, pregunta TTS
+  por altavoces → sugerencia de qwen3:8b en el panel flotante.
 - Router: desempate por especialización (modelos de visión o de código
   penalizados en tareas de texto; los de código preferidos en desafíos).
 
 ### Fixed
+- Las burbujas de respuesta programaban su repintado con temporizadores no
+  ligados al widget: si se borraban mientras llegaba texto, Qt lanzaba
+  "objeto C++ ya eliminado". Los temporizadores usan ahora el widget como
+  contexto.
 - La prueba opcional de Pix2Text creaba un `QPixmap` sin `QApplication`:
   ejecutada sola abortaba el intérprete (código 127). Ahora usa `qapp`.
 - Proveedores OpenAI-compatible: con un error HTTP no tabulado (p. ej. 400)

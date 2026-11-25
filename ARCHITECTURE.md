@@ -185,6 +185,21 @@ Regla de diseño: la política por defecto es **solo local**. Un remoto
 entra únicamente con `remote_data`; uno que puede costar dinero, además
 con `costs`; con documentos personales, además con `documents`.
 
+### Interfaz del copiloto (`local-bridge/app/desktop/copilot/`)
+
+MVVM pragmático: `CopilotController` es el ViewModel (posee sesión y
+servicios, traduce callbacks de hilos a señales Qt); las páginas solo se
+enlazan a señales y llaman a sus métodos.
+
+| Módulo | Responsabilidad |
+|---|---|
+| `controller.py` | Sesión de conversación/traducción (pipeline de audio + STT + asistente/traductor), pausa/fin, precarga del modelo, desafíos, ajustes, consentimientos, uso. |
+| `window.py` | Ventana con navegación: Inicio, Conversación, Traducción, Desafíos, Perfiles y documentos, Motores y modelos, Privacidad. |
+| `pages_*.py` | Vistas de cada sección (sin lógica de negocio). |
+| `overlay.py` | Panel flotante siempre visible, sin foco, arrastrable, compacto, con estado y controles. |
+| `hotkeys.py` | Atajos globales con `RegisterHotKey`; informa conflictos. |
+| `tasks.py` | Trabajo pesado en `QThreadPool` con entrega segura a la GUI. |
+
 ### Escritorio (`local-bridge/app/desktop/`)
 
 | Módulo | Responsabilidad |

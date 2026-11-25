@@ -66,7 +66,9 @@ def answer_messages(
         "No inventes experiencias, empresas, cifras, títulos ni resultados que "
         "no aparezcan ahí: si faltan datos, propone una respuesta honesta y "
         "marca lo que la persona debe completar como [completar: …]. "
-        "No menciones que eres una IA ni que hay un copiloto."
+        "No menciones que eres una IA ni que hay un copiloto. Entrega solo la "
+        "respuesta sugerida: sin introducciones, comentarios ni preguntas "
+        "dirigidas a quien te consulta."
     ).strip()
     sections: list[str] = []
     if profile is not None:

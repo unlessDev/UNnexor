@@ -138,6 +138,8 @@ class BridgeWindow(QMainWindow):
         # Redimensionado manual: (cursor global, marco inicial, bordes).
         self._resize_origin: Optional[tuple[QPoint, QRect, Qt.Edge]] = None
         self._pending_ocr_instruction: Optional[str] = None
+        # Copiloto en tiempo real (se crea al abrirlo por primera vez).
+        self._copilot_window = None
 
         self._build_ui()
 
@@ -196,6 +198,7 @@ class BridgeWindow(QMainWindow):
         self._titlebar.menuClicked.connect(self._open_menu)
         self._titlebar.modelsClicked.connect(self._open_model_selector)
         self._titlebar.screenshotClicked.connect(self._start_capture)
+        self._titlebar.copilotClicked.connect(self.open_copilot)
         layout.addWidget(self._titlebar)
 
         self._chat_scroll, self._chat_container, self._chat_vbox = make_chat_area()
@@ -276,6 +279,9 @@ class BridgeWindow(QMainWindow):
                 self._ollama.close()
                 self._worker.wait(2000)
         self._stop_ocr_workers()
+        if self._copilot_window is not None:
+            self._copilot_window.shutdown()
+            self._copilot_window = None
 
     # ------------------------------------------------------------------ #
     # Persistencia de geometría
@@ -558,6 +564,8 @@ class BridgeWindow(QMainWindow):
     def _open_menu(self) -> None:
         menu = QMenu(self)
 
+        copilot_action = menu.addAction("🧭  Copiloto en tiempo real…")
+        copilot_action.triggered.connect(self.open_copilot)
         models_action = menu.addAction("🤖  Modelos de IA…")
         models_action.triggered.connect(lambda: self._open_model_selector())
         providers_action = menu.addAction("🔌  Proveedores de API…")
@@ -660,6 +668,14 @@ class BridgeWindow(QMainWindow):
             f"Proveedor activo: {label}. Las consultas se enviarán a la API " "remota.",
             seconds=4,
         )
+
+    def open_copilot(self, _checked: bool = False) -> None:
+        """Abre (o trae al frente) la ventana del copiloto en tiempo real."""
+        if self._copilot_window is None:
+            from .copilot.window import CopilotWindow
+
+            self._copilot_window = CopilotWindow(self._cfg)
+        self._copilot_window.bring_to_front()
 
     def _open_providers(self) -> None:
         from .providers_dialog import ProvidersDialog

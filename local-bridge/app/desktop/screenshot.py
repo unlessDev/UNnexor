@@ -151,6 +151,15 @@ class RegionSelector(QObject):
         self._result_rect: Optional[QRect] = None
         self._result_screen: Optional[QScreen] = None
 
+    @property
+    def last_rect(self) -> Optional[QRect]:
+        """Región lógica elegida (para volver a capturarla periódicamente)."""
+        return self._result_rect
+
+    @property
+    def last_screen(self) -> Optional[QScreen]:
+        return self._result_screen
+
     def start(self) -> None:
         screens = QGuiApplication.screens()
         if not screens:

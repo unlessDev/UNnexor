@@ -20,10 +20,10 @@ validación real · 🟡 parcial · ⏳ pendiente · ⛔ no viable (motivo).
 | 8 Compatibilidad de modelos y hardware | ⏳ | |
 | 9 Model Router | ✅ | ver abajo |
 | 10 Perfiles y base de conocimiento (RAG) | ✅ | ver abajo |
-| 11 Asistencia en conversaciones | 🟡 | Núcleo probado en vivo; interfaz en la etapa 14 |
-| 12 Traducción en tiempo real | 🟡 | Núcleo probado con modelo local; interfaz en la etapa 14 |
-| 13 Desafíos en pantalla | 🟡 | Núcleo probado con visión local; captura/interfaz en la etapa 14 |
-| 14 Interfaz y experiencia | ⏳ | |
+| 11 Asistencia en conversaciones | ✅ | Núcleo + interfaz probados en vivo |
+| 12 Traducción en tiempo real | ✅ | Núcleo real + interfaz (pruebas offscreen) |
+| 13 Desafíos en pantalla | 🟡 | Núcleo real; captura en la interfaz sin prueba manual de selección de región |
+| 14 Interfaz y experiencia | ✅ | ver abajo |
 | 15–20 Seguridad, pruebas integrales, distribución, CI, auditoría final | ⏳ | |
 
 ## Etapa 5 — Captura y segmentación de audio
@@ -122,6 +122,20 @@ visión + OCR, no cada modelo por separado.
 
 Hallazgo de hardware: Ollama 0.40.17 usa **Vulkan** en la RX 590 (8 GB);
 la compatibilidad de la etapa 8 debe reconocer Vulkan además de CUDA/ROCm.
+
+## Etapa 14 — Interfaz y experiencia
+
+| Capacidad | Estado | Cómo se validó |
+|---|---|---|
+| Ventana con siete secciones y navegación | ✅ | Prueba offscreen + ventana real en Windows |
+| Sesión de conversación desde la interfaz con audio real | ✅ | `scripts/copilot_ui_e2e.py`: pregunta TTS → sugerencia en el panel flotante (16,6 s desde el inicio del audio, incluida la locución) |
+| Panel flotante: estado, transcripción, sugerencia, pausar/finalizar, otra respuesta/ampliar, compacto | ✅ | Ventana real (captura revisada) + pruebas |
+| Atajos globales con detección de conflictos | ✅ | Registrados sin conflictos en el equipo de referencia; parser probado |
+| Configuración guiada (recomendación automática) | 🟡 | Implementada; probada en código, no con clics manuales |
+| Traducción en la interfaz (vista provisional/confirmada, exportar, resumir) | 🟡 | Pruebas offscreen; sin sesión real desde la interfaz |
+| Desafíos en la interfaz (región, pantalla, varias, periódico) | 🟡 | Pruebas de señales; la selección de región real requiere interacción humana |
+| Permisos por servicio, estrategia y modelos por tarea | ✅ | Pruebas offscreen (permiso concedido y revocado) |
+| Descarga consentida de modelos de voz con progreso | 🟡 | Implementada (progreso por señal); probada la descarga por script, no desde el botón |
 
 ## Bloqueantes registrados para la distribución
 
