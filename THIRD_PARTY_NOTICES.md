@@ -26,6 +26,7 @@ los componentes de terceros se conservan y se listan aquí.
 | CTranslate2 | 4.9.x | MIT | Motor de inferencia de Whisper |
 | PyAV | 19.x | BSD-3-Clause; sus ruedas incluyen DLL de FFmpeg (LGPL-2.1+), libiconv (LGPL) y libgcc (GPL con excepción de runtime) | Dependencia de faster-whisper (decodificación de archivos) |
 | ONNX Runtime | 1.32.x | MIT | Silero VAD |
+| pypdf | 6.x | BSD-3-Clause | Texto de PDF para la base de conocimiento (PyMuPDF se descarta por AGPL) |
 | tokenizers / huggingface_hub | 0.22.x / 0.36.x | Apache-2.0 | Tokenizador de Whisper y descarga consentida de modelos |
 
 Modelos descargados por el usuario (no se distribuyen con la aplicación):

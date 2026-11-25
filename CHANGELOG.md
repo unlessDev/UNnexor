@@ -63,6 +63,12 @@ usa [Semantic Versioning](https://semver.org/lang/es/).
 - Model Router (`app/routing`): tareas, estrategias, política solo-local por
   defecto, descarte explicado, alternativas sin cambios silenciosos a
   remoto y ejecutor en streaming. Validado con una petición real a Groq.
+- Perfiles de contexto y base de conocimiento (`app/knowledge`): TXT,
+  Markdown, PDF (pypdf) y DOCX con validación y límites; notas manuales;
+  fragmentos con fuente; BM25 siempre disponible y embeddings locales
+  opcionales con Ollama fusionados por RRF; contexto con fuentes citables.
+  Probado con `nomic-embed-text` real: las preguntas sin palabras en común
+  ("¿Qué estudiaste?") encuentran el documento correcto.
 
 ### Fixed
 - Proveedores OpenAI-compatible: con un error HTTP no tabulado (p. ej. 400)
