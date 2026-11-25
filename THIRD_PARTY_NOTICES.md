@@ -22,6 +22,17 @@ los componentes de terceros se conservan y se listan aquí.
 | NumPy | 2.x | BSD-3-Clause y componentes permisivos | Audio del copiloto (DSP, VAD) |
 | SoundCard | 0.4.x | BSD-3-Clause | Captura WASAPI (loopback del sistema y micrófono) |
 | cffi / pycparser | 2.x / 3.x | MIT-0 / BSD-3-Clause | Dependencias nativas de SoundCard |
+| faster-whisper | 1.2.x | MIT | Reconocimiento de voz local; incluye el modelo Silero VAD v6 (MIT) |
+| CTranslate2 | 4.9.x | MIT | Motor de inferencia de Whisper |
+| PyAV | 19.x | BSD-3-Clause; sus ruedas incluyen DLL de FFmpeg (LGPL-2.1+), libiconv (LGPL) y libgcc (GPL con excepción de runtime) | Dependencia de faster-whisper (decodificación de archivos) |
+| ONNX Runtime | 1.32.x | MIT | Silero VAD |
+| tokenizers / huggingface_hub | 0.22.x / 0.36.x | Apache-2.0 | Tokenizador de Whisper y descarga consentida de modelos |
+
+Modelos descargados por el usuario (no se distribuyen con la aplicación):
+pesos de Whisper convertidos por SYSTRAN (`Systran/faster-whisper-*`, MIT) y
+`mobiuslabsgmbh/faster-whisper-large-v3-turbo` (MIT). Pendiente para la
+auditoría de licencias: confirmar la configuración LGPL de las DLL de
+FFmpeg que incluye PyAV antes de redistribuir el ejecutable.
 
 ## Dependencias opcionales (no se instalan ni empaquetan por defecto)
 

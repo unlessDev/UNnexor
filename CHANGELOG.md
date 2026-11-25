@@ -36,6 +36,20 @@ usa [Semantic Versioning](https://semver.org/lang/es/).
   vez. Validado con una locución TTS reproducida y capturada en loopback.
 - `paths.models_dir()` (`%LOCALAPPDATA%\Extdator\models`) para modelos
   descargados con consentimiento y `paths.copilot_dir()` para sus datos.
+- Paquete `app/stt`: reconocimiento de voz local con faster-whisper (CPU
+  int8 o CUDA, modelos tiny → large-v3, descarga solo con consentimiento) y
+  remoto por fragmentos con Groq/OpenAI (`/audio/transcriptions`) y
+  Deepgram (`/v1/listen`). Catálogo con modalidad real, acceso y costes
+  verificados; filtro de alucinaciones de Whisper; recomendación según el
+  equipo con latencia medida. `docs/SPEECH.md` documenta motores, costes y
+  mediciones.
+- `TranscriptionService`: texto provisional y confirmado en tiempo real con
+  prioridad a los finales, reintentos ante límites de uso y errores
+  explícitos sin cambios silenciosos de motor.
+- Medido en el equipo de referencia (Ryzen 5 2600X, sin CUDA): Whisper base
+  1,03 s y small 3,48 s por intervención; Groq turbo 0,47 s; los tres
+  transcriben exacto el español de prueba. Prueba en vivo: captura loopback
+  + Whisper base con 1,3–2,0 s de retraso por intervención.
 
 ### Fixed
 - `--server-only` no podía funcionar: pasaba un `uvicorn.Config` a

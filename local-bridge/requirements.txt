@@ -11,6 +11,8 @@
 #                    Manager y equivalentes nativos en otros sistemas)
 #   numpy          → procesado de audio del copiloto (DSP, VAD)
 #   soundcard      → captura WASAPI: loopback del sistema y micrófono (BSD-3)
+#   faster-whisper → reconocimiento de voz local (MIT; CTranslate2, Silero VAD).
+#                    Los modelos NO se instalan: se descargan con consentimiento
 #   pytest         → pruebas
 #   black          → formateo del código (herramienta de desarrollo)
 fastapi>=0.115,<1
@@ -23,5 +25,6 @@ psutil>=5.9,<8
 keyring>=24,<27
 numpy>=1.26,<3
 soundcard>=0.4.5,<0.5
+faster-whisper>=1.1,<2
 pytest>=8,<9
 black>=24,<27

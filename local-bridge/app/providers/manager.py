@@ -22,7 +22,7 @@ from typing import Any, Dict, List, Optional
 from .. import paths
 from .base import ProviderError
 from .openai_compat import OpenAICompatClient
-from .presets import PRESETS, preset
+from .presets import PRESETS, SPEECH_ONLY_PROVIDER_IDS, preset
 
 log = logging.getLogger("extdator.providers")
 
@@ -96,7 +96,9 @@ def purge_all_keys() -> List[str]:
     ``providers.json`` para retirar credenciales huérfanas. No crea el
     directorio de datos si no existe y nunca registra las claves.
     """
-    known = {item["id"] for item in PRESETS} | {"custom"}
+    known = (
+        {item["id"] for item in PRESETS} | {"custom"} | set(SPEECH_ONLY_PROVIDER_IDS)
+    )
     with CONF_LOCK:
         known.update(_read_config()["providers"].keys())
     for provider_id in sorted(known):

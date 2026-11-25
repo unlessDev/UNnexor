@@ -146,6 +146,10 @@ PRESETS: List[Dict[str, Any]] = [
 
 PRESET_IDS = [p["id"] for p in PRESETS]
 
+# Proveedores que solo ofrecen voz (no chat OpenAI-compatible). Sus claves
+# viven en el mismo keyring y se incluyen en la purga de secretos.
+SPEECH_ONLY_PROVIDER_IDS = ["deepgram"]
+
 
 def preset(provider_id: str) -> Optional[Dict[str, Any]]:
     for item in PRESETS:

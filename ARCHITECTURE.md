@@ -130,6 +130,22 @@ Primer bloque del copiloto en tiempo real (diseño completo en
 | `pipeline.py` | `AudioPipeline`: varias fuentes simultáneas, un segmentador por fuente, IDs globales, niveles, cola acotada sin bloquear la captura. |
 | `wav.py` | WAV PCM16 en memoria (STT remoto y exportes). |
 
+### Reconocimiento de voz (`local-bridge/app/stt/`) y transcripción
+
+Detalle de motores, costes y mediciones en `docs/SPEECH.md`.
+
+| Módulo | Responsabilidad |
+|---|---|
+| `base.py` | Puerto `SpeechRecognizer`, `Transcript` (confianza, idioma, RTF), `STTError` tipado, `STTMode` (streaming / fragmentos / lotes). |
+| `catalog.py` | Modelos locales y remotos con modalidad real, acceso (`AccessTier`), precios/límites verificados y fecha. |
+| `faster_whisper_engine.py` | Whisper local (CTranslate2): CUDA float16 o CPU int8, carga perezosa solo desde `models_dir()`, descarga explícita, filtro de alucinaciones. |
+| `openai_compat_engine.py` | `POST /audio/transcriptions` multipart (Groq `verbose_json`, OpenAI `gpt-transcribe` con `languages[]`). |
+| `deepgram_engine.py` | API pregrabada de Deepgram (`nova-3`, idioma o detección). |
+| `recommend.py` | Recomendación por equipo/preferencia con latencia por llamada medida o estimada, razones y advertencias. |
+| `factory.py` | Construye el motor con la clave del keyring (búsqueda inyectable) y su estado de disponibilidad. |
+| `../providers/access.py` | Vocabulario común de acceso/coste (local, gratuito con límites, créditos, pago por consumo…). |
+| `../copilot/transcription.py` | `TranscriptionService`: un hilo STT, finales con prioridad y nunca descartados, solo el provisional más reciente, reintento ante cuota/red, fallo explícito sin cambiar de motor, prompt con contexto y glosario. |
+
 ### Escritorio (`local-bridge/app/desktop/`)
 
 | Módulo | Responsabilidad |

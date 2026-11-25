@@ -15,7 +15,7 @@ validación real · 🟡 parcial · ⏳ pendiente · ⛔ no viable (motivo).
 | 3 Diseño de arquitectura del copiloto | ✅ | ADR-0005 |
 | 4 Estabilización + calidad (Black/Ruff/Mypy en CI) | ✅ | PR #9: 3 bugs reales corregidos con regresión |
 | 5 Captura y segmentación de audio | ✅ | ver abajo |
-| 6 Reconocimiento de voz | ⏳ | |
+| 6 Reconocimiento de voz | ✅ | ver abajo y `docs/SPEECH.md` |
 | 7 Catálogo de proveedores | ⏳ | |
 | 8 Compatibilidad de modelos y hardware | ⏳ | |
 | 9 Model Router | ⏳ | |
@@ -43,3 +43,28 @@ validación real · 🟡 parcial · ⏳ pendiente · ⛔ no viable (motivo).
 Limitaciones conocidas: SoundCard emite "data discontinuity" al abrir el
 loopback sin reproducción (se filtra ese aviso); en Windows 8 SoundCard usa
 STA (no probado).
+
+## Etapa 6 — Reconocimiento de voz
+
+| Capacidad | Estado | Cómo se validó |
+|---|---|---|
+| Whisper local (faster-whisper base/small, CPU int8) | ✅ | Benchmark con locución TTS: WER 6,8 % (solo "15%"), 1,03 / 3,48 s por intervención |
+| Whisper local en GPU NVIDIA (CUDA float16) | 🧪 | Implementado con retorno automático a CPU; sin GPU NVIDIA para probar |
+| Modelos medium / large-v3-turbo / large-v3 | 🧪 | Catálogo y descarga implementados; no descargados (no autorizado) |
+| Groq whisper-large-v3-turbo | ✅ | 4 peticiones reales: 0,47 s de media, confianza 0,82–0,97 |
+| Groq whisper-large-v3 | 🧪 | Mismo adaptador; no probado con petición real |
+| OpenAI gpt-transcribe / whisper-1 | 🧪 | Adaptador probado con respuestas simuladas; sin clave de OpenAI |
+| Deepgram nova-3 (pregrabado por fragmentos) | 🧪 | Adaptador probado con respuestas simuladas; sin clave de Deepgram |
+| Streaming nativo (Deepgram WS, OpenAI Realtime) | ⏳ | No integrado; documentado |
+| Texto provisional + confirmado en vivo | ✅ | Loopback + base: 7 provisionales, 3 finales correctos, 1,3–2,0 s de retraso |
+| Recomendación por hardware | ✅ | Pruebas + ejecución sobre el hardware real detectado |
+| Filtro de alucinaciones y bucles | ✅ | Pruebas unitarias y silencio real con Whisper base |
+| Variantes regionales del español | 🟡 | Solo voz TTS es-MX; falta voz humana de distintas regiones |
+
+## Bloqueantes registrados para la distribución
+
+- `deployment/windows/Extdator.spec` excluye hoy `numpy` y `onnxruntime`
+  (por el OCR). Cuando el copiloto se conecte a la interfaz, el ejecutable
+  debe incluir NumPy, SoundCard (y sus `.h` de cffi), CTranslate2, PyAV,
+  ONNX Runtime y los assets de faster-whisper; medir el tamaño resultante.
+- Revisar la configuración LGPL de las DLL de FFmpeg de PyAV.
