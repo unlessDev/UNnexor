@@ -14,6 +14,7 @@ import base64
 import logging
 import os
 import time
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from PySide6.QtCore import QThread, Signal
@@ -21,6 +22,7 @@ from PySide6.QtCore import QThread, Signal
 from .. import ocr_manager
 from ..config import Config
 from ..conversation import Conversation
+from ..diagnostics import write_diagnostics_archive
 from ..hardware import detect as detect_hardware
 from ..hardware import gpu_acceleration_active
 from ..model_catalog import recommended_catalog
@@ -526,3 +528,52 @@ class PullWorker(QThread):
             self.failed.emit(self._model, "Descarga cancelada.")
         except OllamaError as exc:
             self.failed.emit(self._model, exc.message)
+
+
+class DiagnosticsWorker(QThread):
+    """Genera el ZIP de diagnóstico fuera del hilo de la GUI."""
+
+    bundleReady = Signal(str)
+    bundleFailed = Signal(str)
+
+    def __init__(
+        self,
+        target: Path | str,
+        cfg: Config,
+        state: Any,
+        bus: Any,
+        pairing: Any,
+        ollama: Optional[OllamaClient],
+        parent: Optional[QThread] = None,
+        *,
+        check_ollama: bool = True,
+        log_dir: Optional[Path | str] = None,
+    ) -> None:
+        super().__init__(parent)
+        self._target = Path(target)
+        self._cfg = cfg
+        self._state = state
+        self._bus = bus
+        self._pairing = pairing
+        self._ollama = ollama
+        self._check_ollama = check_ollama
+        self._log_dir = Path(log_dir) if log_dir is not None else None
+
+    def run(self) -> None:
+        try:
+            result = write_diagnostics_archive(
+                self._target,
+                self._cfg,
+                state=self._state,
+                bus=self._bus,
+                pairing=self._pairing,
+                ollama=self._ollama,
+                log_dir=self._log_dir,
+                check_ollama=self._check_ollama,
+            )
+        except Exception as exc:  # noqa: BLE001 - se informa al usuario
+            log.exception("No se pudo generar el diagnóstico")
+            message = str(exc).strip() or exc.__class__.__name__
+            self.bundleFailed.emit(message)
+            return
+        self.bundleReady.emit(str(result))

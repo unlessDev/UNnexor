@@ -308,6 +308,27 @@ $$\alpha \leq \beta \Rightarrow \pi$$    →   α ≤ β ⇒ π
 | 429 | Límite de tasa | Espera unos segundos (`Retry-After`). |
 | 503 | Cola saturada / Ollama caído | Espera la generación o arranca Ollama. |
 
+## Paquete de diagnóstico para soporte (v1.2.0)
+
+1. Abre el menú **⚙ → Exportar diagnóstico…**.
+2. Elige dónde guardar el ZIP y espera el aviso de confirmación.
+3. Revisa `diagnostico.txt` y adjunta el ZIP a tu informe junto con una
+   descripción de lo que ocurrió.
+
+Incluye versión, SO, rutas normalizadas, configuración sin secretos, estado
+de Ollama/modelo, emparejamiento (solo sí/no), recuento de historial y logs
+redactados. **No incluye** el token del puente, claves API, `.env`,
+`user_settings.json` completo, historial de conversación ni capturas.
+
+La redacción elimina tokens, claves, correos, rutas de usuario, IDs de
+extensión y parámetros de URL. Si tienes `LOG_PRIVACY=0`, el exportador
+omite las líneas de selección/imagen conocidas, pero revisa siempre el ZIP
+antes de compartirlo. Para un diagnóstico por consola, sin interfaz:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\check_environment.ps1
+```
+
 ## Diagnóstico rápido
 
 ```powershell

@@ -75,6 +75,10 @@ usa [Semantic Versioning](https://semver.org/lang/es/).
   reabrir desde el menú ⚙. No se muestra en pruebas `offscreen`.
 - `PairingManager.is_confirmed()` para que la interfaz detecte que la
   extensión completó el emparejamiento sin volver a exponer el token.
+- Exportador de diagnóstico desde ⚙: ZIP con resumen legible y JSON,
+  comprobaciones locales, estado de Ollama/modelo, emparejamiento (solo
+  sí/no) y logs redactados. No incluye token, claves API, `.env`, historial
+  ni capturas; los logs se limitan y se sanean antes de escribirse.
 
 ### Changed
 - `docs/ARCHITECTURE.md` se traslada a `ARCHITECTURE.md` (raíz) para que
@@ -110,6 +114,7 @@ usa [Semantic Versioning](https://semver.org/lang/es/).
   1 skipped` (2026-11-23).
 - Tras el asistente de primer inicio del escritorio: `262 passed,
   1 skipped` (2026-11-23).
+- Tras el diagnóstico exportable: `272 passed, 1 skipped` (2026-11-24).
 
 ## [1.2.0] - 2026-11-19
 
