@@ -17,11 +17,12 @@ import os
 import tempfile
 from typing import Optional
 
-from PySide6.QtCore import QTimer, QSettings, Qt
+from PySide6.QtCore import QSettings, QStandardPaths, QTimer, Qt
 from PySide6.QtGui import QCursor, QGuiApplication, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
     QDialog,
+    QFileDialog,
     QHBoxLayout,
     QLabel,
     QMainWindow,
@@ -35,6 +36,7 @@ from PySide6.QtWidgets import (
 
 from .. import ocr_manager
 from ..config import Config
+from ..diagnostics import default_archive_name, ensure_zip_suffix
 from ..ollama_client import OllamaClient, OllamaError
 from ..queue_manager import (
     Bus,
@@ -66,7 +68,7 @@ from .widgets import (
     make_chat_area,
 )
 from .window_manager import HoverScrollHook, NoActivateFilter, apply_noactivate
-from .workers import GenerationWorker, OCRWorker, StatusWorker
+from .workers import DiagnosticsWorker, GenerationWorker, OCRWorker, StatusWorker
 
 log = logging.getLogger("extdator.window")
 
@@ -113,6 +115,7 @@ class BridgeWindow(QMainWindow):
         self._show_onboarding = show_onboarding
         self._onboarding_scheduled = False
         self._onboarding_dialog: Optional[OnboardingDialog] = None
+        self._diagnostics_worker: Optional[DiagnosticsWorker] = None
         self._on_top = cfg.always_on_top
         self._opacity = cfg.window_opacity
         self._settings = QSettings("Extdator", "Bridge")
@@ -256,6 +259,11 @@ class BridgeWindow(QMainWindow):
 
     def stop_workers(self) -> None:
         """Detiene workers de forma ordenada (idempotente)."""
+        if (
+            self._diagnostics_worker is not None
+            and self._diagnostics_worker.isRunning()
+        ):
+            self._diagnostics_worker.wait(15000)
         if self._status_worker.isRunning():
             self._status_worker.stop()
             self._status_worker.wait(1500)
@@ -559,6 +567,8 @@ class BridgeWindow(QMainWindow):
         pairing_action.triggered.connect(self._open_pairing)
         onboarding_action = menu.addAction("🚀  Asistente de inicio…")
         onboarding_action.triggered.connect(self._open_onboarding)
+        diagnostics_action = menu.addAction("🧰  Exportar diagnóstico…")
+        diagnostics_action.triggered.connect(self._export_diagnostics)
 
         menu.addSeparator()
 
@@ -752,6 +762,75 @@ class BridgeWindow(QMainWindow):
             dialog.exec()
         finally:
             self._onboarding_dialog = None
+
+    # ------------------------------------------------------------------ #
+    # Diagnóstico para soporte
+    # ------------------------------------------------------------------ #
+    def _export_diagnostics(self) -> None:
+        if (
+            self._diagnostics_worker is not None
+            and self._diagnostics_worker.isRunning()
+        ):
+            self._set_footer_transient(
+                "Ya se está generando un diagnóstico.", seconds=3
+            )
+            return
+        folder = QStandardPaths.writableLocation(
+            QStandardPaths.StandardLocation.DocumentsLocation
+        ) or os.path.expanduser("~")
+        suggested = os.path.join(folder, default_archive_name())
+        selected, _ = QFileDialog.getSaveFileName(
+            self,
+            "Guardar diagnóstico",
+            suggested,
+            "Archivo ZIP (*.zip)",
+        )
+        if not selected:
+            return
+        target = ensure_zip_suffix(selected)
+        worker = DiagnosticsWorker(
+            target,
+            self._cfg,
+            self._state,
+            self._bus,
+            self._pairing,
+            self._ollama,
+            parent=self,
+        )
+        worker.bundleReady.connect(self._on_diagnostics_ready)
+        worker.bundleFailed.connect(self._on_diagnostics_failed)
+        worker.finished.connect(self._on_diagnostics_finished)
+        self._diagnostics_worker = worker
+        self._set_footer_transient("Generando diagnóstico…", seconds=30)
+        worker.start()
+
+    def _on_diagnostics_ready(self, path: str) -> None:
+        self._set_footer_transient("Diagnóstico guardado.", seconds=5)
+        QMessageBox.information(
+            self,
+            "Diagnóstico exportado",
+            "Se guardó el paquete de diagnóstico en:\n"
+            f"{path}\n\n"
+            "Revisa el ZIP antes de compartirlo: no incluye token ni claves, "
+            "pero puede contener rutas o nombres de modelos.",
+        )
+
+    def _on_diagnostics_failed(self, message: str) -> None:
+        self._set_footer_transient(
+            "No se pudo generar el diagnóstico.", error=True, seconds=5
+        )
+        QMessageBox.warning(
+            self,
+            "Diagnóstico no generado",
+            f"No se pudo crear el ZIP de diagnóstico:\n{message}",
+        )
+
+    def _on_diagnostics_finished(self) -> None:
+        worker = self.sender()
+        if worker is self._diagnostics_worker:
+            self._diagnostics_worker = None
+        if worker is not None:
+            worker.deleteLater()
 
     # ------------------------------------------------------------------ #
     # Captura de pantalla por región

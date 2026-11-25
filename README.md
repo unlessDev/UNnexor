@@ -17,7 +17,7 @@ defecto no usa la nube; los proveedores remotos son opcionales.
 |---|---|
 | Extensión MV3 | Funcional; paquete de tienda generado y validado localmente |
 | Puente local + panel | Funcional; ejecutable one-folder generado y validado |
-| Pruebas | `262 passed, 1 skipped` (2026-11-23) |
+| Pruebas | `272 passed, 1 skipped` (2026-11-24) |
 | Instalador Windows | **Generado y probado localmente** (Inno Setup por usuario) |
 | Publicación en tiendas | No iniciada; requiere cuentas, URL de privacidad, capturas y licencia |
 | Licencia | **Pendiente de decisión del propietario** (ver abajo) |
@@ -164,6 +164,9 @@ informes de build y el propio SBOM, y escribe
 * Asistente de primer inicio del escritorio: privacidad, comprobación de
   Ollama y del modelo activo con reintento, y emparejamiento con detección
   de la conexión. Se muestra una vez y se reabre desde ⚙.
+* Diagnóstico exportable desde ⚙: ZIP con versión, SO, configuración sin
+  secretos, estado de Ollama/modelo y logs redactados. No incluye token,
+  claves API, `.env`, historial ni capturas.
 * Capturas por región: `POST /api/image` (PNG validado, tamaño limitado)
   → cola de imagen → visión multimodal u OCR local opcional.
 * Logs sin contenido privado por defecto (`LOG_PRIVACY=1`).
@@ -187,8 +190,9 @@ informes de build y el propio SBOM, y escribe
 * Autoscroll inteligente (se pausa si subes a leer; se reanuda al final).
 * Copiar respuesta, nueva conversación, detener generación, opacidad,
   minimizar/cerrar, persistencia de posición/tamaño.
-* Menú ⚙: Modelos (semáforo), Proveedores, Ajustes y Emparejar extensión;
-  botón 📷 para capturar una región de la pantalla.
+* Menú ⚙: Modelos (semáforo), Proveedores, Ajustes, Emparejar extensión,
+  Asistente de inicio y Exportar diagnóstico; botón 📷 para capturar una
+  región de la pantalla.
 
 ## Privacidad
 
@@ -199,7 +203,9 @@ viven en el keyring del sistema; las que pongas manualmente en `.env`
 pueden retirarse con `--purge-secrets`. Las capturas de pantalla se borran
 de `%TEMP%` tras procesarlas. Ninguna petición sale de tu máquina sin que tú lo configures.
 Los logs no registran el contenido de las selecciones por defecto. No hay
-analítica ni publicidad. Política completa:
+analítica ni publicidad. El diagnóstico exportable desde ⚙ se redacta antes
+de guardarse y no incluye token, claves API, `.env`, historial ni capturas;
+aun así, conviene revisar el ZIP antes de compartirlo. Política completa:
 [`browser-extension/privacy.html`](browser-extension/privacy.html) (su
 publicación en una URL pública para las tiendas está pendiente).
 
@@ -231,8 +237,9 @@ Cubre: validación/seguridad del servidor, CORS, streaming de Ollama
 (simulado), historial, configuración, ajustes persistentes, hardware y
 evaluador de modelos, emparejamiento, proveedores (transporte simulado),
 OCR (motores opcionales con mocks), límites de arquitectura, rutas de
-runtime, validación/empaquetado de la extensión, purga de secretos y una
-prueba de integración real de Hover Scroll/no-activación sobre Windows.
+runtime, validación/empaquetado de la extensión, diagnóstico saneado, purga
+de secretos y una prueba de integración real de Hover Scroll/no-activación
+sobre Windows.
 El instalador añade su propia prueba de ciclo completo (instalar,
 auto-chequeo, preservar datos, purgar y desinstalar). Complemento GUI
 offscreen: `local-bridge\scripts\gui_smoke.py` (abre los cinco diálogos sin

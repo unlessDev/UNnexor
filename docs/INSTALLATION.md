@@ -159,6 +159,9 @@ Idéntico a Chrome con `brave://extensions`.
 6. En el primer arranque, el panel abre el **asistente de inicio**:
    privacidad, comprobación de Ollama/modelo y código de emparejamiento.
    Se puede reabrir desde `⚙ → Asistente de inicio`.
+7. Si algo falla, `⚙ → Exportar diagnóstico…` guarda un ZIP saneado para
+   soporte (sin token, claves, `.env`, historial ni capturas). Revisa su
+   contenido antes de compartirlo.
 
 ## Modo solo servidor (sin GUI)
 
