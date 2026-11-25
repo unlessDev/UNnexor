@@ -146,6 +146,22 @@ Detalle de motores, costes y mediciones en `docs/SPEECH.md`.
 | `../providers/access.py` | Vocabulario común de acceso/coste (local, gratuito con límites, créditos, pago por consumo…). |
 | `../copilot/transcription.py` | `TranscriptionService`: un hilo STT, finales con prioridad y nunca descartados, solo el provisional más reciente, reintento ante cuota/red, fallo explícito sin cambiar de motor, prompt con contexto y glosario. |
 
+### Catálogo de proveedores y Model Router (`app/providers/`, `app/routing/`)
+
+| Módulo | Responsabilidad |
+|---|---|
+| `providers/catalog.py` | Catálogo unificado (Ollama local + presets) con acceso, capacidades, protocolo y estado honesto ("clave válida · acceso sin confirmar"). |
+| `providers/anthropic.py` | Adaptador nativo Messages API con la misma interfaz que `OpenAICompatClient`. |
+| `providers/consent.py` | Consentimientos `remote_data` / `costs` / `documents` por proveedor. |
+| `providers/usage.py` | Historial de uso por día/proveedor/tarea y últimos encabezados de límites; sin contenido. |
+| `routing/router.py` | Tareas (respuesta, traducción, resumen, visión, desafíos, embeddings…), candidatos, estrategias (equilibrado, velocidad, calidad, local, bajo costo, solo elegidos), política y decisión explicada con alternativas. |
+| `routing/executor.py` | Ejecuta la decisión en streaming; alternativas solo antes de emitir texto, aviso visible (y explícito si pasa a remoto), cancelación sin alternativas. |
+| `routing/candidates.py` | Candidatos reales: Ollama (`/api/tags` + capacidades de `/api/show` + encaje con el hardware) y modelos remotos elegidos; backend de Ollama con errores tipados. |
+
+Regla de diseño: la política por defecto es **solo local**. Un remoto
+entra únicamente con `remote_data`; uno que puede costar dinero, además
+con `costs`; con documentos personales, además con `documents`.
+
 ### Escritorio (`local-bridge/app/desktop/`)
 
 | Módulo | Responsabilidad |

@@ -20,10 +20,52 @@ salvo hacia el propio proveedor al generar.
 * No hay telemetría: la única petición con la clave es la que va al
   proveedor que elegiste.
 
-## Proveedores preconfigurados (12)
+## Modalidades de acceso (no son equivalentes)
 
-Todos usan el adaptador OpenAI-compatible (`chat/completions` con
-streaming SSE). `base_url` verificada a fecha 2026-11-16.
+Cada proveedor declara un nivel de acceso estructurado (`AccessTier` en
+`app/providers/access.py`) que la interfaz muestra tal cual:
+
+| Nivel | Significado | ¿Puede costar dinero? |
+|---|---|---|
+| Ejecución local | Ollama / Whisper local: sin facturación por API; consume recursos del equipo | No |
+| Gratuito con límites de uso | Plan gratuito documentado con cuotas (Groq, Mistral, Cerebras, Gemini) | No, pero puede agotarse |
+| Créditos iniciales o promocionales | Saldo de prueba o según plan (HF Router, NVIDIA NIM, Deepgram) | Consume saldo |
+| Mixto | Modelos `:free` con límites y modelos de pago (OpenRouter) | Sí, según el modelo |
+| Pago por consumo | Requiere facturación (OpenAI, Anthropic, Together, xAI, Moonshot, Z.ai) | Sí |
+| Estado del plan desconocido | Sin verificación | Se trata como que sí |
+
+Los planes cambian: cada preset lleva su fecha de verificación
+(`verified_at`) y enlace a la documentación. Una clave aceptada por el
+catálogo de modelos significa **"clave válida · acceso a modelos sin
+confirmar"**: no prueba que la cuenta tenga saldo ni acceso a todos los
+modelos; eso se confirma al primer uso real.
+
+## Consentimientos y costes
+
+El copiloto nunca usa un servicio remoto sin consentimiento explícito
+(`app/providers/consent.py`, archivo `consents.json` sin secretos):
+
+* `remote_data` — enviar audio, texto o capturas a ese servicio;
+* `costs` — aceptar que su uso puede generar cargos o consumir saldo
+  (obligatorio para créditos, pago por consumo, mixto o desconocido);
+* `documents` — enviar extractos de documentos personales del perfil.
+
+Se pueden revocar en cualquier momento. El enrutador (`app/routing/`)
+descarta y explica cualquier opción sin el consentimiento necesario.
+
+## Historial de uso
+
+`app/providers/usage.py` guarda por día, proveedor y tarea: peticiones,
+errores, segundos de audio, tokens/caracteres y los últimos encabezados de
+límites que informó el proveedor (`x-ratelimit-*` de Groq,
+`anthropic-ratelimit-*`, `retry-after`). Nunca guarda contenido, prompts,
+transcripciones ni claves. Retención de 90 días; se puede borrar.
+
+## Proveedores preconfigurados (14)
+
+Doce usan el adaptador OpenAI-compatible (`chat/completions` con
+streaming SSE, `base_url` verificada el 2026-11-16); Anthropic tiene
+adaptador nativo y Deepgram es solo de voz (2026-11-24).
 
 | ID | Etiqueta | Base URL | Notas |
 |---|---|---|---|
@@ -39,6 +81,8 @@ streaming SSE). `base_url` verificada a fecha 2026-11-16.
 | `zai` | Z.ai (GLM) | `https://api.z.ai/api/paas/v4/` | Familia GLM; termina en `/` a propósito. |
 | `nvidia_nim` | NVIDIA NIM | `https://integrate.api.nvidia.com/v1` | Catálogo NIM con crédito gratuito. |
 | `gemini` | Google AI Studio (Gemini) | `https://generativelanguage.googleapis.com/v1beta/openai/` | Compatibilidad OpenAI de Gemini; termina en `/`. |
+| `anthropic` | Anthropic (Claude) | `https://api.anthropic.com/v1` | Adaptador nativo (Messages API): `x-api-key`, `anthropic-version`, SSE propio, imágenes base64. Validación con `GET /v1/models`. |
+| `deepgram` | Deepgram (solo voz) | `https://api.deepgram.com/v1` | Transcripción Nova-3 para el copiloto. La clave se valida con `GET /v1/projects` (sin transcribir). No aparece como modelo de chat. |
 
 Además existe un proveedor **`custom`** para cualquier servicio
 OpenAI-compatible: pegas la `base_url` y la clave. También está
@@ -87,7 +131,7 @@ adaptador (se integrarían como clases propias en `app/providers/`):
 
 | Proveedor | Qué exige su API | Estado |
 |---|---|---|
-| Anthropic | Header `x-api-key` + `anthropic-version`, `POST /v1/messages`, formato de contenido propio | Pendiente |
+| Anthropic | Header `x-api-key` + `anthropic-version`, `POST /v1/messages`, formato de contenido propio | **Implementado** (`anthropic.py`); probado con respuestas simuladas, sin clave real |
 | Cohere | `POST /v2/chat` con esquema propio | Pendiente |
 | Cloudflare Workers AI | Endpoint REST por cuenta y modelo | Pendiente |
 
@@ -102,5 +146,8 @@ Mientras tanto, varios de ellos exponen puertas compatibles con OpenAI
 * Gestión: `local-bridge/app/providers/manager.py`
   (keyring, `providers.json`, `connect`/`disconnect`/`get_client_for`).
 * Diálogo: `local-bridge/app/desktop/providers_dialog.py`.
-* Pruebas: `local-bridge/tests/test_providers.py` (20 pruebas con
-  transporte simulado; no tocan la red).
+* Anthropic: `local-bridge/app/providers/anthropic.py`.
+* Catálogo unificado, consentimientos e historial:
+  `catalog.py`, `consent.py`, `usage.py`, `access.py`.
+* Pruebas: `local-bridge/tests/test_providers.py` y
+  `tests/test_provider_catalog.py` (transporte simulado; no tocan la red).
