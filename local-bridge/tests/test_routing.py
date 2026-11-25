@@ -312,3 +312,35 @@ def test_ollama_backend_maps_errors_and_streams():
     with pytest.raises(ProviderError) as info:
         broken.chat_stream([{"role": "user", "content": "x"}], "m")
     assert info.value.kind == "network"
+
+
+def test_specialization_breaks_ties_by_task():
+    general = Candidate(
+        "ollama", "qwen3:8b", True, AccessTier.LOCAL, CHAT, 3, 3, fits_hardware=True
+    )
+    vision = Candidate(
+        "ollama",
+        "qwen2.5vl:7b",
+        True,
+        AccessTier.LOCAL,
+        VISION,
+        3,
+        3,
+        fits_hardware=True,
+    )
+    coder = Candidate(
+        "ollama",
+        "qwen2.5-coder:7b",
+        True,
+        AccessTier.LOCAL,
+        frozenset({"chat", "code"}),
+        3,
+        3,
+        fits_hardware=True,
+    )
+    cands = [vision, coder, general]  # el orden de la lista no debe decidir
+    policy = RoutingPolicy(Strategy.QUALITY)
+    assert route(RouteRequest(Task.TRANSLATION), cands, policy).primary == general
+    assert route(RouteRequest(Task.ANSWER), cands, policy).primary == general
+    assert route(RouteRequest(Task.CHALLENGE), cands, policy).primary == coder
+    assert route(RouteRequest(Task.VISION), cands, policy).primary == vision

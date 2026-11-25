@@ -21,8 +21,8 @@ validación real · 🟡 parcial · ⏳ pendiente · ⛔ no viable (motivo).
 | 9 Model Router | ✅ | ver abajo |
 | 10 Perfiles y base de conocimiento (RAG) | ✅ | ver abajo |
 | 11 Asistencia en conversaciones | 🟡 | Núcleo probado en vivo; interfaz en la etapa 14 |
-| 12 Traducción en tiempo real | ⏳ | |
-| 13 Desafíos en pantalla | ⏳ | |
+| 12 Traducción en tiempo real | 🟡 | Núcleo probado con modelo local; interfaz en la etapa 14 |
+| 13 Desafíos en pantalla | 🟡 | Núcleo probado con visión local; captura/interfaz en la etapa 14 |
 | 14 Interfaz y experiencia | ⏳ | |
 | 15–20 Seguridad, pruebas integrales, distribución, CI, auditoría final | ⏳ | |
 
@@ -101,6 +101,24 @@ STA (no probado).
 | Datos personales solo en local salvo permiso del perfil | ✅ | Pruebas |
 | Latencia | ✅ | Pregunta detectada 2,3 s tras el audio; primer token 0,26 s (modelo cargado) / 2,8 s (tras precarga en frío de 16 s) |
 | Ventana flotante, historial visible, controles | ⏳ | Etapa 14 |
+
+## Etapas 12 y 13 — Traducción y desafíos (núcleo)
+
+| Capacidad | Estado | Cómo se validó |
+|---|---|---|
+| Provisional ≠ definitivo; orden temporal; confianza baja | ✅ | Pruebas |
+| Traducción con modelo local | ✅ | Real: 2 frases es→en correctas en 2,0 s |
+| Exportar TXT/Markdown; resumen | ✅ | Pruebas |
+| Exportar PDF | ⏳ | Interfaz (Qt) en la etapa 14 |
+| Desafío por visión | ✅ | Real: qwen2.5vl:7b, ecuaciones resueltas (x=3,y=4 / x=4,y=3), 10 secciones; 20 s al primer token por intercambio de modelos en VRAM |
+| Desafío por OCR + texto | ✅ | Pruebas (OCR simulado) |
+| Análisis periódico sin repetir pantallas iguales | ✅ | Pruebas de dHash con ruido y con cambio real |
+| Captura de regiones/pantalla/varias regiones desde la interfaz | ⏳ | Etapa 14 (reutiliza `desktop/screenshot.py`) |
+
+Hallazgo de carga combinada: con qwen3:8b y qwen2.5vl:7b cargados en
+Ollama (1,9 GB de RAM libre de 16 GB), cargar además Pix2Text (torch) cerró
+el proceso de pruebas. La etapa 8 debe evaluar el conjunto STT + LLM +
+visión + OCR, no cada modelo por separado.
 
 Hallazgo de hardware: Ollama 0.40.17 usa **Vulkan** en la RX 590 (8 GB);
 la compatibilidad de la etapa 8 debe reconocer Vulkan además de CUDA/ROCm.

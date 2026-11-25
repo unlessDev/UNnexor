@@ -134,7 +134,8 @@ def test_rapidocr_real_if_installed(tmp_path):
         ocr_manager.release_engine()
 
 
-def test_pix2text_real_if_installed(tmp_path):
+def test_pix2text_real_if_installed(qapp, tmp_path):
+    """Requiere QApplication: crear un QPixmap sin ella aborta el intérprete."""
     pytest.importorskip("pix2text")
     from PySide6.QtGui import QColor, QPixmap
 
