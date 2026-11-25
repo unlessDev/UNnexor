@@ -252,7 +252,7 @@ def _ollama_summary(
     info["checked"] = True
     try:
         reachable, detail = ollama.is_reachable(timeout=2.0)
-    except Exception as exc:  # noqa: BLE001 - el diagnóstico no debe romperse
+    except Exception as exc:
         info["reachable"] = False
         info["detail"] = f"Error inesperado al comprobar Ollama: {exc}"
         return info
@@ -265,7 +265,7 @@ def _ollama_summary(
     except OllamaError as exc:
         info["models_error"] = exc.message
         return info
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         info["models_error"] = f"Error inesperado al listar modelos: {exc}"
         return info
     cleaned = sorted({str(name) for name in models if str(name).strip()})
@@ -278,7 +278,7 @@ def _ollama_summary(
 def _safe_call(func, default=None):
     try:
         return func()
-    except Exception:  # noqa: BLE001 - instantánea defensiva
+    except Exception:
         return default
 
 
@@ -321,7 +321,7 @@ def _build_checks(
     try:
         cfg.validate()
         add("config", "ok", "Configuración válida.")
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         add("config", "error", f"Configuración inválida: {exc}")
 
     if cfg.host in ("127.0.0.1", "localhost"):

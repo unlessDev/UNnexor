@@ -24,14 +24,14 @@ from __future__ import annotations
 import ctypes
 import ctypes.wintypes as wt
 import logging
-from typing import Callable, Optional
+from typing import Any, Callable
 
 from PySide6.QtCore import QAbstractNativeEventFilter, QByteArray
 
 log = logging.getLogger("extdator.win32")
 
 try:  # pragma: no cover - depende del entorno
-    _user32 = ctypes.windll.user32  # type: ignore[attr-defined]
+    _user32: Any = ctypes.windll.user32
     IS_WINDOWS = True
 except (AttributeError, OSError):  # pragma: no cover
     _user32 = None
@@ -64,8 +64,12 @@ if IS_WINDOWS:
         _fields_ = [("x", wt.LONG), ("y", wt.LONG)]
 
     class MOUSEHOOKSTRUCT(ctypes.Structure):
-        _fields_ = [("pt", POINT), ("hwnd", wt.HWND), ("wHitTestCode", wt.UINT),
-                    ("dwExtraInfo", ctypes.c_size_t)]
+        _fields_ = [
+            ("pt", POINT),
+            ("hwnd", wt.HWND),
+            ("wHitTestCode", wt.UINT),
+            ("dwExtraInfo", ctypes.c_size_t),
+        ]
 
     class MOUSEHOOKSTRUCTEX(ctypes.Structure):
         _fields_ = [("mouse", MOUSEHOOKSTRUCT), ("mouseData", wt.DWORD)]
@@ -75,11 +79,21 @@ if IS_WINDOWS:
     )
 
     _user32.SetWindowsHookExW.restype = wt.HHOOK
-    _user32.SetWindowsHookExW.argtypes = [ctypes.c_int, HOOKPROC, wt.HINSTANCE, wt.DWORD]
+    _user32.SetWindowsHookExW.argtypes = [
+        ctypes.c_int,
+        HOOKPROC,
+        wt.HINSTANCE,
+        wt.DWORD,
+    ]
     _user32.UnhookWindowsHookEx.restype = wt.BOOL
     _user32.UnhookWindowsHookEx.argtypes = [wt.HHOOK]
     _user32.CallNextHookEx.restype = ctypes.c_ssize_t
-    _user32.CallNextHookEx.argtypes = [wt.HHOOK, ctypes.c_int, ctypes.c_size_t, ctypes.c_ssize_t]
+    _user32.CallNextHookEx.argtypes = [
+        wt.HHOOK,
+        ctypes.c_int,
+        ctypes.c_size_t,
+        ctypes.c_ssize_t,
+    ]
     _user32.PostMessageW.restype = wt.BOOL
     _user32.PostMessageW.argtypes = [wt.HWND, wt.UINT, wt.WPARAM, wt.LPARAM]
     _user32.GetWindowLongPtrW.restype = ctypes.c_ssize_t
@@ -88,7 +102,7 @@ if IS_WINDOWS:
     _user32.SetWindowLongPtrW.argtypes = [wt.HWND, ctypes.c_int, ctypes.c_ssize_t]
     _user32.GetForegroundWindow.restype = wt.HWND
 else:  # pragma: no cover
-    MSG = POINT = MOUSEHOOKSTRUCTEX = None  # type: ignore[assignment]
+    MSG = POINT = MOUSEHOOKSTRUCTEX = None  # type: ignore[assignment,misc]
     HOOKPROC = None  # type: ignore[assignment]
 
 
@@ -99,7 +113,9 @@ def apply_noactivate(hwnd: int) -> None:
     try:
         exstyle = _user32.GetWindowLongPtrW(wt.HWND(hwnd), GWL_EXSTYLE)
         if not (exstyle & WS_EX_NOACTIVATE):
-            _user32.SetWindowLongPtrW(wt.HWND(hwnd), GWL_EXSTYLE, exstyle | WS_EX_NOACTIVATE)
+            _user32.SetWindowLongPtrW(
+                wt.HWND(hwnd), GWL_EXSTYLE, exstyle | WS_EX_NOACTIVATE
+            )
             log.debug("WS_EX_NOACTIVATE aplicado al HWND %s", hwnd)
     except Exception as exc:  # pragma: no cover
         log.debug("No se pudo reforzar WS_EX_NOACTIVATE: %s", exc)
@@ -112,14 +128,17 @@ class NoActivateFilter(QAbstractNativeEventFilter):
         super().__init__()
         self._hwnd_provider = hwnd_provider
 
-    def nativeEventFilter(self, event_type, message):  # noqa: N802 (PySide)
+    def nativeEventFilter(self, event_type, message):
         if not IS_WINDOWS:
             return False, 0
         try:
             if event_type == QByteArray(b"windows_generic_MSG"):
                 msg = ctypes.cast(int(message), ctypes.POINTER(MSG)).contents
-                if msg.message == WM_MOUSEACTIVATE and msg.hwnd and \
-                        int(msg.hwnd or 0) == (self._hwnd_provider() or 0):
+                if (
+                    msg.message == WM_MOUSEACTIVATE
+                    and msg.hwnd
+                    and int(msg.hwnd or 0) == (self._hwnd_provider() or 0)
+                ):
                     return True, MA_NOACTIVATE
         except Exception:  # pragma: no cover - nunca romper el bucle de eventos
             pass
@@ -135,8 +154,8 @@ class HoverScrollHook:
     """
 
     def __init__(self) -> None:
-        self._hook = None
-        self._proc = None  # referencia viva: GC no puede tocar el callback
+        self._hook: Any = None
+        self._proc: Any = None  # referencia viva: GC no puede tocar el callback
         self._target: int = 0
 
     # ------------------------------------------------------------------
@@ -190,9 +209,9 @@ class HoverScrollHook:
                 if target and hwnd and int(hwnd or 0) == target:
                     delta = ctypes.c_short((info.mouseData >> 16) & 0xFFFF).value
                     w_pack = (delta & 0xFFFF) << 16
-                    packed_lparam = (
-                        (info.mouse.pt.y & 0xFFFF) << 16
-                    ) | (info.mouse.pt.x & 0xFFFF)
+                    packed_lparam = ((info.mouse.pt.y & 0xFFFF) << 16) | (
+                        info.mouse.pt.x & 0xFFFF
+                    )
                     _user32.PostMessageW(
                         wt.HWND(target), w_param, w_pack, packed_lparam
                     )

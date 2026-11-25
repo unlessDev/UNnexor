@@ -22,6 +22,15 @@ usa [Semantic Versioning](https://semver.org/lang/es/).
   remoto/eval en la extensión.
 
 ### Fixed
+- `--server-only` no podía funcionar: pasaba un `uvicorn.Config` a
+  `uvicorn.run()` (que espera una app ASGI), así que arrancaba en
+  `127.0.0.1:8000` con una "aplicación" no invocable e ignoraba
+  `BRIDGE_PORT`. Ahora usa `uvicorn.Server(config).run()`.
+- `to_human_math` lanzaba `TypeError` cuando una fórmula tenía más de 16
+  envoltorios (`\text{…}`, `\mathrm{…}`…): el desenvoltorio devolvía
+  `None` al agotar las iteraciones.
+- Una prueba de texto Unicode en `/api/selection` estaba sombreada por otra
+  función con el mismo nombre y nunca se ejecutaba; se renombra y ejecuta.
 - `app/__init__.py` declaraba `1.0.0` mientras el manifest declaraba
   `1.2.0`; la versión queda unificada en `1.2.0`.
 - El auto-chequeo y el smoke GUI fallaban en equipos sin Ollama porque
@@ -81,6 +90,11 @@ usa [Semantic Versioning](https://semver.org/lang/es/).
   ni capturas; los logs se limitan y se sanean antes de escribirse.
 
 ### Changed
+- Calidad: `local-bridge/pyproject.toml` configura Black, Ruff y Mypy;
+  `requirements-dev.txt` instala Ruff y Mypy; la CI ejecuta formato, lint
+  y tipos antes de las pruebas. Mypy queda sin errores en `app/` (tipos de
+  Qt, enums cualificados y anotaciones corregidas sin cambiar
+  comportamiento) y es estricto para los paquetes nuevos del copiloto.
 - `docs/ARCHITECTURE.md` se traslada a `ARCHITECTURE.md` (raíz) para que
   sea el documento canónico; se actualizan los enlaces.
 - La extensión deja de solicitar `scripting` y permisos de host para webs
@@ -115,6 +129,8 @@ usa [Semantic Versioning](https://semver.org/lang/es/).
 - Tras el asistente de primer inicio del escritorio: `262 passed,
   1 skipped` (2026-11-23).
 - Tras el diagnóstico exportable: `272 passed, 1 skipped` (2026-11-24).
+- Tras Ruff/Mypy y las regresiones de `--server-only`, matemática y
+  redimensionado del panel: `278 passed, 1 skipped` (2026-11-24).
 
 ## [1.2.0] - 2026-11-19
 

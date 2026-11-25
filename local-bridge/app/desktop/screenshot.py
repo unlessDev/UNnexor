@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from PySide6.QtCore import QObject, QRect, Qt, QTimer, Signal
+from PySide6.QtCore import QObject, QPoint, QRect, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QGuiApplication, QPainter, QPen, QPixmap, QScreen
 from PySide6.QtWidgets import (
     QComboBox,
@@ -55,8 +55,8 @@ class RegionOverlay(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self.setCursor(Qt.CursorShape.CrossCursor)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-        self._origin: Optional[QRect] = None
-        self._current_point = None
+        self._origin: Optional[QPoint] = None
+        self._current_point: Optional[QPoint] = None
         self._selecting = False
 
     def show_full(self) -> None:
@@ -65,18 +65,20 @@ class RegionOverlay(QWidget):
         self.activateWindow()  # recibe teclado solo durante la selección
 
     # ------------------------------------------------------------------ #
-    def paintEvent(self, event) -> None:  # noqa: N802 (PySide)
+    def paintEvent(self, event) -> None:
         painter = QPainter(self)
         # Oscurecer toda la pantalla...
         painter.fillRect(self.rect(), QColor(6, 8, 12, 140))
         rect = self._selected_rect()
         if rect is not None:
             # ...dejar la región elegida nítida y con borde acento.
-            painter.setCompositionMode(QPainter.CompositionMode_Clear)
+            painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Clear)
             painter.fillRect(rect, Qt.GlobalColor.transparent)
-            painter.setCompositionMode(QPainter.CompositionMode_SourceOver)
+            painter.setCompositionMode(
+                QPainter.CompositionMode.CompositionMode_SourceOver
+            )
             painter.setPen(QPen(QColor(ACCENT), 2))
-            painter.setBrush(Qt.GlobalColor.NoBrush)
+            painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.drawRect(rect)
             size_label = f"{rect.width()} × {rect.height()} px"
             painter.setPen(QPen(QColor(TEXT), 1))
@@ -94,7 +96,7 @@ class RegionOverlay(QWidget):
         return None
 
     # ------------------------------------------------------------------ #
-    def mousePressEvent(self, event) -> None:  # noqa: N802 (PySide)
+    def mousePressEvent(self, event) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
             self._origin = event.position().toPoint()
             self._current_point = self._origin
@@ -103,12 +105,12 @@ class RegionOverlay(QWidget):
         elif event.button() == Qt.MouseButton.RightButton:
             self._finish(None)
 
-    def mouseMoveEvent(self, event) -> None:  # noqa: N802 (PySide)
+    def mouseMoveEvent(self, event) -> None:
         if self._selecting:
             self._current_point = event.position().toPoint()
             self.update()
 
-    def mouseReleaseEvent(self, event) -> None:  # noqa: N802 (PySide)
+    def mouseReleaseEvent(self, event) -> None:
         if not self._selecting:
             return
         self._current_point = event.position().toPoint()
@@ -120,7 +122,7 @@ class RegionOverlay(QWidget):
         else:
             self._finish(rect)
 
-    def keyPressEvent(self, event) -> None:  # noqa: N802 (PySide)
+    def keyPressEvent(self, event) -> None:
         if event.key() == Qt.Key.Key_Escape:
             self._finish(None)
 
@@ -209,7 +211,7 @@ class RegionSelector(QObject):
 class InstructionEdit(QPlainTextEdit):
     submitted = Signal()
 
-    def keyPressEvent(self, event) -> None:  # noqa: N802 (PySide)
+    def keyPressEvent(self, event) -> None:
         if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter) and not (
             event.modifiers() & Qt.KeyboardModifier.ShiftModifier
         ):

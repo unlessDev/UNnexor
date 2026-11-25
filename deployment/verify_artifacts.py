@@ -207,9 +207,9 @@ def verify_windows(release: Path, version: str) -> dict:
     _check(smoke.get("ok") is True, "El smoke test headless no pasó.", errors)
     _check(gui.get("ok") is True, "El smoke test GUI no pasó.", errors)
 
-    for key, filename_key, hash_key in (
-        ("archive", "archive", "archive_sha256"),
-        ("exe", "exe", "exe_sha256"),
+    for key, hash_key in (
+        ("archive", "archive_sha256"),
+        ("exe", "exe_sha256"),
     ):
         filename = str(report.get(key, ""))
         try:

@@ -18,7 +18,8 @@ render_math = _mod.render_math
 
 path = os.path.join(tempfile.gettempdir(), "extdator_vision_math.png")
 render_math(["x^2 + y^2 = 25", "x + y = 7"], path)
-b64 = base64.b64encode(open(path, "rb").read()).decode()
+with open(path, "rb") as handle:
+    b64 = base64.b64encode(handle.read()).decode()
 payload = {
     "image_b64": b64,
     "instruction": (

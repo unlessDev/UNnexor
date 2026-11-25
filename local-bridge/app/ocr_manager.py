@@ -194,7 +194,7 @@ def _create_engine(name: str) -> Any:
             from rapidocr_onnxruntime import RapidOCR
         except ImportError as exc:  # paquete renombrado en el futuro
             try:
-                from rapidocr import RapidOCR  # type: ignore[no-redef]
+                from rapidocr import RapidOCR
             except ImportError:
                 raise OCREngineError(
                     "No se pudo inicializar RapidOCR (reinstala "

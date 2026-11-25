@@ -103,7 +103,7 @@ def estimate_requirements(
     size_bytes: Optional[int],
     params_b: Optional[float],
     context_tokens: int,
-) -> Dict[str, Optional[float]]:
+) -> Dict[str, Any]:
     """Desglosa la memoria estimada necesaria (GB). Valores orientativos."""
     weights_gb = round(size_bytes / (1024**3), 2) if size_bytes else None
     kv_gb: Optional[float] = None
@@ -133,9 +133,9 @@ def gpu_budget(hw_dict: Dict[str, Any]) -> Tuple[Optional[float], bool]:
     best: Optional[int] = None
     for gpu in hw_dict.get("gpus", []):
         vram = gpu.get("vram_total_mb")
-        if isinstance(vram, int) and vram > 256:  # ignora iGPU diminutas
-            if best is None or vram > best:
-                best = vram
+        # Ignora iGPU diminutas (≤ 256 MB).
+        if isinstance(vram, int) and vram > 256 and (best is None or vram > best):
+            best = vram
     if best is None:
         return None, False
     return round(best / 1024 * VRAM_USABLE_FRACTION, 2), True

@@ -37,7 +37,7 @@ import tempfile
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Optional
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 LOCAL_BRIDGE = PROJECT_ROOT / "local-bridge"
@@ -281,10 +281,12 @@ def _uninstall(
         raise RuntimeError(
             f"La desinstalación falló (exit={result.returncode}):\n{tail}"
         )
-    if not _wait_until(lambda: not install_dir.exists(), 60):
-        if (install_dir / "Extdator.exe").exists():
-            raise RuntimeError("La desinstalación no eliminó Extdator.exe.")
-        # Un directorio vacío residual no invalida la desinstalación.
+    # Un directorio vacío residual no invalida la desinstalación.
+    if (
+        not _wait_until(lambda: not install_dir.exists(), 60)
+        and (install_dir / "Extdator.exe").exists()
+    ):
+        raise RuntimeError("La desinstalación no eliminó Extdator.exe.")
     # El desinstalador de Inno puede copiarse a %TEMP% y terminar en segundo
     # plano después de borrar el directorio. Damos margen para que cierre su
     # clave de registro y no compita con la siguiente instalación.

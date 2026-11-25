@@ -37,9 +37,24 @@ jobs:
           cache-dependency-path: |
             local-bridge/requirements.txt
             local-bridge/requirements-build.txt
+            local-bridge/requirements-dev.txt
 
       - name: Instalar dependencias
-        run: python -m pip install -r local-bridge/requirements.txt
+        run: |
+          python -m pip install -r local-bridge/requirements.txt
+          python -m pip install -r local-bridge/requirements-dev.txt
+
+      - name: Formato (Black)
+        working-directory: local-bridge
+        run: python -m black --check . ../deployment
+
+      - name: Lint (Ruff)
+        working-directory: local-bridge
+        run: python -m ruff check . ../deployment
+
+      - name: Tipos (Mypy)
+        working-directory: local-bridge
+        run: python -m mypy
 
       - name: Ejecutar la suite
         working-directory: local-bridge

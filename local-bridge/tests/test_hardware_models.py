@@ -9,8 +9,8 @@ import httpx
 import pytest
 
 from app.hardware import HardwareInfo, detect
+from app.model_catalog import catalog_entry, recommended_catalog
 from app.model_evaluator import (
-    TIER_ALTO,
     TIER_IMPOSIBLE,
     TIER_PERFECTO,
     TIER_REGULAR,
@@ -18,10 +18,9 @@ from app.model_evaluator import (
     context_warning,
     estimate_requirements,
     gpu_budget,
-    parse_parameter_count,
     params_from_size,
+    parse_parameter_count,
 )
-from app.model_catalog import catalog_entry, recommended_catalog
 from app.ollama_client import (
     ModelNotFoundError,
     OllamaClient,

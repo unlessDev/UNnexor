@@ -112,7 +112,7 @@ def test_build_creates_zip_checksums_and_report(
 
     checksums = (out / "SHA256SUMS.txt").read_text(encoding="utf-8").splitlines()
     assert len(checksums) == 2
-    for line, browser in zip(checksums, ("chrome", "edge")):
+    for line, browser in zip(checksums, ("chrome", "edge"), strict=True):
         digest, name = line.split("  ")
         assert name == f"{browser}.zip"
         assert digest == report["targets"][browser]["sha256"]

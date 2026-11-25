@@ -25,14 +25,13 @@ import time
 os.environ["QT_QPA_PLATFORM"] = "windows"
 sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parents[2]))
 
-from PySide6.QtCore import Qt  # noqa: E402
-from PySide6.QtGui import QGuiApplication  # noqa: E402
-from PySide6.QtWidgets import QApplication  # noqa: E402
+from PySide6.QtGui import QGuiApplication
+from PySide6.QtWidgets import QApplication
 
-from app.config import Config  # noqa: E402
-from app.desktop.window import BridgeWindow  # noqa: E402
-from app.ollama_client import OllamaClient  # noqa: E402
-from app.queue_manager import Bus, RuntimeState  # noqa: E402
+from app.config import Config
+from app.desktop.window import BridgeWindow
+from app.ollama_client import OllamaClient
+from app.queue_manager import Bus, RuntimeState
 
 user32 = ctypes.windll.user32
 
@@ -43,14 +42,20 @@ MOUSEEVENTF_LEFTUP = 0x0004
 
 
 class MOUSEINPUT(ctypes.Structure):
-    _fields_ = [("dx", wt.LONG), ("dy", wt.LONG), ("mouseData", wt.DWORD),
-                ("dwFlags", wt.DWORD), ("time", wt.DWORD),
-                ("dwExtraInfo", ctypes.POINTER(ctypes.c_ulong))]
+    _fields_ = [
+        ("dx", wt.LONG),
+        ("dy", wt.LONG),
+        ("mouseData", wt.DWORD),
+        ("dwFlags", wt.DWORD),
+        ("time", wt.DWORD),
+        ("dwExtraInfo", ctypes.POINTER(ctypes.c_ulong)),
+    ]
 
 
 class INPUT(ctypes.Structure):
     class _U(ctypes.Union):
         _fields_ = [("mi", MOUSEINPUT)]
+
     _anonymous_ = ("u",)
     _fields_ = [("type", wt.DWORD), ("u", _U)]
 
@@ -112,8 +117,12 @@ def main() -> int:
     assert hwnd, "No se obtuvo HWND nativo"
     pump(app, 0.6)
 
-    results = {"wheel_scroll": False, "focus_kept": False,
-               "click_noactivate": False, "drag_moves": False}
+    results = {
+        "wheel_scroll": False,
+        "focus_kept": False,
+        "click_noactivate": False,
+        "drag_moves": False,
+    }
 
     geo = window.frameGeometry()
 
@@ -124,8 +133,9 @@ def main() -> int:
     pump(app, 0.25)
 
     foreground_before = user32.GetForegroundWindow()
-    assert foreground_before != hwnd, \
-        "El panel ya era la ventana en primer plano antes de la prueba"
+    assert (
+        foreground_before != hwnd
+    ), "El panel ya era la ventana en primer plano antes de la prueba"
 
     start_value = window._chat_scroll.verticalScrollBar().value()
     for _ in range(5):
@@ -136,7 +146,7 @@ def main() -> int:
     foreground_after = user32.GetForegroundWindow()
 
     results["wheel_scroll"] = end_value > start_value
-    results["focus_kept"] = (foreground_after == foreground_before)
+    results["focus_kept"] = foreground_after == foreground_before
     print(f"[probe] scroll {start_value} -> {end_value}", file=sys.stderr)
 
     # --- 3: clic sobre la barra de título no activa ------------------------
@@ -148,8 +158,9 @@ def main() -> int:
     send_click()
     pump(app, 0.3)
     fg_after_click = user32.GetForegroundWindow()
-    results["click_noactivate"] = (fg_after_click == fg_before_click) and \
-        (fg_after_click != hwnd)
+    results["click_noactivate"] = (fg_after_click == fg_before_click) and (
+        fg_after_click != hwnd
+    )
 
     # --- 4: arrastre de la barra de título ---------------------------------
     user32.SetCursorPos(title_x, title_y)

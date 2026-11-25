@@ -173,7 +173,7 @@ class RequirementsCheckTask(QRunnable):
                 True, detail, False, f"No se pudieron listar los modelos: {exc}"
             )
             return
-        except Exception as exc:  # noqa: BLE001 - el hilo nunca debe morir en silencio
+        except Exception as exc:
             log.exception("Fallo inesperado al listar modelos: %s", exc)
             self.signals.finished.emit(
                 True,
@@ -627,6 +627,6 @@ class OnboardingDialog(QDialog):
         self._next.setText("Finalizar")
 
     # ------------------------------------------------------------------ #
-    def done(self, result: int) -> None:  # noqa: N802 (Qt)
+    def done(self, result: int) -> None:
         self._pair_timer.stop()
         super().done(result)

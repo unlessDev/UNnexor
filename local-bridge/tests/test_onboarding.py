@@ -10,16 +10,16 @@ import pytest
 
 pytest.importorskip("PySide6", reason="PySide6 no instalada")
 
-from app.config import Config  # noqa: E402
-from app.desktop.onboarding import (  # noqa: E402
+from app.config import Config
+from app.desktop.onboarding import (
     ONBOARDING_SEEN_KEY,
     OnboardingDialog,
     RequirementsCheckTask,
     model_is_installed,
     should_show_onboarding,
 )
-from app.ollama_client import OllamaError  # noqa: E402
-from app.pairing import PairingManager  # noqa: E402
+from app.ollama_client import OllamaError
+from app.pairing import PairingManager
 
 
 class FakeOllama:

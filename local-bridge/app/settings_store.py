@@ -21,8 +21,8 @@ import shutil
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from .config import Config
 from . import paths
+from .config import Config
 
 log = logging.getLogger("extdator.settings")
 

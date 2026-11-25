@@ -21,7 +21,6 @@ from PySide6.QtWidgets import (
     QDoubleSpinBox,
     QFormLayout,
     QFrame,
-    QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -36,7 +35,7 @@ from PySide6.QtWidgets import (
 )
 
 from ..config import Config
-from ..ollama_client import OllamaClient, OllamaError
+from ..ollama_client import OllamaClient
 from ..settings_store import ALLOWED_KEYS
 from .styles import ACCENT, BORDER, MUTED, PANEL, TEXT
 from .workers import HardwareWorker, PullWorker
@@ -308,7 +307,7 @@ class ModelSelectorDialog(QDialog):
     def _clear_layout(self) -> None:
         while self._vbox.count() > 1:
             item = self._vbox.takeAt(0)
-            widget = item.widget()
+            widget = item.widget() if item is not None else None
             if widget is not None:
                 widget.deleteLater()
 
@@ -474,7 +473,7 @@ class ModelSelectorDialog(QDialog):
             row.status.setText("error")
         self._status.setText(f"⚠ {name}: {message}")
 
-    def closeEvent(self, event) -> None:  # noqa: N802 (PySide)
+    def closeEvent(self, event) -> None:
         for worker in self._pull_workers:
             if worker.isRunning():
                 worker.stop()
@@ -540,16 +539,20 @@ class SettingsDialog(QDialog):
         step: float = 1,
         decimals: int = 0,
         suffix: str = "",
-    ) -> QWidget:
+    ) -> QSpinBox | QDoubleSpinBox:
         spec = ALLOWED_KEYS.get(key, {})
+        widget: QSpinBox | QDoubleSpinBox
         if decimals:
-            widget = QDoubleSpinBox()
-            widget.setDecimals(decimals)
-            widget.setSingleStep(step)
+            double = QDoubleSpinBox()
+            double.setDecimals(decimals)
+            double.setSingleStep(step)
+            double.setRange(min_v, max_v)
+            widget = double
         else:
-            widget = QSpinBox()
-            widget.setSingleStep(int(step))
-        widget.setRange(min_v, max_v)
+            integer = QSpinBox()
+            integer.setSingleStep(int(step))
+            integer.setRange(int(min_v), int(max_v))
+            widget = integer
         widget.setSuffix(suffix)
         if spec.get("restart"):
             widget.setToolTip("Requiere reiniciar Extdator para aplicarse.")
@@ -563,7 +566,7 @@ class SettingsDialog(QDialog):
         self._widgets[key] = widget
         return widget
 
-    def _text(self, key: str, placeholder: str = "") -> QWidget:
+    def _text(self, key: str, placeholder: str = "") -> QLineEdit:
         widget = QLineEdit()
         widget.setPlaceholderText(placeholder)
         self._widgets[key] = widget
@@ -672,11 +675,10 @@ class SettingsDialog(QDialog):
         changes: Dict[str, Any] = {}
         extra = dict(self._cfg.ollama_extra_options or {})
         for key, widget in self._widgets.items():
-            if key == "_num_ctx":
-                extra["num_ctx"] = int(widget.value())
-                continue
-            if key == "_num_predict":
-                extra["num_predict"] = int(widget.value())
+            if key in ("_num_ctx", "_num_predict") and isinstance(
+                widget, (QSpinBox, QDoubleSpinBox)
+            ):
+                extra[key[1:]] = int(widget.value())
                 continue
             if isinstance(widget, QCheckBox):
                 changes[key] = widget.isChecked()
