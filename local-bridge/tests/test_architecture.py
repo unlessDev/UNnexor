@@ -75,3 +75,24 @@ def test_desktop_does_not_import_server_or_main():
         assert "from ..server" not in source, js_file.name
         assert "from ..main" not in source, js_file.name
         assert "fastapi" not in roots, js_file.name
+
+
+COPILOT_CORE_PACKAGES = ["audio", "stt", "copilot", "knowledge", "routing"]
+FORBIDDEN_IN_COPILOT_CORE = {"PySide6", "fastapi", "uvicorn"}
+
+
+def test_copilot_core_packages_stay_framework_free():
+    """ADR-0005: el núcleo del copiloto no depende de Qt ni del servidor."""
+    violations: dict[str, set[str]] = {}
+    for package in COPILOT_CORE_PACKAGES:
+        folder = APP_DIR / package
+        if not folder.is_dir():
+            continue
+        for module in folder.rglob("*.py"):
+            source = module.read_text(encoding="utf-8")
+            found = _imported_roots(module) & FORBIDDEN_IN_COPILOT_CORE
+            if "from ..server" in source or "from ..desktop" in source:
+                found.add("server/desktop")
+            if found:
+                violations[str(module.relative_to(APP_DIR))] = found
+    assert not violations, f"Núcleo del copiloto acoplado: {violations}"

@@ -20,6 +20,22 @@ usa [Semantic Versioning](https://semver.org/lang/es/).
   no del cliente HTTP concreto.
 - Pruebas de arquitectura para límites de imports y ausencia de código
   remoto/eval en la extensión.
+- ADR-0005: arquitectura del copiloto en tiempo real (paquetes `audio`,
+  `stt`, `copilot`, `knowledge`, `routing`, concurrencia, enrutamiento y
+  privacidad; sin exclusión de captura ni mecanismos de ocultación).
+  Avance verificable en `docs/COPILOT_STATUS.md`.
+
+### Copilot
+- Paquete `app/audio`: captura WASAPI del audio del sistema (loopback) y
+  del micrófono con SoundCard, en hilos propios con COM por hilo, pausa
+  sin cerrar el dispositivo, reconexión exponencial y liberación
+  garantizada; remuestreo en streaming a 16 kHz mono; VAD Silero v6 (ONNX
+  incluido en faster-whisper, sin descargas) con respaldo por energía;
+  segmentador con intervenciones provisionales/finales, pre-roll, corte de
+  monólogos y descarte de ruidos; `AudioPipeline` para varias fuentes a la
+  vez. Validado con una locución TTS reproducida y capturada en loopback.
+- `paths.models_dir()` (`%LOCALAPPDATA%\Extdator\models`) para modelos
+  descargados con consentimiento y `paths.copilot_dir()` para sus datos.
 
 ### Fixed
 - `--server-only` no podía funcionar: pasaba un `uvicorn.Config` a
