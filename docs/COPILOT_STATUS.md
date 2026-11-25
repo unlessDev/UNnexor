@@ -20,7 +20,7 @@ validación real · 🟡 parcial · ⏳ pendiente · ⛔ no viable (motivo).
 | 8 Compatibilidad de modelos y hardware | ⏳ | |
 | 9 Model Router | ✅ | ver abajo |
 | 10 Perfiles y base de conocimiento (RAG) | ✅ | ver abajo |
-| 11 Asistencia en conversaciones | ⏳ | |
+| 11 Asistencia en conversaciones | 🟡 | Núcleo probado en vivo; interfaz en la etapa 14 |
 | 12 Traducción en tiempo real | ⏳ | |
 | 13 Desafíos en pantalla | ⏳ | |
 | 14 Interfaz y experiencia | ⏳ | |
@@ -88,6 +88,19 @@ STA (no probado).
 | Fuentes citables en el contexto | ✅ | Pruebas |
 | Gestión desde la interfaz (añadir, eliminar, reindexar) | ⏳ | Etapa 14 |
 | PDF escaneados | ⏳ | Requiere OCR; hoy se informa "no se encontró texto" |
+
+## Etapa 11 — Asistencia en conversaciones (núcleo)
+
+| Capacidad | Estado | Cómo se validó |
+|---|---|---|
+| Detección automática de preguntas (sin "¿?") y descarte de saludos | ✅ | Pruebas + en vivo: "Buenos días, gracias por venir." ignorado, la pregunta detectada |
+| No responder por fragmento (turnos por pausa) ni repetir | ✅ | Pruebas |
+| Respuesta contextual con perfil y documentos citados | ✅ | Pruebas + en vivo con qwen3:8b |
+| Honestidad: sin inventar experiencias, `[completar: …]` | ✅ | En vivo: la respuesta marcó el resultado a completar |
+| Pregunta manual, otra respuesta, ampliar, útil, cancelar | ✅ | Pruebas |
+| Datos personales solo en local salvo permiso del perfil | ✅ | Pruebas |
+| Latencia | ✅ | Pregunta detectada 2,3 s tras el audio; primer token 0,26 s (modelo cargado) / 2,8 s (tras precarga en frío de 16 s) |
+| Ventana flotante, historial visible, controles | ⏳ | Etapa 14 |
 
 Hallazgo de hardware: Ollama 0.40.17 usa **Vulkan** en la RX 590 (8 GB);
 la compatibilidad de la etapa 8 debe reconocer Vulkan además de CUDA/ROCm.

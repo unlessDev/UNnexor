@@ -219,6 +219,31 @@ class OllamaClient:
         except json.JSONDecodeError as exc:
             raise OllamaResponseError("Respuesta no válida de /api/show.") from exc
 
+    def preload(self, model: str, keep_alive: Optional[str] = None) -> float:
+        """Carga el modelo en memoria sin generar texto (``/api/generate``
+        sin prompt). Devuelve los segundos que tardó. La primera respuesta
+        de un modelo frío puede tardar decenas de segundos en cargarlo."""
+        payload: Dict[str, Any] = {"model": model}
+        effective = self._keep_alive if keep_alive is None else keep_alive
+        if effective:
+            payload["keep_alive"] = effective
+        started = time.perf_counter()
+        try:
+            response = self._client.post("/api/generate", json=payload)
+        except httpx.HTTPError as exc:
+            raise OllamaConnectionError(
+                _friendly_http_error(exc, self._base_url)
+            ) from exc
+        if response.status_code == 404:
+            raise ModelNotFoundError(
+                f"El modelo '{model}' no está instalado en Ollama."
+            )
+        if response.status_code != 200:
+            raise OllamaResponseError(
+                f"Ollama devolvió HTTP {response.status_code} al cargar el modelo."
+            )
+        return round(time.perf_counter() - started, 2)
+
     def running_models(self) -> List[Dict[str, Any]]:
         """Modelos cargados en memoria ahora mismo (``GET /api/ps``).
 
