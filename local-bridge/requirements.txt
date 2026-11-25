@@ -13,6 +13,8 @@
 #   soundcard      → captura WASAPI: loopback del sistema y micrófono (BSD-3)
 #   faster-whisper → reconocimiento de voz local (MIT; CTranslate2, Silero VAD).
 #                    Los modelos NO se instalan: se descargan con consentimiento
+#   pypdf          → texto de PDF para la base de conocimiento (BSD-3; se evita
+#                    PyMuPDF por su licencia AGPL)
 #   pytest         → pruebas
 #   black          → formateo del código (herramienta de desarrollo)
 fastapi>=0.115,<1
@@ -26,5 +28,6 @@ keyring>=24,<27
 numpy>=1.26,<3
 soundcard>=0.4.5,<0.5
 faster-whisper>=1.1,<2
+pypdf>=5,<7
 pytest>=8,<9
 black>=24,<27

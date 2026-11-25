@@ -158,6 +158,17 @@ Detalle de motores, costes y mediciones en `docs/SPEECH.md`.
 | `routing/executor.py` | Ejecuta la decisión en streaming; alternativas solo antes de emitir texto, aviso visible (y explícito si pasa a remoto), cancelación sin alternativas. |
 | `routing/candidates.py` | Candidatos reales: Ollama (`/api/tags` + capacidades de `/api/show` + encaje con el hardware) y modelos remotos elegidos; backend de Ollama con errores tipados. |
 
+### Perfiles y base de conocimiento (`app/knowledge/`)
+
+| Módulo | Responsabilidad |
+|---|---|
+| `profiles.py` | `ContextProfile` (rol, experiencia, objetivo, empresa, idioma, tono, detalle, glosario, `allow_remote_documents=False` por defecto) y `ProfileStore` JSON. |
+| `extract.py` | TXT/MD (UTF-8/CP1252), PDF con pypdf, DOCX leyendo su XML; validación por contenido, límites de tamaño/páginas, guarda contra bombas ZIP, PDF cifrados rechazados. |
+| `chunker.py` | Fragmentos ~900 caracteres con solapamiento, respetando párrafos/frases y conservando sección y página. |
+| `bm25.py` | BM25 sin tildes ni palabras vacías (es/en): funciona sin modelos. |
+| `embeddings.py` | Embeddings locales vía Ollama `/api/embed` (p. ej. `nomic-embed-text`), normalizados. |
+| `service.py` | `KnowledgeBase` en SQLite: añadir archivo/nota (misma nombre = nueva versión), eliminar, borrar perfil, vectores pendientes/reconstrucción, búsqueda híbrida (RRF) y `build_context` con fuentes citables. |
+
 Regla de diseño: la política por defecto es **solo local**. Un remoto
 entra únicamente con `remote_data`; uno que puede costar dinero, además
 con `costs`; con documentos personales, además con `documents`.

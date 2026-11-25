@@ -19,7 +19,7 @@ validación real · 🟡 parcial · ⏳ pendiente · ⛔ no viable (motivo).
 | 7 Catálogo de proveedores | ✅ | ver abajo |
 | 8 Compatibilidad de modelos y hardware | ⏳ | |
 | 9 Model Router | ✅ | ver abajo |
-| 10 Perfiles y base de conocimiento (RAG) | ⏳ | |
+| 10 Perfiles y base de conocimiento (RAG) | ✅ | ver abajo |
 | 11 Asistencia en conversaciones | ⏳ | |
 | 12 Traducción en tiempo real | ⏳ | |
 | 13 Desafíos en pantalla | ⏳ | |
@@ -75,6 +75,22 @@ STA (no probado).
 | Alternativas sin cambios silenciosos; sin cambio tras emitir texto | ✅ | `tests/test_routing.py` |
 | Candidatos de Ollama con capacidades reales | 🧪 | Ollama simulado; validar con Ollama en marcha en la etapa 11 |
 | Interfaz del catálogo/consentimientos en el copiloto | ⏳ | Etapa 14 |
+
+## Etapa 10 — Perfiles y base de conocimiento
+
+| Capacidad | Estado | Cómo se validó |
+|---|---|---|
+| Perfiles (rol, experiencia, objetivo, tono, detalle, glosario) | ✅ | Pruebas de persistencia y validación |
+| TXT / Markdown / DOCX / PDF | ✅ | Pruebas con archivos reales generados (PDF estándar, DOCX con estilos) |
+| Rechazo de PDF cifrado, binarios, bombas ZIP, formatos no admitidos | ✅ | Pruebas |
+| BM25 sin modelos | ✅ | Pruebas |
+| Embeddings con Ollama (`nomic-embed-text`) + búsqueda híbrida | ✅ | Prueba real: 4 notas, recupera por significado sin palabras en común |
+| Fuentes citables en el contexto | ✅ | Pruebas |
+| Gestión desde la interfaz (añadir, eliminar, reindexar) | ⏳ | Etapa 14 |
+| PDF escaneados | ⏳ | Requiere OCR; hoy se informa "no se encontró texto" |
+
+Hallazgo de hardware: Ollama 0.40.17 usa **Vulkan** en la RX 590 (8 GB);
+la compatibilidad de la etapa 8 debe reconocer Vulkan además de CUDA/ROCm.
 
 ## Bloqueantes registrados para la distribución
 
