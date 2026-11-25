@@ -81,6 +81,8 @@ def ollama_candidates(
             caps.add("vision")
         if "embedding" in caps_raw:
             caps.add("embeddings")
+        if re.search(r"cod(?:er|e|estral)|starcoder|deepseek-coder", name, re.I):
+            caps.add("code")  # especializado en programación
         params = parse_parameter_count(details.get("parameter_size"), name)
         quality, speed = _ollama_quality_speed(params)
         fits: bool | None = None

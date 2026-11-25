@@ -166,7 +166,12 @@ def _rejection_reason(
     return None
 
 
-def _score(cand: Candidate, strategy: Strategy) -> float:
+_TEXT_TASKS = frozenset(
+    {Task.ANSWER, Task.QUESTION_DETECTION, Task.TRANSLATION, Task.SUMMARY}
+)
+
+
+def _score(cand: Candidate, strategy: Strategy, task: Task | None = None) -> float:
     quality, speed = float(cand.quality), float(cand.speed)
     base = {
         Strategy.BALANCED: quality + speed,
@@ -178,6 +183,15 @@ def _score(cand: Candidate, strategy: Strategy) -> float:
     }[strategy]
     if cand.local and cand.fits_hardware is None:
         base -= 0.5  # sin evaluar: ligera penalización
+    # Desempates por especialización: a igual tamaño, un modelo de visión o
+    # de código suele rendir menos en conversación/traducción que uno general.
+    if task in _TEXT_TASKS:
+        if "vision" in cand.capabilities:
+            base -= 0.25
+        if "code" in cand.capabilities:
+            base -= 0.5
+    elif task is Task.CHALLENGE and "code" in cand.capabilities:
+        base += 0.5
     return base
 
 
@@ -207,7 +221,9 @@ def route(
     if not allowed:
         return RouteDecision(request.task, None, rejected=tuple(rejected))
 
-    ordered = sorted(allowed, key=lambda c: _score(c, policy.strategy), reverse=True)
+    ordered = sorted(
+        allowed, key=lambda c: _score(c, policy.strategy, request.task), reverse=True
+    )
     reasons: list[str] = [f"Estrategia: {policy.strategy.label.lower()}."]
     pinned_key = policy.pinned.get(request.task)
     if pinned_key:

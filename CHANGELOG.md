@@ -82,8 +82,21 @@ usa [Semantic Versioning](https://semver.org/lang/es/).
   Whisper base → qwen3:8b local (RX 590 por Vulkan): pregunta detectada
   2,3 s después de terminar el audio; primer token 0,26 s con el modelo
   cargado y 2,8 s tras una precarga en frío.
+- Traducción en tiempo real (núcleo): segmentos provisionales nunca
+  traducidos ni presentados como definitivos, confirmados traducidos en
+  orden con contexto, confianza baja marcada, exportación TXT/Markdown y
+  resumen. Real: dos frases es→en correctas en 2,0 s con un modelo local.
+- Desafíos en pantalla (núcleo): visión del modelo o, si no hay, OCR +
+  modelo de texto; respuesta estructurada (problema, consigna, enfoque,
+  plan, pasos, código, explicación, resultado, advertencias, alternativas);
+  detector de cambios por hash perceptual para el análisis periódico. Real:
+  qwen2.5vl:7b resolvió un sistema de ecuaciones desde una imagen.
+- Router: desempate por especialización (modelos de visión o de código
+  penalizados en tareas de texto; los de código preferidos en desafíos).
 
 ### Fixed
+- La prueba opcional de Pix2Text creaba un `QPixmap` sin `QApplication`:
+  ejecutada sola abortaba el intérprete (código 127). Ahora usa `qapp`.
 - Proveedores OpenAI-compatible: con un error HTTP no tabulado (p. ej. 400)
   durante el streaming, el cuerpo no se leía y se mostraba un error interno
   de httpx (`ResponseNotRead`) en lugar del mensaje del proveedor.

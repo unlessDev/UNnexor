@@ -166,6 +166,8 @@ Detalle de motores, costes y mediciones en `docs/SPEECH.md`.
 | `prompts.py` | Prompts de respuesta (perfil, documentos con fuente, conversación reciente, otra respuesta, ampliar), traducción, resumen y desafíos. Regla: no inventar experiencias ni datos; marcar `[completar: …]`. |
 | `settings.py` | `CopilotSettings` (voz, fuentes, sensibilidad, estrategia, modelos fijados/remotos, ventana, atajos) y su repositorio JSON. |
 | `engine.py` | `RoutedEngine`: candidatos cacheados + router + ejecutor + historial de uso con límites; `local_only` para datos personales; `warm_up()` precarga el modelo local al iniciar. |
+| `translation.py` | `LiveTranslator`: provisionales sin traducir y marcados, confirmados traducidos en orden con contexto, confianza baja marcada, exportación TXT/Markdown y resumen. |
+| `challenges.py` | dHash + `ChangeDetector` (análisis periódico sin repetir pantallas iguales) y `ChallengeSolver` (visión si hay modelo permitido; si no, OCR + texto; si no, explicación). |
 | `assistant.py` | `ConversationAssistant`: turnos → preguntas del interlocutor → una generación a la vez, preguntas manuales con prioridad, otra respuesta, ampliar, útil/no útil, cancelación, historial. |
 
 ### Perfiles y base de conocimiento (`app/knowledge/`)
