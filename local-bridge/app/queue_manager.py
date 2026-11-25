@@ -51,7 +51,7 @@ class Bus:
     """Cola FIFO thread-safe con bloqueo por timeout en el consumidor."""
 
     def __init__(self, maxsize: int = 64) -> None:
-        self._q: "queue.Queue[Any]" = queue.Queue(maxsize=maxsize)
+        self._q: queue.Queue[Any] = queue.Queue(maxsize=maxsize)
 
     def publish(self, event: Any) -> bool:
         try:

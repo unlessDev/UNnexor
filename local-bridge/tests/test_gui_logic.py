@@ -10,8 +10,6 @@ from __future__ import annotations
 import json
 
 import httpx
-import pytest
-from PySide6.QtWidgets import QApplication
 
 from app.config import Config
 from app.desktop.styles import APP_QSS, FONT_FAMILIES

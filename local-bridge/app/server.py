@@ -27,7 +27,7 @@ from . import __version__
 from .config import Config
 from .hardware import detect as detect_hardware
 from .hardware import gpu_acceleration_active
-from .model_evaluator import assess_model, context_warning
+from .model_evaluator import assess_model
 from .ollama_client import OllamaClient, OllamaError
 from .pairing import PairingManager
 from .queue_manager import (
@@ -378,7 +378,6 @@ def create_app(
             hw.setdefault("notes", []).append(
                 "Ollama está usando CPU (no la GPU): evaluación en modo solo-RAM."
             )
-        disk_free = info.disk_free_gb
         results = []
         for item in installed:
             details = item.get("details") or {}
@@ -456,7 +455,7 @@ def create_app(
         }
 
     @app.post("/api/pair/confirm")
-    def pair_confirm(request: Request, payload: PairConfirmIn) -> JSONResponse:
+    def pair_confirm(request: Request, payload: PairConfirmIn) -> Dict[str, Any]:
         """Entrega el token a cambio del código efímero del panel."""
         _require_pairing_origin(request)
         client_key = request.client.host if request.client else "local"

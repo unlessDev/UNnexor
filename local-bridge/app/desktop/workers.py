@@ -10,14 +10,13 @@
 
 from __future__ import annotations
 
-import base64
 import logging
 import os
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from PySide6.QtCore import QThread, Signal
+from PySide6.QtCore import QObject, QThread, Signal
 
 from .. import ocr_manager
 from ..config import Config
@@ -27,13 +26,13 @@ from ..hardware import detect as detect_hardware
 from ..hardware import gpu_acceleration_active
 from ..model_catalog import recommended_catalog
 from ..model_evaluator import assess_model
+from ..ocr_manager import OCREngineError, OCRNotAvailable
 from ..ollama_client import (
     GenerationCancelled,
     ModelNotFoundError,
     OllamaClient,
     OllamaError,
 )
-from ..ocr_manager import OCREngineError, OCRNotAvailable
 from ..queue_manager import (
     Bus,
     ClearConversation,
@@ -64,7 +63,7 @@ class GenerationWorker(QThread):
         bus: Bus,
         state: RuntimeState,
         ollama: OllamaClient,
-        parent: Optional[QThread] = None,
+        parent: Optional[QObject] = None,
     ) -> None:
         super().__init__(parent)
         self._cfg = cfg
@@ -223,7 +222,7 @@ class GenerationWorker(QThread):
                 )
                 self.generationFailed.emit(hint, "model")
                 return
-            messages = (
+            messages: List[Dict[str, Any]] = (
                 [{"role": "system", "content": self._conversation.system_prompt}]
                 if self._conversation.system_prompt
                 else []
@@ -306,7 +305,7 @@ class StatusWorker(QThread):
     INTERVAL_S = 4.0
 
     def __init__(
-        self, cfg: Config, ollama: OllamaClient, parent: Optional[QThread] = None
+        self, cfg: Config, ollama: OllamaClient, parent: Optional[QObject] = None
     ) -> None:
         super().__init__(parent)
         self._cfg = cfg
@@ -360,7 +359,7 @@ class HardwareWorker(QThread):
         self,
         ollama: OllamaClient,
         configured_model: str = "",
-        parent: Optional[QThread] = None,
+        parent: Optional[QObject] = None,
     ) -> None:
         super().__init__(parent)
         self._ollama = ollama
@@ -459,7 +458,7 @@ class OCRWorker(QThread):
         image_path: str,
         engine: Optional[str] = None,
         lang: str = "es",
-        parent: Optional[QThread] = None,
+        parent: Optional[QObject] = None,
     ) -> None:
         super().__init__(parent)
         self._path = image_path
@@ -495,7 +494,7 @@ class PullWorker(QThread):
     failed = Signal(str, str)  # (modelo, mensaje)
 
     def __init__(
-        self, ollama: OllamaClient, model: str, parent: Optional[QThread] = None
+        self, ollama: OllamaClient, model: str, parent: Optional[QObject] = None
     ) -> None:
         super().__init__(parent)
         self._ollama = ollama
@@ -544,7 +543,7 @@ class DiagnosticsWorker(QThread):
         bus: Any,
         pairing: Any,
         ollama: Optional[OllamaClient],
-        parent: Optional[QThread] = None,
+        parent: Optional[QObject] = None,
         *,
         check_ollama: bool = True,
         log_dir: Optional[Path | str] = None,
@@ -571,7 +570,7 @@ class DiagnosticsWorker(QThread):
                 log_dir=self._log_dir,
                 check_ollama=self._check_ollama,
             )
-        except Exception as exc:  # noqa: BLE001 - se informa al usuario
+        except Exception as exc:
             log.exception("No se pudo generar el diagnóstico")
             message = str(exc).strip() or exc.__class__.__name__
             self.bundleFailed.emit(message)

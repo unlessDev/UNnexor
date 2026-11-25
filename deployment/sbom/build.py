@@ -29,7 +29,7 @@ import uuid
 from datetime import datetime, timezone
 from importlib.metadata import distributions
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Dict, Iterable, List, Optional
 from urllib.parse import quote
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]

@@ -12,10 +12,10 @@ import secrets
 import shutil
 import sys
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
-from .config import DEFAULT_ENV_FILE
 from . import paths
+from .config import DEFAULT_ENV_FILE
 
 EXAMPLE_FILE = paths.resource_path(".env.example")
 
@@ -31,7 +31,7 @@ def clear_env_secrets(env_path: Optional[Path] = None) -> dict:
     las líneas ``*_API_KEY``. Devuelve un resumen sin incluir valores.
     """
     path = Path(env_path) if env_path else paths.env_file()
-    result = {
+    result: Dict[str, Any] = {
         "found": path.is_file(),
         "token_cleared": False,
         "keys_removed": [],

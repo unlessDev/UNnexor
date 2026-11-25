@@ -339,7 +339,7 @@ class AssistantMessage(QFrame):
             style.polish(self)
 
     # ------------------------------------------------------------------
-    def resizeEvent(self, event) -> None:  # noqa: N802 (API de Qt)
+    def resizeEvent(self, event) -> None:
         """Recalcula la altura cuando cambia el ancho (el texto se re-envuelve)."""
         super().resizeEvent(event)
         self._schedule_height_update()

@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 
 from app.config import Config
 from app.ollama_client import OllamaClient
-from app.queue_manager import Bus, ClearConversation, RuntimeState, SelectionRequest
+from app.queue_manager import Bus, RuntimeState
 from app.server import create_app
 from tests.conftest import make_config
 
@@ -27,9 +27,12 @@ def ollama_stub() -> OllamaClient:
         if request.url.path == "/api/version":
             return httpx.Response(200, json={"version": "0-test"})
         if request.url.path == "/api/tags":
-            return httpx.Response(200, json={
-                "models": [{"name": "llama3:latest"}, {"name": "mistral:latest"}],
-            })
+            return httpx.Response(
+                200,
+                json={
+                    "models": [{"name": "llama3:latest"}, {"name": "mistral:latest"}],
+                },
+            )
         return httpx.Response(200, content=ndjson({"done": True}))
 
     cfg = Config()
@@ -124,14 +127,17 @@ def test_cors_preflight_disallowed_origin(client):
     assert response.headers.get("access-control-allow-origin", "") == ""
 
 
-def test_status_requires_token(client):
+def test_selection_accepts_unicode(app):
     instance, _ = app
     text = "Hola áéíóú ñ €🚀\nsegunda línea\tcon tab"
     with TestClient(instance) as c:
         response = c.post(
             "/api/selection",
-            json={"text": text, "source_url": "https://example.com/page",
-                  "timestamp": "2026-01-01T00:00:00Z"},
+            json={
+                "text": text,
+                "source_url": "https://example.com/page",
+                "timestamp": "2026-01-01T00:00:00Z",
+            },
             headers={**AUTH, "Origin": "chrome-extension://abcdefghijklmnop"},
         )
         assert response.status_code == 202

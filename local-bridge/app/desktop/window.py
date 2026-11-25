@@ -17,7 +17,7 @@ import os
 import tempfile
 from typing import Optional
 
-from PySide6.QtCore import QSettings, QStandardPaths, QTimer, Qt
+from PySide6.QtCore import QPoint, QRect, QSettings, QStandardPaths, Qt, QTimer
 from PySide6.QtGui import QCursor, QGuiApplication, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
@@ -61,7 +61,6 @@ from .styles import APP_QSS
 from .widgets import (
     AssistantMessage,
     ChatScroller,
-    IconButton,
     SystemNote,
     TitleBar,
     UserMessage,
@@ -136,6 +135,8 @@ class BridgeWindow(QMainWindow):
         self._capture_selector = None
         self._capture_was_visible = True
         self._ocr_workers: list = []
+        # Redimensionado manual: (cursor global, marco inicial, bordes).
+        self._resize_origin: Optional[tuple[QPoint, QRect, Qt.Edge]] = None
         self._pending_ocr_instruction: Optional[str] = None
 
         self._build_ui()
@@ -235,7 +236,7 @@ class BridgeWindow(QMainWindow):
             self._native_filter_installed = False
 
     # ------------------------------------------------------------------ #
-    def showEvent(self, event) -> None:  # noqa: N802 (PySide)
+    def showEvent(self, event) -> None:
         super().showEvent(event)
         hwnd = self._hwnd()
         if hwnd:
@@ -249,7 +250,7 @@ class BridgeWindow(QMainWindow):
             # Dejar que la ventana se pinte antes de abrir el diálogo modal.
             QTimer.singleShot(700, self._maybe_show_onboarding)
 
-    def closeEvent(self, event) -> None:  # noqa: N802 (PySide)
+    def closeEvent(self, event) -> None:
         self._save_geometry()
         self.stop_workers()
         self._hook.uninstall()
@@ -310,16 +311,16 @@ class BridgeWindow(QMainWindow):
     def on_window_moved(self) -> None:
         self._save_geometry()
 
-    def resizeEvent(self, event) -> None:  # noqa: N802 (PySide)
+    def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
         self._save_geometry()
 
     # ------------------------------------------------------------------ #
     # Redimensionado manual (frameless)
     # ------------------------------------------------------------------ #
-    def _edge_at(self, pos) -> int:
+    def _edge_at(self, pos) -> Qt.Edge:
         """Devuelve los bordes Qt para el cursor en ``pos`` (coords ventana)."""
-        edges = 0
+        edges = Qt.Edge(0)
         width, height = self.width(), self.height()
         if pos.x() <= RESIZE_BAND:
             edges |= Qt.Edge.LeftEdge
@@ -334,7 +335,7 @@ class BridgeWindow(QMainWindow):
     def _over_titlebar_controls(self, pos) -> bool:
         return pos.y() <= TitleBar.HEIGHT and bool(self._titlebar.childAt(pos))
 
-    def mousePressEvent(self, event) -> None:  # noqa: N802 (PySide)
+    def mousePressEvent(self, event) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
             pos = event.position().toPoint()
             edges = self._edge_at(pos)
@@ -349,9 +350,9 @@ class BridgeWindow(QMainWindow):
                 return
         super().mousePressEvent(event)
 
-    def mouseMoveEvent(self, event) -> None:  # noqa: N802 (PySide)
+    def mouseMoveEvent(self, event) -> None:
         pos = event.position().toPoint()
-        if hasattr(self, "_resize_origin") and getattr(self, "_resize_origin", None):
+        if self._resize_origin is not None:
             origin_global, origin_frame, edges = self._resize_origin
             delta = event.globalPosition().toPoint() - origin_global
             new = origin_frame.adjusted(
@@ -380,8 +381,8 @@ class BridgeWindow(QMainWindow):
             self.unsetCursor()
         super().mouseMoveEvent(event)
 
-    def mouseReleaseEvent(self, event) -> None:  # noqa: N802 (PySide)
-        if getattr(self, "_resize_origin", None):
+    def mouseReleaseEvent(self, event) -> None:
+        if self._resize_origin is not None:
             self._resize_origin = None
             self.unsetCursor()
             self._save_geometry()
@@ -441,7 +442,7 @@ class BridgeWindow(QMainWindow):
         self._streaming_widget = None
         while self._chat_vbox.count() > 1:
             item = self._chat_vbox.takeAt(0)
-            widget = item.widget()
+            widget = item.widget() if item is not None else None
             if widget is not None:
                 widget.deleteLater()
         self._last_assistant_text = ""

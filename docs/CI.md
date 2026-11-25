@@ -20,7 +20,7 @@ la misma referencia.
 
 | Trabajo | Contenido |
 |---|---|
-| `Pruebas` | Python 3.12, dependencias de `requirements.txt` y `pytest tests -q`. |
+| `Pruebas` | Python 3.12; Black, Ruff y Mypy (config en `local-bridge/pyproject.toml`, herramientas en `requirements-dev.txt`) y `pytest tests -q`. |
 | `Empaquetar y verificar` | Depende de las pruebas; compila extensión, EXE one-folder, instalador y SBOM; verifica todo. |
 
 El trabajo de artefactos ejecuta, en orden:

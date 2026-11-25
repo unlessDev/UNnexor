@@ -42,3 +42,34 @@ def test_health_wait_tolerates_cold_start() -> None:
 def test_health_request_timeout_covers_ollama_probe() -> None:
     """/health puede tardar lo que tarde el sondeo de Ollama; hay que esperarlo."""
     assert main.HEALTH_REQUEST_TIMEOUT > OLLAMA_HEALTH_TIMEOUT
+
+
+def test_server_only_runs_uvicorn_server_with_bridge_config(monkeypatch) -> None:
+    """Regresión: ``--server-only`` pasaba un ``uvicorn.Config`` a
+    ``uvicorn.run`` (que espera una app ASGI) e ignoraba host y puerto."""
+    import uvicorn
+
+    from app.queue_manager import Bus, RuntimeState
+    from tests.conftest import make_config
+
+    captured: dict = {}
+
+    class FakeServer:
+        def __init__(self, config) -> None:
+            captured["config"] = config
+
+        def run(self) -> None:
+            captured["ran"] = True
+
+    monkeypatch.setattr(uvicorn, "Server", FakeServer)
+    cfg = make_config(host="127.0.0.1", port=5123)
+    ollama = main.OllamaClient(cfg)
+    try:
+        assert main.run_server_only(cfg, Bus(), RuntimeState(), ollama) == 0
+    finally:
+        ollama.close()
+    config = captured["config"]
+    assert isinstance(config, uvicorn.Config)
+    assert (config.host, config.port) == ("127.0.0.1", 5123)
+    assert callable(config.app)
+    assert captured["ran"] is True

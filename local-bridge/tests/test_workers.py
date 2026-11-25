@@ -11,12 +11,11 @@ import time
 
 import httpx
 import pytest
-from PySide6.QtWidgets import QApplication
 
 from app.config import Config
+from app.desktop.workers import GenerationWorker
 from app.ollama_client import OllamaClient
 from app.queue_manager import Bus, ClearConversation, RuntimeState, SelectionRequest
-from app.desktop.workers import GenerationWorker
 
 pytest.importorskip("PySide6", reason="PySide6 no instalada")
 

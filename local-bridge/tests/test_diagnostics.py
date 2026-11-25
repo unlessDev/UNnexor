@@ -11,10 +11,10 @@ import pytest
 
 pytest.importorskip("PySide6", reason="PySide6 no instalada")
 
-from app import diagnostics, paths  # noqa: E402
-from app.config import Config  # noqa: E402
-from app.desktop import workers as desktop_workers  # noqa: E402
-from app.ollama_client import OllamaError  # noqa: E402
+from app import diagnostics, paths
+from app.config import Config
+from app.desktop import workers as desktop_workers
+from app.ollama_client import OllamaError
 
 
 class FakeOllama:

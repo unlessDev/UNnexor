@@ -24,11 +24,21 @@ cd local-bridge
 .venv\Scripts\python.exe -m pytest tests -q
 ```
 
-Formato selectivo (solo archivos modificados):
+Calidad (lo mismo que ejecuta la CI; configuración en
+`local-bridge/pyproject.toml`):
 
 ```powershell
-.venv\Scripts\python.exe -m black app/mi_modulo.py tests/test_mi_modulo.py
+cd local-bridge
+.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+.venv\Scripts\python.exe -m black --check . ..\deployment
+.venv\Scripts\python.exe -m ruff check . ..\deployment
+.venv\Scripts\python.exe -m mypy
 ```
+
+- Black da formato; Ruff revisa errores, imports y simplificaciones.
+- Mypy verifica `app/`; los paquetes del copiloto (`app.audio`, `app.stt`,
+  `app.copilot`, `app.knowledge`, `app.routing`) exigen anotaciones
+  completas. El código nuevo usa `list[str]`/`X | None`.
 
 ## Ramas y commits
 

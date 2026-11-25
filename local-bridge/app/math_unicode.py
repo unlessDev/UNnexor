@@ -412,9 +412,7 @@ def _looks_like_math(text: str) -> bool:
     if re.search(r"[<>]=|=>|!=|->", text):
         return True
     inline = re.search(r"\$([^$\n]+)\$", text)
-    if inline and re.search(r"[\\^_{}]", inline.group(1)):
-        return True
-    return False
+    return bool(inline and re.search(r"[\\^_{}]", inline.group(1)))
 
 
 def _convert_environments(text: str) -> str:
@@ -488,8 +486,12 @@ def _match_brace(text: str, start: int) -> int:
 
 
 def _unwrap_wrappers(text: str) -> str:
-    """\\mathrm{…}, \\text{…}, \\boxed{…}… → su contenido."""
-    for _ in range(16):
+    """\\mathrm{…}, \\text{…}, \\boxed{…}… → su contenido.
+
+    Cada iteración acorta el texto (elimina ``\\nombre{`` y ``}``), así que
+    el límite solo protege frente a entradas patológicas.
+    """
+    for _ in range(512):
         match = _WRAP_RE.search(text)
         if not match:
             return text
@@ -502,6 +504,9 @@ def _unwrap_wrappers(text: str) -> str:
         if name == "mathbb" and len(inner) == 1:
             inner = _BLACKBOARD.get(inner, inner)
         text = text[: match.start()] + inner + text[end + 1 :]
+    # Límite de iteraciones alcanzado: se devuelve lo ya desenvuelto (antes
+    # caía al final de la función y devolvía None).
+    return text
 
 
 def _map_commands(text: str) -> str:

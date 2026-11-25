@@ -279,9 +279,11 @@ def test_connect_invalid_key_does_not_store(manager_env):
 
     import unittest.mock as mock
 
-    with mock.patch.object(manager.OpenAICompatClient, "__init__", init_patch):
-        with pytest.raises(ProviderError) as excinfo:
-            manager.connect("groq", "bad-key")
+    with (
+        mock.patch.object(manager.OpenAICompatClient, "__init__", init_patch),
+        pytest.raises(ProviderError) as excinfo,
+    ):
+        manager.connect("groq", "bad-key")
     assert excinfo.value.kind == "auth"
     assert manager.connected_providers() == []
     assert "groq" not in manager_env["keys"]

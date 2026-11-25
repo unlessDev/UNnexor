@@ -15,7 +15,7 @@ Las operaciones de red corren en QThreads (la GUI nunca se bloquea).
 
 from __future__ import annotations
 
-from typing import Any, List, Optional
+from typing import List, Optional
 
 from PySide6.QtCore import QThread, Signal
 from PySide6.QtWidgets import (
@@ -163,7 +163,7 @@ class ProviderCard(QFrame):
         kind.setStyleSheet(f"color: {MUTED}; font-size: 10px;")
         layout.addWidget(kind)
 
-    def mousePressEvent(self, event) -> None:  # noqa: N802 (PySide)
+    def mousePressEvent(self, event) -> None:
         self.clicked.emit(self.provider_id)
         super().mousePressEvent(event)
 
@@ -455,7 +455,7 @@ class ProvidersDialog(QDialog):
             f"color: {RED if error else MUTED}; font-size: 10px;"
         )
 
-    def closeEvent(self, event) -> None:  # noqa: N802 (PySide)
+    def closeEvent(self, event) -> None:
         for worker in self._workers:
             if worker.isRunning():
                 worker.wait(1500)

@@ -181,7 +181,9 @@ def run_server_only(
     uconfig = uvicorn.Config(
         app, host=cfg.host, port=cfg.port, log_level="info", access_log=False
     )
-    uvicorn.run(uconfig)
+    # ``uvicorn.run`` espera una aplicación ASGI, no un ``Config``: pasarle
+    # el ``Config`` arrancaba en 127.0.0.1:8000 con una "app" no invocable.
+    uvicorn.Server(uconfig).run()
     return 0
 
 
@@ -284,8 +286,8 @@ def run_bridge(
                 report_error("Extdator ya se está ejecutando.")
             else:
                 report_error(
-                    "Extdator ya se está ejecutando (puerto %d). Usa "
-                    "scripts\\stop.ps1 para detenerlo." % cfg.port
+                    f"Extdator ya se está ejecutando (puerto {cfg.port}). Usa "
+                    "scripts\\stop.ps1 para detenerlo."
                 )
             return 3
         if paths.is_frozen():

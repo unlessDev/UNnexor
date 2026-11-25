@@ -200,3 +200,13 @@ def test_markdown_structure_survives():
     result = to_human_math(raw)
     assert result.startswith("**Paso 1:** plantear ax² + bx + c = 0")
     assert "\n\n- factor común" in result
+
+
+def test_many_wrappers_never_returns_none():
+    """Regresión: con más de 16 envoltorios ``\\text{…}`` el desenvoltorio
+    devolvía ``None`` y ``to_human_math`` lanzaba ``TypeError``."""
+    raw = "$" + " + ".join(rf"\text{{a{i}}}" for i in range(20)) + "$"
+    assert "\t" not in raw
+    result = to_human_math(raw)
+    assert isinstance(result, str)
+    assert result.startswith("a0 + a1")
