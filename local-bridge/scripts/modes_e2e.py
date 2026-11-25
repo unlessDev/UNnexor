@@ -52,7 +52,9 @@ def main() -> int:
     report: dict = {}
 
     # ------------------------------------------------------------ traducción
-    translator = LiveTranslator(engine, target=lambda: "en", source_language=lambda: "es")
+    translator = LiveTranslator(
+        engine, target=lambda: "en", source_language=lambda: "es"
+    )
     translator.start()
     started = time.perf_counter()
     for seg_id, text in enumerate(
@@ -63,18 +65,26 @@ def main() -> int:
         start=1,
     ):
         translator.handle_transcript(
-            TranscriptEvent(seg_id, SourceKind.SYSTEM, text, True, seg_id * 4.0, seg_id * 4.0 + 3)
+            TranscriptEvent(
+                seg_id, SourceKind.SYSTEM, text, True, seg_id * 4.0, seg_id * 4.0 + 3
+            )
         )
     deadline = time.monotonic() + 180
     while time.monotonic() < deadline and not all(
-        s.status in (SegmentStatus.DONE, SegmentStatus.FAILED) for s in translator.segments()
+        s.status in (SegmentStatus.DONE, SegmentStatus.FAILED)
+        for s in translator.segments()
     ):
         time.sleep(0.1)
     translator.stop()
     report["translation"] = {
         "seconds_total": round(time.perf_counter() - started, 2),
         "segments": [
-            {"status": s.status.value, "model": s.model, "en": s.translation, "error": s.error}
+            {
+                "status": s.status.value,
+                "model": s.model,
+                "en": s.translation,
+                "error": s.error,
+            }
             for s in translator.segments()
         ],
     }
@@ -93,7 +103,9 @@ def main() -> int:
         result = solver.solve(
             [b64],
             "Resuelve el sistema de ecuaciones de la imagen.",
-            on_chunk=lambda _d: first.append(time.perf_counter() - started) if not first else None,
+            on_chunk=lambda _d: (
+                first.append(time.perf_counter() - started) if not first else None
+            ),
             on_notice=notices.append,
         )
         report["challenge"] = {
@@ -103,7 +115,9 @@ def main() -> int:
             "first_token_s": round(first[0], 2) if first else None,
             "seconds_total": round(time.perf_counter() - started, 2),
             "mentions_solutions": all(token in result.text for token in ("3", "4")),
-            "headings": [line for line in result.text.splitlines() if line.startswith("## ")],
+            "headings": [
+                line for line in result.text.splitlines() if line.startswith("## ")
+            ],
             "excerpt": result.text[:400],
         }
     except Exception as exc:  # se informa el fallo real
