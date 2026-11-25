@@ -185,6 +185,21 @@ Regla de diseño: la política por defecto es **solo local**. Un remoto
 entra únicamente con `remote_data`; uno que puede costar dinero, además
 con `costs`; con documentos personales, además con `documents`.
 
+### Interfaz del copiloto (`local-bridge/app/desktop/copilot/`)
+
+MVVM pragmático: `CopilotController` es el ViewModel (posee sesión y
+servicios, traduce callbacks de hilos a señales Qt); las páginas solo se
+enlazan a señales y llaman a sus métodos.
+
+| Módulo | Responsabilidad |
+|---|---|
+| `controller.py` | Sesión de conversación/traducción (pipeline de audio + STT + asistente/traductor), pausa/fin, precarga del modelo, desafíos, ajustes, consentimientos, uso. |
+| `window.py` | Ventana con navegación: Inicio, Conversación, Traducción, Desafíos, Perfiles y documentos, Motores y modelos, Privacidad. |
+| `pages_*.py` | Vistas de cada sección (sin lógica de negocio). |
+| `overlay.py` | Panel flotante siempre visible, sin foco, arrastrable, compacto, con estado y controles. |
+| `hotkeys.py` | Atajos globales con `RegisterHotKey`; informa conflictos. |
+| `tasks.py` | Trabajo pesado en `QThreadPool` con entrega segura a la GUI. |
+
 ### Escritorio (`local-bridge/app/desktop/`)
 
 | Módulo | Responsabilidad |
@@ -304,8 +319,8 @@ seguridad de una aplicación local.
 |---|---|---|
 | ZIP Chrome | `deployment/extension/build.py` + validación estática | **Generado y verificado localmente** |
 | ZIP Edge | mismo paquete, validación de manifiesto | **Generado y verificado localmente** |
-| EXE/one-folder | `deployment/windows/build.py` + PyInstaller 6 | **Generado y validado (smoke + GUI offscreen)** |
-| Instalador | `deployment/installer/build.py` + Inno Setup 6 por usuario | **Generado y probado (instalación, preservación, purga y desinstalación)** |
+| EXE/one-folder | `deployment/windows/build.py` + PyInstaller 6 | **Generado y validado (smoke + GUI offscreen + componentes del copiloto)**; 302 MB en disco, ZIP 121 MB |
+| Instalador | `deployment/installer/build.py` + Inno Setup 6 por usuario | **Generado y probado (instalación, preservación, purga y desinstalación)**; 84,5 MB con el copiloto |
 | SBOM | `deployment/sbom/build.py` (CycloneDX 1.5) | **Generado y verificado localmente** |
 | Verificación | `deployment/verify_artifacts.py` | **Checksums, informes y SBOM** |
 | CI | `.github/workflows/ci.yml` (GitHub Actions, Windows) | Pruebas + empaquetado + verificación |
@@ -375,7 +390,13 @@ datos de usuario. Límites y comandos: `docs/CI.md`.
    identificarse como tales.
 6. La política de privacidad está empaquetada, pero falta una URL pública
    para las tiendas; tampoco existen capturas reales ni IDs de tienda.
-7. El ejecutable base no incluye motores OCR locales pesados
+7. El ejecutable incluye el copiloto (NumPy, SoundCard, faster-whisper,
+   CTranslate2, ONNX Runtime, PyAV, pypdf) pero no los modelos: Whisper y
+   los de Ollama se descargan con consentimiento. El auto-chequeo del EXE
+   valida esos componentes (Silero en ONNX Runtime, CTranslate2 int8 y,
+   si hay un modelo Whisper, una transcripción real). SciPy, pandas, torch
+   y otros paquetes del entorno de desarrollo se excluyen explícitamente.
+8. El ejecutable base no incluye motores OCR locales pesados
    (Pix2Text/RapidOCR/Tesseract): el OCR local queda para la versión de
    desarrollo o una futura edición opcional. La visión multimodal del
    modelo activo sí está disponible.

@@ -253,6 +253,11 @@ def run_check(cfg: Config, bus: Bus, state: RuntimeState, ollama: OllamaClient) 
         )
     server.should_exit = True
     thread.join(timeout=5)
+    # Componentes del copiloto (informativo: su ausencia no invalida el
+    # puente, pero el build completo debe incluirlos).
+    from .copilot.components import check_components
+
+    results["copilot_components"] = check_components()
     ok = bool(
         results.get("health")
         and results["selection"]

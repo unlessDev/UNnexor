@@ -69,6 +69,7 @@ class TitleBar(QWidget):
     menuClicked = Signal()
     modelsClicked = Signal()
     screenshotClicked = Signal()
+    copilotClicked = Signal()
 
     HEIGHT = 40
 
@@ -116,6 +117,10 @@ class TitleBar(QWidget):
         self._models.clicked.connect(self.modelsClicked)
         self._shot = IconButton("📷", "Capturar región de pantalla (OCR o visión)")
         self._shot.clicked.connect(self.screenshotClicked)
+        self._copilot = IconButton(
+            "🧭", "Copiloto en tiempo real (conversación, traducción, desafíos)"
+        )
+        self._copilot.clicked.connect(self.copilotClicked)
         self._menu = IconButton("⚙", "Opciones (opacidad, copiar, reiniciar)")
         self._menu.clicked.connect(self.menuClicked)
         self._min = IconButton("—", "Minimizar")
@@ -130,6 +135,7 @@ class TitleBar(QWidget):
             self._stop,
             self._models,
             self._shot,
+            self._copilot,
             self._menu,
             self._min,
             self._close,
@@ -249,7 +255,9 @@ class AssistantMessage(QFrame):
     modo que el LaTeX crudo nunca es lo que el usuario lee o copia.
     """
 
-    def __init__(self, model: str = "", parent: QWidget | None = None) -> None:
+    def __init__(
+        self, model: str = "", parent: QWidget | None = None, role: str = "OLLAMA"
+    ) -> None:
         super().__init__(parent)
         self.setObjectName("assistantMessage")
         self._parts: list[str] = []
@@ -261,7 +269,7 @@ class AssistantMessage(QFrame):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(10, 8, 10, 8)
         layout.setSpacing(2)
-        layout.addWidget(MessageHeader("OLLAMA", model))
+        layout.addWidget(MessageHeader(role, model))
 
         self.browser = QTextBrowser()
         self.browser.setObjectName("assistantText")
@@ -297,7 +305,7 @@ class AssistantMessage(QFrame):
         if self._stream_pending:
             return
         self._stream_pending = True
-        QTimer.singleShot(0, self._render_streaming)
+        QTimer.singleShot(0, self, self._render_streaming)
 
     def _render_streaming(self) -> None:
         self._stream_pending = False
@@ -348,7 +356,7 @@ class AssistantMessage(QFrame):
         if self._height_pending:
             return
         self._height_pending = True
-        QTimer.singleShot(0, self._update_height)
+        QTimer.singleShot(0, self, self._update_height)
 
     def _update_height(self) -> None:
         self._height_pending = False

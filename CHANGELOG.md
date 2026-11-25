@@ -91,10 +91,24 @@ usa [Semantic Versioning](https://semver.org/lang/es/).
   plan, pasos, código, explicación, resultado, advertencias, alternativas);
   detector de cambios por hash perceptual para el análisis periódico. Real:
   qwen2.5vl:7b resolvió un sistema de ecuaciones desde una imagen.
+- Interfaz del copiloto (`app/desktop/copilot`): ventana con Inicio
+  (configuración guiada), Conversación, Traducción, Desafíos, Perfiles y
+  documentos, Motores y modelos (motor de voz y descarga consentida,
+  estrategia, modelos por tarea, permisos por servicio, uso) y Privacidad;
+  panel flotante siempre visible sin robar el foco; atajos globales
+  configurables; botón 🧭 y entrada de menú en el panel principal.
+  Validada en Windows real: sesión iniciada desde la página, pregunta TTS
+  por altavoces → sugerencia de qwen3:8b en el panel flotante.
 - Router: desempate por especialización (modelos de visión o de código
   penalizados en tareas de texto; los de código preferidos en desafíos).
 
 ### Fixed
+- Si una edición no incluyera los componentes del copiloto, el botón 🧭
+  muestra un aviso en lugar de cerrar la aplicación.
+- Las burbujas de respuesta programaban su repintado con temporizadores no
+  ligados al widget: si se borraban mientras llegaba texto, Qt lanzaba
+  "objeto C++ ya eliminado". Los temporizadores usan ahora el widget como
+  contexto.
 - La prueba opcional de Pix2Text creaba un `QPixmap` sin `QApplication`:
   ejecutada sola abortaba el intérprete (código 127). Ahora usa `qapp`.
 - Proveedores OpenAI-compatible: con un error HTTP no tabulado (p. ej. 400)
@@ -185,6 +199,14 @@ usa [Semantic Versioning](https://semver.org/lang/es/).
   `localhost`).
 
 ### Distribution
+- El ejecutable y el instalador incluyen ya el copiloto en tiempo real:
+  carpeta 302 MB (antes ≈79 MB), ZIP 121 MB, instalador 84,5 MB (antes
+  ≈29 MB). El smoke test del build exige que el auto-chequeo del EXE
+  confirme los componentes del copiloto: Silero VAD ejecutado en ONNX
+  Runtime, CTranslate2 con int8 y, si hay un modelo Whisper descargado,
+  una transcripción real (0,94 s con base en el equipo de referencia). Se
+  excluyen SciPy, pandas y otros paquetes que arrastraba el entorno.
+  Instalador probado en su ciclo completo. Sin firma Authenticode.
 - Paquetes `chrome.zip` y `edge.zip` generados y validados localmente;
   pendientes de cuenta de tienda, URL pública de privacidad, capturas y
   autorización.

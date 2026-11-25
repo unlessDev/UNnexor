@@ -200,6 +200,11 @@ def smoke_test(exe: Path, timeout: int = 180) -> Dict[str, object]:
             raise RuntimeError(
                 f"Rutas empaquetadas incorrectas: {report.get('data_dir')} != {data_dir}"
             )
+        components = (report.get("results") or {}).get("copilot_components") or {}
+        if not components.get("ok"):
+            raise RuntimeError(
+                f"Faltan componentes del copiloto en el EXE: {components}"
+            )
         if report.get("env_file") != str(data_dir / ".env"):
             raise RuntimeError(
                 f"El .env no se resolvió en datos: {report.get('env_file')}"
@@ -210,6 +215,7 @@ def smoke_test(exe: Path, timeout: int = 180) -> Dict[str, object]:
             "seconds": round(time.monotonic() - started, 2),
             "port": port,
             "data_dir_isolated": True,
+            "copilot_components": True,
         }
 
 

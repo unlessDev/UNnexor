@@ -11,7 +11,11 @@ para no duplicar la versión en el repositorio.
 import os
 from pathlib import Path
 
-from PyInstaller.utils.hooks import collect_data_files, collect_submodules
+from PyInstaller.utils.hooks import (
+    collect_data_files,
+    collect_dynamic_libs,
+    collect_submodules,
+)
 
 PROJECT_ROOT = Path(SPECPATH).resolve().parents[1]
 LOCAL_BRIDGE = PROJECT_ROOT / "local-bridge"
@@ -24,6 +28,13 @@ datas = [
     (str(ICON), "assets"),
 ]
 datas += collect_data_files("certifi")
+# Copiloto en tiempo real (ADR-0005): modelo Silero VAD de faster-whisper y
+# cabeceras cffi que SoundCard lee al importarse.
+datas += collect_data_files("faster_whisper")
+datas += collect_data_files("soundcard")
+# CTranslate2 no tiene hook: sus DLL (ctranslate2, libiomp5md, cudnn) se
+# copian en su carpeta para que el paquete las encuentre.
+binaries = collect_dynamic_libs("ctranslate2")
 
 hiddenimports = collect_submodules("app") + [
     "uvicorn.logging",
@@ -35,10 +46,19 @@ hiddenimports = collect_submodules("app") + [
     "uvicorn.lifespan.on",
     "anyio._backends._asyncio",
     "keyring.backends.Windows",
+    # Copiloto: se importan de forma diferida, se declaran explícitamente.
+    "soundcard",
+    "faster_whisper",
+    "faster_whisper.utils",
+    "ctranslate2",
+    "av",
+    "pypdf",
+    "tokenizers",
 ]
 
 # OCR opcional: no se empaqueta en el instalador base (evita cientos de MB
-# de torch/onnxruntime). La visión del modelo sigue disponible.
+# de torch). La visión del modelo sigue disponible. NumPy y ONNX Runtime SÍ
+# se incluyen: los necesita el copiloto (audio y Silero VAD).
 # Qt: solo se usan Core, Gui y Widgets; el resto de módulos no aporta nada
 # al producto y engorda el instalador.
 excludes = [
@@ -47,7 +67,6 @@ excludes = [
     "black",
     "pix2text",
     "rapidocr",
-    "onnxruntime",
     "torch",
     "torchvision",
     "cv2",
@@ -56,7 +75,21 @@ excludes = [
     "notebook",
     "jupyter",
     "PIL",
-    "numpy",
+    # Arrastrados por dependencias opcionales del entorno de desarrollo; el
+    # copiloto no los usa (el auto-chequeo del build lo verifica).
+    "scipy",
+    "pandas",
+    "sympy",
+    "sklearn",
+    "transformers",
+    "optimum",
+    "onnx",
+    "polars",
+    "pyarrow",
+    "seaborn",
+    "ultralytics",
+    "wandb",
+    "tensorflow",
     "PySide6.QtQml",
     "PySide6.QtQuick",
     "PySide6.QtQuickWidgets",
@@ -79,7 +112,7 @@ excludes = [
 a = Analysis(
     [str(LOCAL_BRIDGE / "run.py")],
     pathex=[str(LOCAL_BRIDGE)],
-    binaries=[],
+    binaries=binaries,
     datas=datas,
     hiddenimports=hiddenimports,
     hookspath=[],

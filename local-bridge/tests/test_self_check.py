@@ -73,3 +73,25 @@ def test_server_only_runs_uvicorn_server_with_bridge_config(monkeypatch) -> None
     assert (config.host, config.port) == ("127.0.0.1", 5123)
     assert callable(config.app)
     assert captured["ran"] is True
+
+
+def test_copilot_component_check_reports_failures(monkeypatch) -> None:
+    import importlib
+
+    from app.copilot import components
+
+    real_import = importlib.import_module
+
+    def fake_import(name: str, *args, **kwargs):
+        if name == "pypdf":
+            raise ImportError("No module named 'pypdf'")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(components.importlib, "import_module", fake_import)
+    monkeypatch.setattr(
+        components, "_whisper_smoke", lambda: {"ok": True, "skipped": True}
+    )
+    report = components.check_components()
+    assert report["pypdf"]["ok"] is False and "pypdf" in report["pypdf"]["error"]
+    assert report["numpy"]["ok"] is True
+    assert report["ok"] is False  # un componente ausente invalida el build
