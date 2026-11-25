@@ -69,6 +69,19 @@ usa [Semantic Versioning](https://semver.org/lang/es/).
   opcionales con Ollama fusionados por RRF; contexto con fuentes citables.
   Probado con `nomic-embed-text` real: las preguntas sin palabras en común
   ("¿Qué estudiaste?") encuentran el documento correcto.
+- Asistencia en conversaciones (núcleo, sin interfaz todavía): detección de
+  preguntas y peticiones en español/inglés aunque Whisper omita "¿?",
+  turnos cerrados por pausa (no se responde por fragmento), sin duplicados,
+  prompts con perfil, documentos citados y conversación reciente, regla de
+  no inventar experiencias (`[completar: …]`), otra respuesta, ampliar,
+  preguntas manuales, cancelación. Los datos personales solo van a modelos
+  locales salvo permiso explícito del perfil.
+- `OllamaClient.preload()` y `RoutedEngine.warm_up()`: precarga del modelo
+  local al iniciar la sesión.
+- Prueba real (`scripts/copilot_e2e.py`): pregunta en voz TTS → loopback →
+  Whisper base → qwen3:8b local (RX 590 por Vulkan): pregunta detectada
+  2,3 s después de terminar el audio; primer token 0,26 s con el modelo
+  cargado y 2,8 s tras una precarga en frío.
 
 ### Fixed
 - Proveedores OpenAI-compatible: con un error HTTP no tabulado (p. ej. 400)

@@ -158,6 +158,16 @@ Detalle de motores, costes y mediciones en `docs/SPEECH.md`.
 | `routing/executor.py` | Ejecuta la decisión en streaming; alternativas solo antes de emitir texto, aviso visible (y explícito si pasa a remoto), cancelación sin alternativas. |
 | `routing/candidates.py` | Candidatos reales: Ollama (`/api/tags` + capacidades de `/api/show` + encaje con el hardware) y modelos remotos elegidos; backend de Ollama con errores tipados. |
 
+### Asistencia en conversaciones (`app/copilot/`)
+
+| Módulo | Responsabilidad |
+|---|---|
+| `questions.py` | Puntuación explicable de preguntas/peticiones (es/en, sin depender de "¿?"), `TurnAccumulator` (turno = finales seguidos de una fuente hasta una pausa), detección de duplicados. |
+| `prompts.py` | Prompts de respuesta (perfil, documentos con fuente, conversación reciente, otra respuesta, ampliar), traducción, resumen y desafíos. Regla: no inventar experiencias ni datos; marcar `[completar: …]`. |
+| `settings.py` | `CopilotSettings` (voz, fuentes, sensibilidad, estrategia, modelos fijados/remotos, ventana, atajos) y su repositorio JSON. |
+| `engine.py` | `RoutedEngine`: candidatos cacheados + router + ejecutor + historial de uso con límites; `local_only` para datos personales; `warm_up()` precarga el modelo local al iniciar. |
+| `assistant.py` | `ConversationAssistant`: turnos → preguntas del interlocutor → una generación a la vez, preguntas manuales con prioridad, otra respuesta, ampliar, útil/no útil, cancelación, historial. |
+
 ### Perfiles y base de conocimiento (`app/knowledge/`)
 
 | Módulo | Responsabilidad |
