@@ -42,7 +42,7 @@ def render_math(lines: list[str], out_path: str) -> None:
     img.save(out_path, "PNG")
 
 
-from app.ocr_manager import (  # noqa: E402
+from app.ocr_manager import (
     available_engines,
     recommend,
     release_engine,
