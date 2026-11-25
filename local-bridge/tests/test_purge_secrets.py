@@ -8,7 +8,7 @@ from pathlib import Path
 from app import main, paths
 from app.env_setup import clear_env_secrets
 from app.providers import manager
-from app.providers.presets import PRESETS
+from app.providers.presets import PRESETS, SPEECH_ONLY_PROVIDER_IDS
 
 
 def test_purge_all_keys_removes_presets_orphans_and_state(monkeypatch, tmp_path):
@@ -34,7 +34,8 @@ def test_purge_all_keys_removes_presets_orphans_and_state(monkeypatch, tmp_path)
     assert set(purged) == {item["id"] for item in PRESETS} | {
         "custom",
         "proveedor-huerfano",
-    }
+    } | set(SPEECH_ONLY_PROVIDER_IDS)
+    assert "deepgram" in purged  # claves de servicios solo de voz también
     assert deleted == purged
     saved = json.loads(config_file.read_text(encoding="utf-8"))
     assert saved["providers"] == {}

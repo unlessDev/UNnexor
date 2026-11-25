@@ -83,17 +83,33 @@ def segment_file(path: Path, vad_name: str) -> list[SpeechSegment]:
     return events
 
 
-def capture_loopback(path: Path, vad_name: str) -> dict:
+def capture_loopback(path: Path, vad_name: str, engine: str | None = None) -> dict:
     import winsound
+
+    from app.copilot.transcription import TranscriptEvent, TranscriptionService
+    from app.stt.factory import create_recognizer
 
     segments: list[SpeechSegment] = []
     statuses: list[CaptureStatus] = []
     levels: list[float] = []
+    events: list[TranscriptEvent] = []
+    errors: list[str] = []
     lock = threading.Lock()
+    service: TranscriptionService | None = None
+    if engine:
+        service = TranscriptionService(
+            lambda: create_recognizer(engine),
+            events.append,
+            on_error=lambda exc: errors.append(f"{exc.kind}: {exc.message}"),
+            language="es",
+        )
+        service.start()
 
     def on_segment(segment: SpeechSegment) -> None:
         with lock:
             segments.append(segment)
+        if service is not None:
+            service.submit(segment)
 
     pipeline = AudioPipeline(
         SoundCardBackend(),
@@ -110,8 +126,27 @@ def capture_loopback(path: Path, vad_name: str) -> dict:
     played = time.perf_counter() - started
     time.sleep(1.5)  # deja cerrar la última intervención por silencio
     pipeline.stop()
+    transcript: dict = {}
+    if service is not None:
+        service.stop()
+        final_events = [e for e in events if e.final and e.text]
+        transcript = {
+            "engine": engine,
+            "errors": errors,
+            "provisional_texts": sum(1 for e in events if not e.final),
+            "finals": [
+                {
+                    "id": e.segment_id,
+                    "latency_s": e.latency_s,
+                    "confidence": e.confidence,
+                    "text": e.text,
+                }
+                for e in final_events
+            ],
+        }
     finals = [s for s in segments if s.final and not s.discarded]
     return {
+        "transcription": transcript,
         "vad": pipeline.vad_name,
         "played_s": round(played, 2),
         "states": sorted({s.state.value for s in statuses}),
@@ -137,6 +172,11 @@ def main() -> int:
     parser.add_argument("--text", default=DEFAULT_TEXT)
     parser.add_argument("--voice", default="es")
     parser.add_argument("--keep", type=Path, help="Copia el WAV generado aquí")
+    parser.add_argument(
+        "--transcribe",
+        metavar="MOTOR",
+        help="Transcribe en vivo la captura (p. ej. faster-whisper:base)",
+    )
     args = parser.parse_args()
 
     with tempfile.TemporaryDirectory() as tmp:
@@ -156,7 +196,7 @@ def main() -> int:
                 for s in finals
             ]
         if args.loopback:
-            report["loopback"] = capture_loopback(wav, args.vad)
+            report["loopback"] = capture_loopback(wav, args.vad, args.transcribe)
     print(json.dumps(report, indent=2, ensure_ascii=False))
     return 0
 
