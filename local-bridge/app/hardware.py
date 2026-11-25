@@ -17,8 +17,10 @@ GUI si se llama desde un QThread.
 
 from __future__ import annotations
 
+import os
 import platform
 import socket
+import sys
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -70,6 +72,7 @@ class HardwareInfo:
     detected_at: str = ""  # ISO-8601 de la detección
     detection_ms: int = 0
     ollama_gpu_active: Optional[bool] = None  # dato de terreno (GET /api/ps)
+    backends: Dict[str, Any] = field(default_factory=dict)
     notes: List[str] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -246,6 +249,61 @@ def directory_size_bytes(path: Path, limit_entries: int = 20_000) -> int:
     return total
 
 
+def _system32() -> Path:
+    return Path(os.environ.get("SYSTEMROOT", r"C:\Windows")) / "System32"
+
+
+def _cpu_features() -> Dict[str, Optional[bool]]:
+    """AVX/AVX2/AVX-512 vía ``IsProcessorFeaturePresent`` (Windows)."""
+    if sys.platform != "win32":
+        return {"avx": None, "avx2": None, "avx512": None}
+    try:
+        import ctypes
+
+        check = ctypes.windll.kernel32.IsProcessorFeaturePresent  # type: ignore[attr-defined,unused-ignore]
+        # PF_AVX_INSTRUCTIONS_AVAILABLE=39, PF_AVX2=40, PF_AVX512F=41
+        return {
+            "avx": bool(check(39)),
+            "avx2": bool(check(40)),
+            "avx512": bool(check(41)),
+        }
+    except Exception:
+        return {"avx": None, "avx2": None, "avx512": None}
+
+
+def detect_backends() -> Dict[str, Any]:
+    """Backends de inferencia presentes en el sistema (sin cargarlos).
+
+    * ``cuda_driver``: ``nvcuda.dll`` (driver NVIDIA con CUDA).
+    * ``vulkan``: cargador ``vulkan-1.dll`` (lo instalan los drivers de
+      AMD, NVIDIA e Intel; Ollama lo usa con GPUs AMD/Intel).
+    * ``hip_runtime``: ``amdhip64*.dll`` o ``HIP_PATH`` (ROCm en Windows).
+      Su presencia no garantiza que la GPU concreta esté soportada.
+    * ``whisper_cuda``: GPUs CUDA que ve CTranslate2 (reconocimiento de voz).
+    """
+    system32 = _system32()
+    result: Dict[str, Any] = {
+        "cuda_driver": None,
+        "vulkan": None,
+        "hip_runtime": None,
+        "whisper_cuda": None,
+        "cpu": _cpu_features(),
+    }
+    if sys.platform == "win32" and system32.is_dir():
+        result["cuda_driver"] = (system32 / "nvcuda.dll").is_file()
+        result["vulkan"] = (system32 / "vulkan-1.dll").is_file()
+        result["hip_runtime"] = bool(os.environ.get("HIP_PATH")) or any(
+            system32.glob("amdhip64*.dll")
+        )
+    try:
+        import ctranslate2
+
+        result["whisper_cuda"] = int(ctranslate2.get_cuda_device_count()) > 0
+    except Exception:
+        result["whisper_cuda"] = None
+    return result
+
+
 def detect(models_dir: Optional[Path] = None) -> HardwareInfo:
     """Recolecta una instantánea del hardware. No requiere admin."""
     import time
@@ -322,6 +380,7 @@ def detect(models_dir: Optional[Path] = None) -> HardwareInfo:
         os_name=f"{platform.system()} {platform.release()}",
         detected_at=datetime.now(timezone.utc).isoformat(),
         detection_ms=elapsed,
+        backends=detect_backends(),
         notes=notes,
     )
 

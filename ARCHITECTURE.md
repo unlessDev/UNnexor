@@ -185,6 +185,15 @@ Regla de diseño: la política por defecto es **solo local**. Un remoto
 entra únicamente con `remote_data`; uno que puede costar dinero, además
 con `costs`; con documentos personales, además con `documents`.
 
+### Compatibilidad del equipo (`local-bridge/app/compat/`)
+
+| Módulo | Responsabilidad |
+|---|---|
+| `../hardware.py` (`detect_backends`) | Driver CUDA (`nvcuda.dll`), cargador Vulkan (`vulkan-1.dll`), runtime HIP/ROCm, AVX/AVX2/AVX-512 y GPUs CUDA visibles para CTranslate2. Presencia ≠ compatibilidad: se informa así. |
+| `../model_evaluator.py` | Cinco clases públicas: Óptimo, Compatible, Exigente, No compatible, No evaluado (sin datos). La VRAM de una GPU solo cuenta si hay un backend utilizable para su fabricante. |
+| `workload.py` | Evalúa el conjunto (voz + modelo de respuesta + visión + OCR): VRAM compartida por los modelos de Ollama (alternancia si no caben juntos), RAM del proceso y del sistema; "No compatible" solo si supera la RAM total. |
+| `benchmark.py` | Mediciones consentidas: carga, primer token, tokens/s, VRAM y RAM (Ollama); latencia por intervención y RSS del proceso (Whisper) con voz TTS real, nunca con ruido sintético. Los resultados alimentan la recomendación de voz. |
+
 ### Interfaz del copiloto (`local-bridge/app/desktop/copilot/`)
 
 MVVM pragmático: `CopilotController` es el ViewModel (posee sesión y

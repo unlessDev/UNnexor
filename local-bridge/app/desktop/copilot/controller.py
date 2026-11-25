@@ -373,6 +373,80 @@ class CopilotController(QObject):
 
         run_async(work, on_done=done, on_error=failed)
 
+    # ------------------------------------------------------ compatibilidad
+    def assess_current_workload(self) -> dict[str, Any]:
+        """Equipo + carga combinada de la configuración actual (bloqueante)."""
+        from ... import ocr_manager
+        from ...compat.workload import (
+            WorkloadItem,
+            assess_workload,
+            ocr_item,
+            ollama_item,
+            stt_item,
+        )
+        from ...hardware import detect
+
+        hw = detect().to_dict()
+        self.set_hardware(hw)
+        items: list[WorkloadItem] = []
+        spec = get_spec(self.settings.stt_engine)
+        if spec.is_local:
+            items.append(stt_item(spec.label, spec.ram_mb))
+        try:
+            installed = {m.get("name"): m for m in self.ollama.installed_models_full()}
+        except Exception:
+            installed = {}
+        used: set[str] = set()
+        vision_ok = False
+        for task, kind in ((Task.ANSWER, "llm"), (Task.VISION, "vision")):
+            primary = self.engine.decide(task).primary
+            if primary is None:
+                continue
+            if task is Task.VISION:
+                vision_ok = True
+            if not primary.local or primary.model in used:
+                continue
+            entry = installed.get(primary.model)
+            if entry is None:
+                continue
+            used.add(primary.model)
+            details = entry.get("details") or {}
+            items.append(
+                ollama_item(
+                    primary.model,
+                    entry.get("size"),
+                    details.get("parameter_size"),
+                    kind,
+                )
+            )
+        ocr_engine = None if vision_ok else ocr_manager.recommend()
+        if ocr_engine:
+            items.append(ocr_item(ocr_engine))
+        return {"hw": hw, "items": items, "assessment": assess_workload(hw, items)}
+
+    def run_benchmark(self, kind: str) -> dict[str, Any]:
+        """Medición consentida (bloqueante: llamar en segundo plano)."""
+        from ...compat.benchmark import benchmark_llm, benchmark_stt
+
+        if kind == "stt":
+            spec = get_spec(self.settings.stt_engine)
+            if not spec.is_local:
+                raise ValueError(
+                    "El motor de voz elegido es remoto: no hay nada que medir en este equipo."
+                )
+            result = benchmark_stt(spec.model)
+            key = f"stt:{spec.model}"
+        else:
+            primary = self.engine.decide(Task.ANSWER).primary
+            if primary is None or not primary.local:
+                raise ValueError("El modelo de respuesta elegido no es local.")
+            result = benchmark_llm(self.ollama, primary.model)
+            key = f"llm:{primary.model}"
+        settings = self.settings
+        settings.benchmarks[key] = result
+        self.save_settings(settings)
+        return result
+
     # ------------------------------------------------------------ utilidades
     def describe_routes(self) -> dict[str, str]:
         out: dict[str, str] = {}

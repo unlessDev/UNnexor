@@ -130,6 +130,7 @@ class HomePage(QWidget):
                 connected=connected,
                 installed=set(fw.installed_models()),
                 cuda_available=fw.cuda_devices() > 0,
+                measured_call_s=self._c.settings.measured_stt_call_s(),
             )
             return {"hw": hw, "recs": recs, "routes": self._c.describe_routes()}
 
@@ -634,6 +635,31 @@ class EnginesPage(QWidget):
         remote_layout.addWidget(self.remote_list)
         layout.addWidget(remote)
 
+        compat = QGroupBox("Compatibilidad y rendimiento del equipo")
+        compat_layout = QVBoxLayout(compat)
+        compat_layout.addWidget(
+            hint(
+                "Evalúa a la vez el motor de voz, el modelo de respuesta, el de "
+                "visión y el OCR que se usarían. Las mediciones son opcionales: "
+                "usan CPU/GPU y memoria durante unos segundos."
+            )
+        )
+        compat_buttons = QHBoxLayout()
+        self.analyze = QPushButton("Analizar equipo y carga")
+        self.bench_stt = QPushButton("Medir motor de voz")
+        self.bench_llm = QPushButton("Medir modelo de respuesta")
+        for button in (self.analyze, self.bench_stt, self.bench_llm):
+            compat_buttons.addWidget(button)
+        compat_buttons.addStretch(1)
+        compat_layout.addLayout(compat_buttons)
+        self.compat_view = QTextBrowser()
+        self.compat_view.setMinimumHeight(170)
+        compat_layout.addWidget(self.compat_view)
+        layout.addWidget(compat)
+        self.analyze.clicked.connect(self.analyze_workload)
+        self.bench_stt.clicked.connect(lambda: self.benchmark("stt"))
+        self.bench_llm.clicked.connect(lambda: self.benchmark("llm"))
+
         usage = QGroupBox(
             "Uso de servicios externos (últimos 30 días, solo contadores)"
         )
@@ -915,6 +941,68 @@ class EnginesPage(QWidget):
             s.remote_models.pop(provider_id, None)
         self._c.save_settings(s)
         self.load_candidates()
+
+    # ----------------------------------------------------- compatibilidad
+    def analyze_workload(self) -> None:
+        self.compat_view.setPlainText("Analizando el equipo…")
+        run_async(
+            self._c.assess_current_workload,
+            on_done=self._show_workload,
+            on_error=lambda m: self.compat_view.setPlainText(
+                f"No se pudo analizar: {m}"
+            ),
+        )
+
+    def _show_workload(self, result: Any) -> None:
+        hw = result["hw"]
+        assessment = result["assessment"]
+        backends = hw.get("backends") or {}
+        cpu = backends.get("cpu") or {}
+        yes = {True: "sí", False: "no", None: "?"}
+        gpus = ", ".join(
+            f"{g['name']} ({(g.get('vram_total_mb') or 0) / 1024:.0f} GB)"
+            for g in hw.get("gpus", [])
+        )
+        lines = [
+            f"**Equipo:** {hw.get('cpu_name', '').strip()} · {hw.get('cpu_cores')} "
+            f"núcleos (AVX2 {yes[cpu.get('avx2')]}, AVX-512 {yes[cpu.get('avx512')]})"
+            f" · {(hw.get('ram_total_mb') or 0) / 1024:.0f} GB RAM",
+            f"**GPU:** {gpus or 'ninguna'}",
+            f"**Backends:** CUDA {yes[backends.get('cuda_driver')]} · Vulkan "
+            f"{yes[backends.get('vulkan')]} · HIP/ROCm "
+            f"{yes[backends.get('hip_runtime')]} (presente no significa compatible "
+            f"con tu GPU) · Whisper en CUDA {yes[backends.get('whisper_cuda')]}",
+            "",
+            f"**Carga combinada: {assessment.emoji} {assessment.label}**",
+            "Componentes: "
+            + (", ".join(f"{i.name} ({i.kind})" for i in result["items"]) or "—"),
+        ]
+        lines += [f"- {reason}" for reason in assessment.reasons]
+        for key, bench in self._c.settings.benchmarks.items():
+            values = ", ".join(
+                f"{k}={v}"
+                for k, v in bench.items()
+                if k not in ("model", "measured_at")
+            )
+            lines.append(f"- Medición {key}: {values}")
+        self.compat_view.setMarkdown("\n".join(lines))
+
+    def benchmark(self, kind: str) -> None:
+        what = "el motor de voz" if kind == "stt" else "el modelo de respuesta"
+        answer = QMessageBox.question(
+            self,
+            "Medir rendimiento",
+            f"Se medirá {what} usando CPU/GPU y memoria durante unos segundos "
+            "(no se descarga nada). ¿Continuar?",
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+        self.compat_view.setPlainText(f"Midiendo {what}…")
+        run_async(
+            lambda: self._c.run_benchmark(kind),
+            on_done=lambda _r: self.analyze_workload(),
+            on_error=lambda m: self.compat_view.setPlainText(f"No se pudo medir: {m}"),
+        )
 
     def _fill_usage(self) -> None:
         summary = self._c.ledger.summary()

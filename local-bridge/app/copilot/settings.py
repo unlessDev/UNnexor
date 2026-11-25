@@ -43,6 +43,16 @@ class CopilotSettings:
     hotkey_toggle_capture: str = "Ctrl+Alt+Shift+C"
     hotkey_ask_manual: str = "Ctrl+Alt+Shift+A"
     hotkey_screen_challenge: str = "Ctrl+Alt+Shift+S"
+    # Mediciones de rendimiento consentidas: "stt:base", "llm:qwen3:8b"…
+    benchmarks: dict[str, dict[str, Any]] = field(default_factory=dict)
+
+    def measured_stt_call_s(self) -> dict[str, float]:
+        out: dict[str, float] = {}
+        for key, value in self.benchmarks.items():
+            call = value.get("call_s") if isinstance(value, dict) else None
+            if key.startswith("stt:") and isinstance(call, int | float):
+                out[key[4:]] = float(call)
+        return out
 
     def validate(self) -> None:
         if self.sensitivity not in ("low", "medium", "high"):
