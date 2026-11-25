@@ -1,0 +1,9 @@
+{
+  "venvPath": "local-bridge",
+  "venv": ".venv",
+  "extraPaths": ["local-bridge"],
+  "include": ["local-bridge/app", "local-bridge/tests", "local-bridge/scripts", "deployment"],
+  "exclude": ["**/.venv", "build", "release"],
+  "pythonVersion": "3.12",
+  "typeCheckingMode": "basic"
+}

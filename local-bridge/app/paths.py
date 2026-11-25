@@ -64,6 +64,25 @@ def providers_file() -> Path:
     return data_dir() / "providers.json"
 
 
+def models_dir() -> Path:
+    """Modelos locales descargados con consentimiento (voz, embeddings…).
+
+    Siempre en ``%LOCALAPPDATA%\\Extdator\\models`` (también en desarrollo)
+    para no duplicar cientos de MB entre el repositorio y la instalación ni
+    meterlos en el árbol de Git. ``EXTDATOR_MODELS_DIR`` lo sustituye.
+    La desinstalación ordinaria los conserva.
+    """
+    override = os.environ.get("EXTDATOR_MODELS_DIR", "").strip()
+    if override:
+        return Path(override).expanduser()
+    return _local_appdata() / APP_DIR_NAME / "models"
+
+
+def copilot_dir() -> Path:
+    """Datos del copiloto: perfiles, base de conocimiento, sesiones."""
+    return data_dir() / "copilot"
+
+
 def resource_path(relative: str) -> Path:
     """Recurso empaquetado (``_MEIPASS``) o archivo junto al código en dev."""
     bundle = getattr(sys, "_MEIPASS", None)

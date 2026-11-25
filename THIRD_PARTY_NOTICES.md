@@ -19,6 +19,9 @@ los componentes de terceros se conservan y se listan aquí.
 | python-dotenv | 1.2.x | BSD-3-Clause | Lectura de `.env` |
 | psutil | 7.x | BSD-3-Clause | Detección de hardware |
 | keyring | 25.x | MIT | Windows Credential Manager |
+| NumPy | 2.x | BSD-3-Clause y componentes permisivos | Audio del copiloto (DSP, VAD) |
+| SoundCard | 0.4.x | BSD-3-Clause | Captura WASAPI (loopback del sistema y micrófono) |
+| cffi / pycparser | 2.x / 3.x | MIT-0 / BSD-3-Clause | Dependencias nativas de SoundCard |
 
 ## Dependencias opcionales (no se instalan ni empaquetan por defecto)
 

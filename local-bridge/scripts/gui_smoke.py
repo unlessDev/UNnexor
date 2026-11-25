@@ -20,20 +20,20 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from PySide6.QtCore import QCoreApplication, QTimer  # noqa: E402
-from PySide6.QtGui import QColor, QPainter, QPixmap  # noqa: E402
-from PySide6.QtWidgets import QApplication  # noqa: E402
+from PySide6.QtCore import QCoreApplication, QTimer
+from PySide6.QtGui import QColor, QPainter, QPixmap
+from PySide6.QtWidgets import QApplication
 
-from app.config import Config  # noqa: E402
-from app.desktop.dialogs import (  # noqa: E402
+from app.config import Config
+from app.desktop.dialogs import (
     ModelSelectorDialog,
     PairingDialog,
     SettingsDialog,
 )
-from app.desktop.providers_dialog import ProvidersDialog  # noqa: E402
-from app.desktop.screenshot import ScreenshotPreviewDialog  # noqa: E402
-from app.ollama_client import OllamaClient  # noqa: E402
-from app.pairing import PairingManager  # noqa: E402
+from app.desktop.providers_dialog import ProvidersDialog
+from app.desktop.screenshot import ScreenshotPreviewDialog
+from app.ollama_client import OllamaClient
+from app.pairing import PairingManager
 
 FAILURES: list[str] = []
 

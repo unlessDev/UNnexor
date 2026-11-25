@@ -114,6 +114,22 @@ ZIP reproducibles + SHA-256). Las guías de tienda están en `docs/stores/`.
 | `settings_store.py` | Persistencia de ajustes de UI en JSON; secretos fuera. |
 | `main.py` | Composición: modos `bridge`, `--server-only`, `--check`; logging. |
 
+### Audio del copiloto (`local-bridge/app/audio/`)
+
+Primer bloque del copiloto en tiempo real (diseño completo en
+[ADR-0005](docs/adr/0005-realtime-copilot-architecture.md); avance en
+`docs/COPILOT_STATUS.md`). No importa Qt: se comunica por callbacks.
+
+| Módulo | Responsabilidad |
+|---|---|
+| `types.py` | DTO: `SourceKind` (sistema/micrófono), `AudioDevice`, `AudioChunk`, `SpeechSegment` (provisional/final). Formato interno mono `float32` 16 kHz. |
+| `dsp.py` | Mezcla a mono, remuestreo en streaming (FIR + fase continua), niveles dBFS, normalización limitada. |
+| `vad.py` | Puerto `VoiceActivityDetector`; `SileroVAD` (ONNX v6 incluido en faster-whisper) y `EnergyVAD` de respaldo. |
+| `segmenter.py` | Máquina de estados: pre-roll, provisionales periódicos, cierre por silencio, corte de monólogos, descarte de ruidos. |
+| `capture.py` | Puerto `CaptureBackend`; `SoundCardBackend` (WASAPI loopback + micrófono, COM por hilo); `CaptureWorker` con pausa, reconexión exponencial y liberación garantizada. |
+| `pipeline.py` | `AudioPipeline`: varias fuentes simultáneas, un segmentador por fuente, IDs globales, niveles, cola acotada sin bloquear la captura. |
+| `wav.py` | WAV PCM16 en memoria (STT remoto y exportes). |
+
 ### Escritorio (`local-bridge/app/desktop/`)
 
 | Módulo | Responsabilidad |
@@ -159,6 +175,8 @@ transcripción y los pesos no se descargan sin consentimiento.
 | Proveedores | `providers.json` sin claves | Media (metadatos) |
 | Claves API | Windows Credential Manager (keyring); posibles copias en `.env` hasta purgar | Alta |
 | Historial | Memoria del worker; no se persiste | Alta |
+| Modelos locales del copiloto (voz, embeddings) | `%LOCALAPPDATA%\Extdator\models` (también en desarrollo; `EXTDATOR_MODELS_DIR`) | Baja (pesos públicos) |
+| Audio capturado | Solo en memoria durante la sesión; nunca se escribe a disco | Alta |
 | Logs | `local-bridge/logs/` (desarrollo) / `%LOCALAPPDATA%\Extdator\logs\` (instalado) | Contenido prohibido por `LOG_PRIVACY=1` |
 
 `app/paths.py` centraliza las rutas. En desarrollo conserva las rutas
@@ -284,6 +302,9 @@ datos de usuario. Límites y comandos: `docs/CI.md`.
   Inno Setup, instalación por usuario.
 - [ADR-0004](docs/adr/0004-project-license-pending.md): licencia del
   proyecto pendiente de autorización del propietario.
+- [ADR-0005](docs/adr/0005-realtime-copilot-architecture.md): paquetes,
+  concurrencia, enrutamiento y reglas de privacidad del copiloto en tiempo
+  real (sin mecanismos para ocultarlo a terceros).
 
 ## 10. Deuda técnica y límites conocidos
 
