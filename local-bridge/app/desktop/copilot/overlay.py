@@ -25,9 +25,12 @@ from PySide6.QtWidgets import (
 from ...copilot.assistant import QAItem
 from ...copilot.transcription import TranscriptEvent
 from ...copilot.translation import SegmentStatus, TranslationSegment
+from ..frameless import enable_frameless_resize
 from ..styles import ACCENT, AMBER, BORDER, GREEN, MUTED, PANEL, RED, TEXT
-from ..widgets import AssistantMessage, ChatScroller, make_chat_area
+from ..widgets import AssistantMessage, ChatScroller, UserMessage, make_chat_area
 from ..window_manager import apply_noactivate
+
+MAX_HISTORY = 80  # widgets conservados (≈ 40 preguntas con su respuesta)
 
 OVERLAY_QSS = f"""
 #overlayRoot {{ background: #12141a; border: 1px solid {BORDER}; border-radius: 10px; }}
@@ -54,8 +57,9 @@ class CopilotOverlay(QWidget):
             Qt.WindowType.Window
             | Qt.WindowType.FramelessWindowHint
             | Qt.WindowType.WindowDoesNotAcceptFocus
-            | Qt.WindowType.Tool
         )
+        # Sin Qt.Tool: así tiene botón en la barra de tareas y al minimizarlo
+        # no desaparece (WS_EX_APPWINDOW se refuerza en showEvent).
         if on_top:
             flags |= Qt.WindowType.WindowStaysOnTopHint
         super().__init__(None, flags)
@@ -96,12 +100,25 @@ class CopilotOverlay(QWidget):
         self._stop.setToolTip("Finalizar la sesión")
         self._stop.clicked.connect(self.stopClicked)
         self._compact_btn = QPushButton("▁")
-        self._compact_btn.setToolTip("Minimizar / expandir el panel")
+        self._compact_btn.setToolTip("Contraer / expandir el panel")
         self._compact_btn.clicked.connect(self.toggle_compact)
         main = QPushButton("⧉")
         main.setToolTip("Abrir la ventana del copiloto")
         main.clicked.connect(self.openMainClicked)
-        for button in (self._pause, self._stop, self._compact_btn, main):
+        clear = QPushButton("🗑")
+        clear.setToolTip("Vaciar el historial del panel")
+        clear.clicked.connect(self.clear_history)
+        minimize = QPushButton("—")
+        minimize.setToolTip("Minimizar a la barra de tareas")
+        minimize.clicked.connect(self.showMinimized)
+        for button in (
+            self._pause,
+            self._stop,
+            clear,
+            self._compact_btn,
+            main,
+            minimize,
+        ):
             button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
             bar_layout.addWidget(button)
         layout.addWidget(bar)
@@ -145,6 +162,8 @@ class CopilotOverlay(QWidget):
             self.restoreGeometry(geometry)
         else:
             self.resize(420, 360)
+        # Redimensionado desde cualquier borde (además del agarre inferior).
+        enable_frameless_resize(self)
 
     # ------------------------------------------------------------ ventana
     def showEvent(self, event) -> None:
@@ -225,12 +244,24 @@ class CopilotOverlay(QWidget):
             shown = self._recent[-2:] + [line + " …"]
         self._transcript.setText("\n".join(shown))
 
+    def _append(self, widget: QWidget) -> None:
+        """Añade al historial (nunca borra lo anterior; conserva los últimos
+        ``MAX_HISTORY`` elementos). El autodesplazamiento se pausa si el
+        usuario subió a leer."""
+        self._vbox.insertWidget(self._vbox.count() - 1, widget)
+        while self._vbox.count() - 1 > MAX_HISTORY:
+            old = self._vbox.takeAt(0)
+            stale = old.widget() if old is not None else None
+            if stale is not None and stale is not self._answer:
+                stale.deleteLater()
+        self._scroller.ensure_bottom()
+
     def begin_answer(self, item: QAItem) -> None:
         self._current_item = item.id
         self._question.setText(f"❓ {item.question}")
-        self._clear_answers()
+        self._append(UserMessage(item.question))
         self._answer = AssistantMessage(item.model or "sugerencia", role="COPILOTO")
-        self._vbox.insertWidget(self._vbox.count() - 1, self._answer)
+        self._append(self._answer)
         self._alt.setEnabled(False)
         self._more.setEnabled(False)
         self.set_status("Generando respuesta…", "busy")
@@ -260,20 +291,50 @@ class CopilotOverlay(QWidget):
             self._transcript.setText(f"{segment.original} …")
             return
         if segment.status is SegmentStatus.DONE:
-            self._clear_answers()
             widget = AssistantMessage("traducción", role="COPILOTO")
             widget.append_streaming(f"{segment.translation}\n\n_{segment.original}_")
             widget.finalize()
-            self._vbox.insertWidget(self._vbox.count() - 1, widget)
+            self._append(widget)
             self._transcript.setText("")
 
-    def show_text(self, title: str, text: str) -> None:
+    def begin_text(self, title: str) -> None:
+        """Nueva entrada en streaming (p. ej. un desafío) sin borrar las previas."""
+        self._current_item = None
         self._question.setText(title)
+        self._append(UserMessage(title))
+        self._answer = AssistantMessage("copiloto", role="COPILOTO")
+        self._append(self._answer)
+
+    def append_text(self, delta: str) -> None:
+        if self._answer is not None:
+            self._answer.append_streaming(delta)
+            self._scroller.ensure_bottom()
+
+    def finish_text(self, text: str, error: bool = False) -> None:
+        if self._answer is None:
+            self.begin_text("copiloto")
+        assert self._answer is not None
+        if self._answer.text().strip() != text.strip():
+            self._answer.append_streaming(
+                text[len(self._answer.text()) :]
+                if text.startswith(self._answer.text())
+                else "\n\n" + text
+            )
+        if error:
+            self._answer.mark_error()
+        else:
+            self._answer.finalize()
+
+    def show_text(self, title: str, text: str) -> None:
+        self.begin_text(title)
+        self.finish_text(text)
+
+    def clear_history(self) -> None:
         self._clear_answers()
-        widget = AssistantMessage("copiloto", role="COPILOTO")
-        widget.append_streaming(text)
-        widget.finalize()
-        self._vbox.insertWidget(self._vbox.count() - 1, widget)
+        self._question.setText("")
+        self._current_item = None
+        self._alt.setEnabled(False)
+        self._more.setEnabled(False)
 
     def _clear_answers(self) -> None:
         while self._vbox.count() > 1:

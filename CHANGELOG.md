@@ -113,6 +113,33 @@ usa [Semantic Versioning](https://semver.org/lang/es/).
   penalizados en tareas de texto; los de código preferidos en desafíos).
 
 ### Fixed
+- **Falta de memoria en Ollama (Vulkan/CUDA)**: el copiloto precargaba su
+  modelo durante 15 minutos y, junto al modelo del panel y la VRAM usada
+  por otras aplicaciones, la GPU de 8 GB se quedaba sin memoria (HTTP 500
+  "out-of-memory" o "connection forcibly closed"). Ahora se respeta el
+  `keep_alive` configurado y, ante un error de memoria antes de emitir
+  texto, se descargan los otros modelos y se reintenta una vez; si persiste
+  se muestra un mensaje con acciones concretas. Las capturas para modelos
+  con visión se limitan a 1280 px / 1,2 MP (los búferes de imagen agotaban
+  la VRAM).
+- **Bucles en el reconocimiento de voz** ("el informe del informe del
+  informe…"): causa medida — el texto ya confirmado se enviaba como prompt a
+  Whisper y, con fragmentos casi sin voz, el modelo lo repetía (además
+  tardaba ~7 s re-decodificando). Ahora solo se envía el glosario, se usan
+  parámetros antibucle (`no_repeat_ngram_size`, `repetition_penalty`,
+  umbrales de compresión/probabilidad), los fragmentos de menos de −50 dBFS
+  no se transcriben y las repeticiones residuales se colapsan.
+- **Las respuestas desaparecían**: el panel flotante y la sección Desafíos
+  borraban el contenido anterior en cada respuesta. Ahora conservan el
+  historial (con botón para vaciarlo) y no interrumpen la lectura; la
+  sección Conversación ya no salta a la pregunta nueva si estás leyendo
+  otra.
+- **No se podían agrandar ni reducir** el panel principal ni el flotante: el
+  contenido cubría los bordes. `desktop/frameless.py` permite redimensionar
+  desde cualquier borde con el redimensionado nativo del sistema.
+- **Minimizar hacía desaparecer la ventana**: `WS_EX_NOACTIVATE` sin
+  `WS_EX_APPWINDOW` la sacaba de la barra de tareas. Ambos paneles tienen
+  ahora botón en la barra de tareas y el flotante, botón de minimizar.
 - Si una edición no incluyera los componentes del copiloto, el botón 🧭
   muestra un aviso en lugar de cerrar la aplicación.
 - Las burbujas de respuesta programaban su repintado con temporizadores no

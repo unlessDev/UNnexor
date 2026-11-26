@@ -28,13 +28,14 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
 
+from ..audio.dsp import rms_dbfs
 from ..audio.types import SourceKind, SpeechSegment
 from ..stt.base import SpeechRecognizer, STTError, Transcript
 
 log = logging.getLogger("extdator.copilot.transcription")
 
 FATAL_KINDS = frozenset({"auth", "payment", "unavailable", "model_missing"})
-PROMPT_TAIL_CHARS = 200
+MIN_SPEECH_DBFS = -50.0  # por debajo: casi silencio, no se transcribe
 
 
 class TranscriberState(str, Enum):
@@ -104,7 +105,6 @@ class TranscriptionService:
         self._failed = False
         self._thread: threading.Thread | None = None
         self._recognizer: SpeechRecognizer | None = None
-        self._confirmed_tail: dict[SourceKind, str] = {}
         self._backlog_warned = False
         self.state = TranscriberState.IDLE
         self.processed = 0
@@ -208,7 +208,9 @@ class TranscriptionService:
 
     def _process(self, job: _Job) -> None:
         segment = job.segment
-        if segment.discarded:
+        if segment.discarded or rms_dbfs(segment.samples) < MIN_SPEECH_DBFS:
+            # Falsos positivos del VAD (respiración, ruido de fondo): sin voz
+            # suficiente para transcribir; evita alucinaciones y cuota remota.
             self._emit_retract(segment, job)
             return
         if not segment.final and self._superseded(segment):
@@ -221,9 +223,6 @@ class TranscriptionService:
             if segment.final:
                 self._emit_retract(segment, job)
             return
-        if segment.final and result.text:
-            tail = self._confirmed_tail.get(segment.source, "") + " " + result.text
-            self._confirmed_tail[segment.source] = tail[-PROMPT_TAIL_CHARS:].strip()
         self.processed += 1
         self._emit(
             TranscriptEvent(
@@ -256,9 +255,10 @@ class TranscriptionService:
                 glossary = ""
             if glossary:
                 parts.append(glossary)
-        tail = self._confirmed_tail.get(source)
-        if tail:
-            parts.append(tail)
+        # El texto ya confirmado NO se usa como prompt: con fragmentos sin voz
+        # real Whisper "continúa" el prompt y entra en bucles ("el informe del
+        # informe del…"). Solo el glosario (vocabulario) es seguro.
+        del source
         return " ".join(parts) or None
 
     def _transcribe_with_retry(self, segment: SpeechSegment) -> Transcript | None:

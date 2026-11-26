@@ -90,6 +90,37 @@ def _finalize_stats(
     return text, stats
 
 
+_RESOURCE_PATTERNS = (
+    "out-of-memory",
+    "out of memory",
+    "failed to allocate",
+    "unable to allocate",
+    "erroroutofdevicememory",
+    "cudamalloc failed",
+    "forcibly closed",
+    "wsarecv",
+    "process has terminated",
+    "connection was reset",
+)
+
+
+def is_resource_error(detail: str) -> bool:
+    """¿El fallo de Ollama es por memoria (VRAM/RAM) o porque el proceso del
+    modelo se cerró al cargarlo/ejecutarlo?"""
+    lowered = (detail or "").lower()
+    return any(pattern in lowered for pattern in _RESOURCE_PATTERNS)
+
+
+def resource_error_message(model: str, freed: List[str]) -> str:
+    unloaded = f" Ya se liberaron otros modelos ({', '.join(freed)})." if freed else ""
+    return (
+        f"No hay memoria de GPU/RAM suficiente para ejecutar '{model}'.{unloaded} "
+        "Otras aplicaciones pueden estar usando la VRAM. Cierra programas que "
+        "usen la GPU, elige un modelo más pequeño o reduce el contexto "
+        "(num_ctx) en Ajustes."
+    )
+
+
 # Tiempo máximo del sondeo de versión usado por /health. El cliente que
 # consume /health debe esperar más que este valor (ver main.HEALTH_REQUEST_TIMEOUT).
 OLLAMA_HEALTH_TIMEOUT = 2.0
@@ -228,21 +259,54 @@ class OllamaClient:
         if effective:
             payload["keep_alive"] = effective
         started = time.perf_counter()
+        freed: List[str] = []
+        for attempt in (1, 2):
+            try:
+                response = self._client.post("/api/generate", json=payload)
+            except httpx.HTTPError as exc:
+                raise OllamaConnectionError(
+                    _friendly_http_error(exc, self._base_url)
+                ) from exc
+            if response.status_code == 404:
+                raise ModelNotFoundError(
+                    f"El modelo '{model}' no está instalado en Ollama."
+                )
+            if response.status_code == 200:
+                return round(time.perf_counter() - started, 2)
+            detail = _read_error_detail(response)
+            if attempt == 1 and is_resource_error(detail):
+                freed = self.unload_other_models(model)
+                continue
+            message = (
+                resource_error_message(model, freed)
+                if is_resource_error(detail)
+                else f"Ollama devolvió HTTP {response.status_code} al cargar el modelo."
+            )
+            raise OllamaResponseError(message, detail=detail)
+        raise OllamaResponseError("No se pudo cargar el modelo.")  # pragma: no cover
+
+    def unload_other_models(self, keep: str) -> List[str]:
+        """Descarga de memoria los modelos cargados distintos de ``keep``
+        (``keep_alive: 0``). Devuelve sus nombres. Nunca lanza."""
+        unloaded: List[str] = []
         try:
-            response = self._client.post("/api/generate", json=payload)
-        except httpx.HTTPError as exc:
-            raise OllamaConnectionError(
-                _friendly_http_error(exc, self._base_url)
-            ) from exc
-        if response.status_code == 404:
-            raise ModelNotFoundError(
-                f"El modelo '{model}' no está instalado en Ollama."
-            )
-        if response.status_code != 200:
-            raise OllamaResponseError(
-                f"Ollama devolvió HTTP {response.status_code} al cargar el modelo."
-            )
-        return round(time.perf_counter() - started, 2)
+            running = self.running_models()
+        except OllamaError:
+            return unloaded
+        for entry in running:
+            name = str(entry.get("name") or entry.get("model") or "")
+            if not name or name == keep:
+                continue
+            try:
+                self._client.post(
+                    "/api/generate",
+                    json={"model": name, "keep_alive": 0},
+                    timeout=30.0,
+                )
+                unloaded.append(name)
+            except httpx.HTTPError:
+                continue
+        return unloaded
 
     def running_models(self) -> List[Dict[str, Any]]:
         """Modelos cargados en memoria ahora mismo (``GET /api/ps``).
@@ -371,6 +435,8 @@ class OllamaClient:
         ):
             payload["think"] = self._think
 
+        emitted = [False]  # ¿ya se entregó texto? (no reintentar si es así)
+
         def run_attempt(with_think: bool) -> Tuple[str, Dict[str, Any]]:
             attempt_payload = dict(payload)
             if not with_think:
@@ -410,9 +476,13 @@ class OllamaClient:
                                 "(JSON malformado)."
                             ) from exc
                         if obj.get("error"):
-                            raise OllamaResponseError(f"Ollama reportó: {obj['error']}")
+                            raise OllamaResponseError(
+                                f"Ollama reportó: {obj['error']}",
+                                detail=str(obj["error"]),
+                            )
                         delta = (obj.get("message") or {}).get("content") or ""
                         if delta:
+                            emitted[0] = True
                             parts.append(delta)
                             if on_chunk is not None:
                                 on_chunk(delta)
@@ -433,8 +503,9 @@ class OllamaClient:
             return "".join(parts), stats
 
         started = time.perf_counter()
+        with_think = "think" in payload
         try:
-            return _finalize_stats(*run_attempt("think" in payload), started)
+            return _finalize_stats(*run_attempt(with_think), started)
         except OllamaResponseError as exc:
             if (
                 exc.detail
@@ -445,4 +516,18 @@ class OllamaClient:
                 # se pudo consultar): reintenta una vez sin el parámetro.
                 self._thinking_cache[payload["model"]] = False
                 return _finalize_stats(*run_attempt(False), started)
-            raise
+            if not is_resource_error(exc.detail or exc.message) or emitted[0]:
+                raise
+            # Sin memoria (VRAM/RAM) o el proceso del modelo se cerró al
+            # cargarlo: se descargan los OTROS modelos y se reintenta una vez
+            # (solo si aún no se emitió texto, para no duplicar la respuesta).
+            freed = self.unload_other_models(payload["model"])
+            try:
+                return _finalize_stats(*run_attempt(with_think), started)
+            except OllamaResponseError as retry_exc:
+                if is_resource_error(retry_exc.detail or retry_exc.message):
+                    raise OllamaResponseError(
+                        resource_error_message(payload["model"], freed),
+                        detail=retry_exc.detail,
+                    ) from retry_exc
+                raise

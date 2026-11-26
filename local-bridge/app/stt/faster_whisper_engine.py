@@ -26,7 +26,7 @@ from typing import Any
 from .. import paths
 from ..audio.types import SAMPLE_RATE, FloatArray
 from .base import STTError, Transcript, TranscriptPiece
-from .hallucinations import is_hallucination, is_repetition_loop
+from .hallucinations import collapse_repetitions, is_hallucination, is_repetition_loop
 
 log = logging.getLogger("extdator.stt.whisper")
 
@@ -248,6 +248,14 @@ class FasterWhisperRecognizer:
                 condition_on_previous_text=False,
                 initial_prompt=prompt or None,
                 temperature=(0.0, 0.2, 0.4),
+                # Antibucles: sin esto, un fragmento sin voz real podía
+                # producir "el informe del informe del informe…" o tardar
+                # ~7 s re-decodificando (medido el 2026-11-25).
+                no_repeat_ngram_size=3,
+                repetition_penalty=1.1,
+                compression_ratio_threshold=2.0,
+                log_prob_threshold=-0.8,
+                no_speech_threshold=0.5,
             )
             raw = list(segments)  # el generador decodifica al iterar
         except Exception as exc:
@@ -270,7 +278,7 @@ class FasterWhisperRecognizer:
             weights += span
             weighted += confidence * span
 
-        text = " ".join(piece.text for piece in pieces).strip()
+        text = collapse_repetitions(" ".join(piece.text for piece in pieces).strip())
         filtered = bool(text) and (is_hallucination(text) or is_repetition_loop(text))
         if filtered:
             log.debug("Transcripción descartada como alucinación: %r", text[:80])

@@ -183,8 +183,8 @@ def test_prompt_carries_confirmed_text_and_glossary_per_source():
     )
     prompts = {seg_id: prompt for seg_id, prompt in recognizer.calls}
     assert prompts[1] == "Kubernetes, Terraform"
-    assert prompts[2] == "Kubernetes, Terraform texto 1"
-    assert prompts[3] == "Kubernetes, Terraform"  # otra fuente, otro contexto
+    assert prompts[2] == "Kubernetes, Terraform"  # sin texto previo: evita bucles
+    assert prompts[3] == "Kubernetes, Terraform"
 
 
 def test_backlog_warning_when_engine_is_too_slow():

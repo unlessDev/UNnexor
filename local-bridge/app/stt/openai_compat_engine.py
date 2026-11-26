@@ -25,7 +25,7 @@ import httpx
 from ..audio.types import SAMPLE_RATE, FloatArray
 from ..audio.wav import encode_wav
 from .base import STTError, Transcript, TranscriptPiece
-from .hallucinations import is_hallucination, is_repetition_loop
+from .hallucinations import collapse_repetitions, is_hallucination, is_repetition_loop
 from .remote_common import error_from_response, network_error, normalize_language
 
 MAX_PROMPT_CHARS = 600  # ~224 tokens: límite documentado por Groq
@@ -134,6 +134,7 @@ class OpenAICompatTranscriber:
                 weighted += confidence * span
         if pieces:
             text = " ".join(p.text for p in pieces if p.text).strip()
+        text = collapse_repetitions(text)
         filtered = bool(text) and (is_hallucination(text) or is_repetition_loop(text))
         return Transcript(
             text="" if filtered else text,
