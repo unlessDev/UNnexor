@@ -108,7 +108,8 @@ class CopilotController(QObject):
         super().__init__(parent)
         copilot_cfg = copy.copy(cfg)
         copilot_cfg.ollama_think = False  # respuestas en vivo: sin razonamiento
-        copilot_cfg.ollama_keep_alive = "15m"
+        # Se respeta el keep_alive configurado: forzar 15 min mantenía un
+        # segundo modelo en VRAM y provocaba falta de memoria en el panel.
         self.cfg = copilot_cfg
         self.settings_repo = settings_repo or SettingsRepository()
         self.settings: CopilotSettings = self.settings_repo.load()

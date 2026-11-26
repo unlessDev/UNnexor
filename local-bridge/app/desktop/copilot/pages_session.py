@@ -342,11 +342,17 @@ class ConversationPage(QWidget):
         text = f"{icon} {item.question}"
         list_item = self._list_items.get(item.id)
         if list_item is None:
+            # Solo se salta a la pregunta nueva si el usuario ya estaba en la
+            # última: si está leyendo una anterior, no se le interrumpe.
+            count = self.questions.count()
+            current = self.questions.currentRow()
+            follow = count == 0 or current in (-1, count - 1)
             list_item = QListWidgetItem(text)
             list_item.setData(Qt.ItemDataRole.UserRole, item.id)
             self.questions.addItem(list_item)
             self._list_items[item.id] = list_item
-            self.questions.setCurrentItem(list_item)
+            if follow:
+                self.questions.setCurrentItem(list_item)
         else:
             list_item.setText(text)
         if self._selected_id() == item.id:

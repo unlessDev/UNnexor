@@ -44,7 +44,11 @@ WM_MOUSEWHEEL = 0x020A
 WM_MOUSEHWHEEL = 0x020E
 WH_MOUSE_LL = 14
 WS_EX_NOACTIVATE = 0x08000000
+WS_EX_APPWINDOW = 0x00040000
+WS_EX_TOOLWINDOW = 0x00000080
+WS_MINIMIZEBOX = 0x00020000
 GWL_EXSTYLE = -20
+GWL_STYLE = -16
 WM_APP_QUIT_HOOK = 0x0402  # mensaje interno para desinstalar el hook de forma segura
 
 
@@ -106,19 +110,31 @@ else:  # pragma: no cover
     HOOKPROC = None  # type: ignore[assignment]
 
 
-def apply_noactivate(hwnd: int) -> None:
-    """Refuerza ``WS_EX_NOACTIVATE`` en el HWND (por si Qt no lo aplicó)."""
+def apply_noactivate(hwnd: int, taskbar: bool = True) -> None:
+    """Refuerza ``WS_EX_NOACTIVATE`` en el HWND (por si Qt no lo aplicó).
+
+    Windows oculta de la barra de tareas las ventanas con
+    ``WS_EX_NOACTIVATE`` salvo que tengan ``WS_EX_APPWINDOW``: sin él, al
+    minimizar el panel desaparecía por completo. ``WS_MINIMIZEBOX`` permite
+    minimizar/restaurar desde el botón de la barra de tareas aunque la
+    ventana no tenga marco.
+    """
     if not IS_WINDOWS or not hwnd:
         return
     try:
-        exstyle = _user32.GetWindowLongPtrW(wt.HWND(hwnd), GWL_EXSTYLE)
-        if not (exstyle & WS_EX_NOACTIVATE):
-            _user32.SetWindowLongPtrW(
-                wt.HWND(hwnd), GWL_EXSTYLE, exstyle | WS_EX_NOACTIVATE
-            )
-            log.debug("WS_EX_NOACTIVATE aplicado al HWND %s", hwnd)
+        handle = wt.HWND(hwnd)
+        exstyle = _user32.GetWindowLongPtrW(handle, GWL_EXSTYLE)
+        wanted = exstyle | WS_EX_NOACTIVATE
+        if taskbar:
+            wanted = (wanted | WS_EX_APPWINDOW) & ~WS_EX_TOOLWINDOW
+        if wanted != exstyle:
+            _user32.SetWindowLongPtrW(handle, GWL_EXSTYLE, wanted)
+        if taskbar:
+            style = _user32.GetWindowLongPtrW(handle, GWL_STYLE)
+            if not (style & WS_MINIMIZEBOX):
+                _user32.SetWindowLongPtrW(handle, GWL_STYLE, style | WS_MINIMIZEBOX)
     except Exception as exc:  # pragma: no cover
-        log.debug("No se pudo reforzar WS_EX_NOACTIVATE: %s", exc)
+        log.debug("No se pudo reforzar el estilo de ventana: %s", exc)
 
 
 class NoActivateFilter(QAbstractNativeEventFilter):

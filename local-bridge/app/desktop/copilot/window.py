@@ -126,7 +126,8 @@ class CopilotWindow(QMainWindow):
         c.translationUpdated.connect(self._on_translation)
         c.challengeStarted.connect(self._on_challenge_started)
         c.challengeDone.connect(self._on_challenge_done)
-        c.challengeFailed.connect(lambda m: self.overlay.set_status(m, "error"))
+        c.challengeChunk.connect(self.overlay.append_text)
+        c.challengeFailed.connect(self._on_challenge_failed)
         c.notice.connect(lambda m: self.overlay.set_status(m, "info"))
         c.error.connect(self._on_error)
         self.hotkey_problems: list[str] = []
@@ -212,14 +213,18 @@ class CopilotWindow(QMainWindow):
         if self.controller.mode == "translation":
             self.overlay.show_translation(segment)
 
-    def _on_challenge_started(self, _instruction: str) -> None:
-        self.overlay.show_text("🧩 Analizando la captura…", "")
+    def _on_challenge_started(self, instruction: str) -> None:
+        self.overlay.begin_text(f"🧩 {instruction or 'Desafío en pantalla'}")
         self.overlay.set_status("Procesando imagen…", "busy")
         self.overlay.show()
 
     def _on_challenge_done(self, result: ChallengeResult) -> None:
-        self.overlay.show_text("🧩 Solución", result.text)
+        self.overlay.finish_text(result.text)
         self.overlay.set_status(f"Listo · {result.model}", "capture")
+
+    def _on_challenge_failed(self, message: str) -> None:
+        self.overlay.finish_text(f"⚠ {message}", error=True)
+        self.overlay.set_status(message, "error")
 
     def _on_error(self, message: str) -> None:
         self.overlay.set_status(message, "error")

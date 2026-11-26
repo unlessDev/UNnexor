@@ -214,6 +214,11 @@ class BridgeWindow(QMainWindow):
         self.setStyleSheet(APP_QSS)
         self.setMinimumSize(MIN_W, MIN_H)
         self._install_native_filter()
+        # Los bordes están cubiertos por el contenido: el redimensionado se
+        # gestiona a nivel de aplicación (ver desktop/frameless.py).
+        from .frameless import enable_frameless_resize
+
+        enable_frameless_resize(self)
 
     # ------------------------------------------------------------------ #
     # Helpers nativos
@@ -933,6 +938,11 @@ class BridgeWindow(QMainWindow):
 
     def _dispatch_capture(self, pixmap: QPixmap, method: str, instruction: str) -> None:
         """Guarda temporal y enruta: visión directa o OCR local."""
+        if method == "vision":
+            # El OCR aprovecha la resolución completa; la visión no.
+            from .screenshot import fit_for_vision
+
+            pixmap = fit_for_vision(pixmap)
         path = self._save_capture_temp(pixmap)
         if path is None:
             self._set_footer_transient(

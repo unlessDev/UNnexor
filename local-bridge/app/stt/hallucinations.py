@@ -58,3 +58,35 @@ def is_repetition_loop(text: str, min_repeats: int = 4) -> bool:
         if best >= min_repeats and best * size >= len(words) * 0.6:
             return True
     return False
+
+
+def collapse_repetitions(text: str, max_repeats: int = 2) -> str:
+    """Reduce secuencias repetidas consecutivas (1–6 palabras) a
+    ``max_repeats`` apariciones: "del informe del informe del informe" →
+    "del informe del informe". No toca repeticiones legítimas cortas."""
+    words = text.split()
+    if len(words) < 4:
+        return text
+    changed = True
+    while changed:
+        changed = False
+        for size in range(6, 0, -1):
+            i = 0
+            out: list[str] = []
+            while i < len(words):
+                chunk = words[i : i + size]
+                repeats = 1
+                while len(chunk) == size and [
+                    w.lower().strip(".,;:!?¿¡")
+                    for w in words[i + repeats * size : i + (repeats + 1) * size]
+                ] == [w.lower().strip(".,;:!?¿¡") for w in chunk]:
+                    repeats += 1
+                if repeats > max_repeats:
+                    out.extend(words[i : i + size * max_repeats])
+                    i += size * repeats
+                    changed = True
+                else:
+                    out.append(words[i])
+                    i += 1
+            words = out
+    return " ".join(words)

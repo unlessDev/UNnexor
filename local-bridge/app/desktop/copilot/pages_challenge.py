@@ -28,19 +28,16 @@ from PySide6.QtWidgets import (
 )
 
 from ...copilot.challenges import ChallengeResult, ChangeDetector, fingerprint
-from ..widgets import AssistantMessage
+from ..screenshot import fit_for_vision
+from ..widgets import AssistantMessage, ChatScroller, UserMessage, make_chat_area
 from .common import hint, title
 from .controller import CopilotController
 
-MAX_IMAGE_WIDTH = 1600
 MAX_IMAGES = 4
 
 
 def pixmap_to_b64(pixmap: QPixmap) -> str:
-    if pixmap.width() > MAX_IMAGE_WIDTH:
-        pixmap = pixmap.scaledToWidth(
-            MAX_IMAGE_WIDTH, Qt.TransformationMode.SmoothTransformation
-        )
+    pixmap = fit_for_vision(pixmap)
     data = QByteArray()
     buffer = QBuffer(data)
     buffer.open(QIODevice.OpenModeFlag.WriteOnly)
@@ -129,10 +126,13 @@ class ChallengesPage(QWidget):
                 "forma relevante y se detiene al desmarcarlo."
             )
         )
-        self.result_holder = QVBoxLayout()
-        holder = QWidget()
-        holder.setLayout(self.result_holder)
-        layout.addWidget(holder, 1)
+        # Historial desplazable: cada análisis se añade sin borrar los previos.
+        self._scroll, _container, self.result_holder = make_chat_area()
+        self._scroller = ChatScroller(self._scroll.verticalScrollBar(), self)
+        layout.addWidget(self._scroll, 1)
+        clear_history = QPushButton("Vaciar historial")
+        clear_history.clicked.connect(self._clear_result)
+        layout.addWidget(clear_history, 0, Qt.AlignmentFlag.AlignRight)
 
         self.region.clicked.connect(lambda: self.capture_region(append=False))
         self.add.clicked.connect(lambda: self.capture_region(append=True))
@@ -267,29 +267,37 @@ class ChallengesPage(QWidget):
 
     # ------------------------------------------------------------ resultados
     def _clear_result(self) -> None:
-        while self.result_holder.count():
+        # Conserva el estiramiento final del área de historial.
+        while self.result_holder.count() > 1:
             child = self.result_holder.takeAt(0)
             widget = child.widget() if child is not None else None
             if widget is not None:
                 widget.deleteLater()
+        self._answer = None
 
-    def _on_started(self, _instruction: str) -> None:
-        self._clear_result()
+    def _add_entry(self, widget: QWidget) -> None:
+        self.result_holder.insertWidget(self.result_holder.count() - 1, widget)
+        self._scroller.ensure_bottom()
+
+    def _on_started(self, instruction: str) -> None:
+        self._add_entry(UserMessage(instruction or "Desafío en pantalla"))
         self._answer = AssistantMessage("desafío", role="COPILOTO")
-        self.result_holder.addWidget(self._answer)
+        self._add_entry(self._answer)
         self.solve.setEnabled(False)
 
     def _on_chunk(self, delta: str) -> None:
         if self._answer is not None:
             self._answer.append_streaming(delta)
+            self._scroller.ensure_bottom()
 
     def _on_done(self, result: ChallengeResult) -> None:
         # El resultado final manda sobre lo recibido en streaming.
         if self._answer is None or self._answer.text().strip() != result.text.strip():
-            self._clear_result()
+            if self._answer is not None:
+                self._answer.deleteLater()
             self._answer = AssistantMessage("desafío", role="COPILOTO")
             self._answer.append_streaming(result.text)
-            self.result_holder.addWidget(self._answer)
+            self._add_entry(self._answer)
         self._answer.finalize()
         method = "visión" if result.method == "vision" else "OCR + texto"
         self.plan.setText(f"Resuelto con {result.model} ({method}).")

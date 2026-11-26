@@ -380,3 +380,27 @@ class ScreenshotPreviewDialog(QDialog):
     def method(self) -> str:
         data = self._method.currentData()
         return data if isinstance(data, str) else "none"
+
+
+# Límite para modelos con visión: los tokens de imagen crecen con los píxeles
+# y con ellos los búferes de cómputo de la GPU; capturas de 1600+ px agotaban
+# la VRAM de una GPU de 8 GB (qwen2.5vl:7b, 2026-11-25).
+VISION_MAX_SIDE = 1280
+VISION_MAX_PIXELS = 1_200_000
+
+
+def fit_for_vision(pixmap: QPixmap) -> QPixmap:
+    """Reduce la captura (sin agrandarla) para enviarla a un modelo de visión."""
+    width, height = pixmap.width(), pixmap.height()
+    if width <= 0 or height <= 0:
+        return pixmap
+    scale = min(1.0, VISION_MAX_SIDE / max(width, height))
+    scale = min(scale, (VISION_MAX_PIXELS / (width * height)) ** 0.5)
+    if scale >= 1.0:
+        return pixmap
+    return pixmap.scaled(
+        max(1, int(width * scale)),
+        max(1, int(height * scale)),
+        Qt.AspectRatioMode.KeepAspectRatio,
+        Qt.TransformationMode.SmoothTransformation,
+    )
