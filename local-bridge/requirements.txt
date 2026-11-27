@@ -17,7 +17,7 @@
 #                    PyMuPDF por su licencia AGPL)
 #   pytest         → pruebas
 #   black          → formateo del código (herramienta de desarrollo)
-fastapi>=0.115,<1
+fastapi>=0.165.0,<1
 uvicorn>=0.30,<1
 httpx>=0.27,<1
 pydantic>=2.7,<3
