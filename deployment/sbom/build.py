@@ -13,8 +13,8 @@ Salida en ``release/sbom/`` (ignorado por Git):
   * unnexor-<versión>.cdx.json
   * SHA256SUMS.txt
 
-La licencia principal del proyecto está pendiente de decisión; el SBOM la
-marca explícitamente como ``pending-owner-decision`` y no inventa una.
+La licencia del proyecto es Apache-2.0 (decisión del propietario,
+2026-11-27); el SBOM la declara en el componente raíz.
 """
 
 from __future__ import annotations
@@ -38,7 +38,8 @@ APP_INIT = LOCAL_BRIDGE / "app" / "__init__.py"
 REQUIREMENTS = LOCAL_BRIDGE / "requirements.txt"
 BUILD_REQUIREMENTS = LOCAL_BRIDGE / "requirements-build.txt"
 DEFAULT_OUT = PROJECT_ROOT / "release" / "sbom"
-REPO_URL = "https://github.com/unlessDev/Extdator"
+REPO_URL = "https://github.com/unlessDev/UNnexor"
+PROJECT_LICENSE = "Apache-2.0"
 TOOL_VERSION = "1.0"
 
 
@@ -237,6 +238,7 @@ def build(
                 "bom-ref": root_ref,
                 "name": "UNnexor",
                 "version": version,
+                "licenses": [{"license": {"id": PROJECT_LICENSE}}],
                 "description": (
                     "Asistente local para el navegador: extensión MV3, puente "
                     "HTTP, panel flotante y modelos en Ollama."
@@ -244,7 +246,7 @@ def build(
                 "properties": [
                     {
                         "name": "unnexor:license-status",
-                        "value": "pending-owner-decision",
+                        "value": PROJECT_LICENSE,
                     },
                     {
                         "name": "unnexor:distribution-status",
@@ -268,7 +270,7 @@ def build(
                 },
                 {
                     "name": "unnexor:license-status",
-                    "value": "pending-owner-decision",
+                    "value": PROJECT_LICENSE,
                 },
             ],
         },

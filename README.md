@@ -43,11 +43,16 @@ navegador, una aplicación de escritorio y modelos de IA locales (Ollama):
 - Chrome, Brave o Edge para la extensión.
 - Desde el código fuente: Python 3.12.
 
-### Usar la versión distribuida
+### Descargar para Windows
 
-Cuando haya una versión publicada: ejecuta el instalador
-`UNnexor-<versión>-win64-setup.exe` y abre **UNnexor** desde el menú Inicio
-(o `UNnexor.exe`). Al abrirse inicia el puente local, comprueba Ollama y
+<p>
+  <a href="https://github.com/unlessDev/UNnexor/releases/latest/download/UNnexor-Setup-Windows-x64.exe"><b>⬇ Descargar UNnexor para Windows (instalador .exe)</b></a>
+  · <a href="https://github.com/unlessDev/UNnexor/releases/latest">todas las descargas</a>
+</p>
+
+Ejecuta el instalador (no requiere administrador; Windows SmartScreen puede
+avisar porque aún no está firmado: «Más información» → «Ejecutar de todas
+formas») y abre **UNnexor** desde el menú Inicio. Al abrirse inicia el puente local, comprueba Ollama y
 muestra el panel; al cerrarlo detiene todo lo que inició. Ver
 [docs/INSTALLATION.md](docs/INSTALLATION.md).
 
@@ -59,12 +64,10 @@ muestra el panel; al cerrarlo detiene todo lo que inició. Ver
 | Puente local + panel | Funcional; ejecutable one-folder generado y validado |
 | Copiloto en tiempo real | Funcional (conversación con escucha continua/temporizada/manual, traducción, desafíos); incluido en el ejecutable |
 | Pruebas | `492 passed, 1 skipped` (2026-11-27) |
-| Instalador Windows | **Generado y probado localmente** (Inno Setup por usuario) |
-| Publicación en tiendas | No iniciada; requiere cuentas, URL de privacidad, capturas y licencia |
-| Licencia | **Pendiente de decisión del propietario** (ver abajo) |
-
-El repositorio remoto es privado. No se publican releases ni se cambia la
-visibilidad sin autorización expresa.
+| Instalador Windows | **v2.0.0 publicado** en [Releases](https://github.com/unlessDev/UNnexor/releases/latest) (Inno Setup, por usuario, sin firma Authenticode) |
+| Publicación en tiendas | No iniciada; requiere cuentas de desarrollador y URL pública de privacidad |
+| Licencia | **Apache-2.0** ([LICENSE](LICENSE)) |
+| macOS / Linux | Previstos; por ahora solo Windows 10/11 x64 |
 
 ```
 Selección en el navegador → Botón X (Enviar / Consultar) → Puente local (FastAPI)
@@ -179,75 +182,63 @@ informes de build y el propio SBOM, y escribe
 
 ## Características
 
-**Extensión**
-* Botón ✦ minimalista (Shadow DOM) sobre el inicio de la selección, con
-  animación, hover/active, reposicionado en scroll y ocultado automático.
-* Texto enviado tal cual: acentos, símbolos, saltos de línea.
-* Estados de error claros (backend caído, timeout, token, 413, 429...).
+### 🌐 Extensión del navegador (Chrome, Brave, Edge)
+* Botón con la **X de UNnexor** junto al texto seleccionado (Shadow DOM: no
+  altera la página). Al pulsarlo: **Enviar directamente** o **Consultar…**,
+  un panel pequeño para escribir una pregunta sobre la selección
+  (Ctrl+Enter / Esc).
+* Página de opciones con asistente de conexión en 4 pasos y cabecera
+  animada; emparejamiento con código de 6 dígitos.
 * Permisos mínimos: `storage` + acceso solo a `127.0.0.1`/`localhost`.
-* Primer arranque guiado: abre el asistente de vinculación si aún no hay
-  conexión.
 
-**Puente local**
-* `POST /api/selection` con validación estricta, token compartido, CORS por
-  origen autorizado, límite de tamaño y de tasa. Solo `127.0.0.1`.
-* Cola FIFO thread-safe → Ollama nunca bloquea el servidor HTTP.
-* Streaming real de `/api/chat` (NDJSON), historial conversacional en
-  memoria (como `ollama run`) y limpieza de contexto.
-* Cambio de modelo en caliente (`POST /api/config`) o por `.env`.
-* Ajustes persistentes desde la UI (`GET/POST /api/settings`) con
-  validación, aplicación en vivo y `reset` a los valores del `.env`.
-* Detección de hardware real (`/api/hardware`) y evaluador de modelos con
-  semáforo 🟢🟡🟠🔴 (`/api/models/eval`; rojo solo fundado y deshabilitado).
-* Emparejamiento seguro: `POST /api/pair/confirm` con código efímero de
-  6 dígitos (un solo uso, 10 min, límite de intentos, solo orígenes de
-  extensión).
-* Asistente de primer inicio del escritorio: privacidad, comprobación de
-  Ollama y del modelo activo con reintento, y emparejamiento con detección
-  de la conexión. Se muestra una vez y se reabre desde ⚙.
-* Diagnóstico exportable desde ⚙: ZIP con versión, SO, configuración sin
-  secretos, estado de Ollama/modelo y logs redactados. No incluye token,
-  claves API, `.env`, historial ni capturas.
-* Capturas por región: `POST /api/image` (PNG validado, tamaño limitado)
-  → cola de imagen → visión multimodal u OCR local opcional.
-* Logs sin contenido privado por defecto (`LOG_PRIVACY=1`).
+### 🪟 Aplicación de escritorio
+* Panel flotante que **no roba el foco**, con Hover Scroll, historial,
+  Markdown/LaTeX y streaming; redimensionable y minimizable.
+* Iconos vectoriales propios y menú ☰ por secciones (Conversación,
+  Herramientas, Modelos y configuración, Ventana).
+* **Icono en el área de notificación**: abre el panel, el copiloto, los
+  modelos, los ajustes o la consola desde un único lugar.
+* **«Siempre visible» real por ventana** (panel, copiloto y panel flotante).
+* **Consola del puente opcional** con los registros en vivo (oculta por
+  defecto).
+* **Captura de región** → modelo con visión u OCR local.
 
-**Proveedores remotos (opcional)**
-* 12 presets OpenAI-compatible verificados (OpenAI, Groq, OpenRouter,
-  Mistral, Cerebras, Together, xAI, Moonshot, HF Router, Z.ai, NVIDIA
-  NIM, Gemini) + proveedor `custom`.
-* Claves conectadas desde el panel en el Windows Credential Manager
-  (keyring); `data\providers.json` guarda estado sin claves. Las
-  `*_API_KEY` que pongas manualmente en `.env` se migran sin borrarse y
-  pueden retirarse con `--purge-secrets`.
-* Streaming SSE, errores traducidos a mensajes claros, cambio
-  local↔remoto en caliente desde el panel.
+### 🧭 Copiloto en tiempo real ([guía](docs/COPILOT.md))
+* **Conversaciones**: audio del sistema (WASAPI loopback) y/o micrófono,
+  Whisper local o remoto, sugerencias con tu perfil y documentos sin
+  inventar datos. Escucha **continua**, **temporizada** (10 s – 10 min) o
+  **manual con tecla**.
+* **Traducción en vivo** con texto provisional/confirmado, resumen y
+  exportación TXT/Markdown/PDF.
+* **Desafíos en pantalla**: región, pantalla completa, varias regiones o
+  análisis periódico.
+* **Perfiles** con documentos `.md`/`.txt` como contexto local (BM25 +
+  embeddings opcionales).
 
-**Panel flotante**
-* Estética terminal oscura, Markdown + bloques de código al finalizar.
-* **Always on Top** y **no-activación**: nunca roba el foco.
-* **Hover Scroll verificado empíricamente**: rueda sobre el panel sin clic
-  (hook `WH_MOUSE_LL` + enrutamiento nativo de Windows).
-* Autoscroll inteligente (se pausa si subes a leer; se reanuda al final).
-* Copiar respuesta, nueva conversación, detener generación, opacidad,
-  minimizar/cerrar, persistencia de posición/tamaño.
-* Menú ⚙: Modelos (semáforo), Proveedores, Ajustes, Emparejar extensión,
-  Asistente de inicio y Exportar diagnóstico; botón 📷 para capturar una
-  región de la pantalla.
+### 🤖 Modelos y rendimiento
+* **Recomendar configuración**: detecta CPU, RAM, GPU (NVIDIA/AMD/Intel,
+  VRAM, aceleración real), disco y sistema; tres perfiles de consumo y una
+  propuesta por función con motivos, parámetros de generación, alternativa
+  ligera, copia de seguridad y restauración.
+* **Catálogo de Ollama en línea** (modelos nuevos, capacidades, tamaños
+  estimados) y aviso de versiones nuevas de Ollama; nunca descarga nada solo.
+* Clasificación de cada modelo para tu equipo: ÓPTIMO, COMPATIBLE, EXIGENTE,
+  NO COMPATIBLE o NO EVALUADO; mediciones reales de velocidad.
+* **Ollama gestionado**: UNnexor lo inicia si está cerrado y al salir
+  detiene solo lo que inició.
 
-**Copiloto en tiempo real** (botón 🧭; guía: [`docs/COPILOT.md`](docs/COPILOT.md))
-* Asistencia en conversaciones: captura del audio del sistema (WASAPI
-  loopback) y/o micrófono, transcripción local (Whisper) o remota, detección
-  de preguntas y sugerencias con tu perfil y documentos, sin inventar datos.
-* Traducción en tiempo real con texto provisional/confirmado, exportación
-  TXT/Markdown/PDF y resumen.
-* Desafíos en pantalla: región, pantalla completa, varias regiones o
-  análisis periódico; visión del modelo u OCR + texto.
-* Perfiles y base de conocimiento (TXT, MD, PDF, DOCX) con búsqueda por
-  palabras y semántica local.
-* Motores y servicios: catálogo con modalidad de acceso y costes, permisos
-  explícitos por servicio, estrategia de modelos por tarea, historial de uso.
-* Panel flotante siempre visible sin robar el foco y atajos globales.
+### 🔌 Proveedores remotos (opcional)
+* Catálogo con nivel de acceso y costes (gratuito, limitado, créditos,
+  pago por uso, local) y consentimientos explícitos por servicio.
+* OpenAI-compatible (OpenAI, Groq, OpenRouter, Mistral, Gemini, xAI…),
+  Anthropic nativo y Deepgram para voz. Claves en el Administrador de
+  credenciales de Windows.
+
+### 🧱 Puente local y seguridad
+* FastAPI solo en `127.0.0.1`, token/emparejamiento, CORS por origen,
+  límites de tamaño y de tasa, cola sin bloqueos y registros sin contenido
+  privado por defecto.
+* Diagnóstico exportable sin secretos; desinstalación con purga opcional.
 
 ## Privacidad
 
@@ -306,10 +297,9 @@ pantalla).
 
 ## Licencia
 
-El proyecto **no tiene todavía una licencia principal aprobada**. Hasta que
-el propietario lo decida, el código queda bajo copyright y no se concede
-permiso de redistribución pública. Ver
-[ADR-0004](docs/adr/0004-project-license-pending.md).
+UNnexor se distribuye bajo la **[Apache License 2.0](LICENSE)** · Copyright
+2026 UnlessDev (ver [NOTICE](NOTICE) y
+[ADR-0004](docs/adr/0004-project-license-pending.md)).
 
 Las dependencias de terceros conservan sus licencias; el inventario y los
 avisos se mantienen en [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

@@ -65,7 +65,6 @@ perdería datos del usuario o rompería la comunicación entre versiones:
 | Mensaje `extdator:send-selection`, `__extdatorInjected` | Interno de la extensión | Sin efecto visible. |
 | Loggers `extdator.*` | Nombres internos de registro | Sin efecto visible. |
 | `AppId` del instalador | Inno Setup | La nueva versión actualiza la instalación previa en lugar de duplicarla. |
-| URL `github.com/unlessDev/Extdator` | Enlaces al repositorio | Es la dirección real del repositorio; renombrarlo es decisión del propietario. |
 
 El instalador, al actualizar desde Extdator, retira `Extdator.exe` y los
 accesos directos con el nombre anterior; los datos no se tocan.

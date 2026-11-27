@@ -100,7 +100,6 @@ def test_no_visible_old_name_in_user_interface():
                     'APP_DIR_NAME = "Extdator"',
                     'SERVICE = "Extdator"',
                     'setOrganizationName("Extdator")',
-                    "unlessDev/Extdator",
                     "La organización",
                     "Extdator ->",
                     "%LOCALAPPDATA%",

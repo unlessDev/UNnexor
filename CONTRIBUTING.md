@@ -11,7 +11,7 @@
 ## Puesta en marcha
 
 ```powershell
-git clone https://github.com/unlessDev/Extdator.git
+git clone https://github.com/unlessDev/UNnexor.git
 cd UNnexor
 powershell -ExecutionPolicy Bypass -File scripts\install.ps1
 powershell -ExecutionPolicy Bypass -File scripts\start.ps1

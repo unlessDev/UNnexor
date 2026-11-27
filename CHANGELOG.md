@@ -6,6 +6,28 @@ usa [Semantic Versioning](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-11-27
+
+Primera versión publicada como **UNnexor** (antes Extdator). Licencia
+**Apache-2.0**; repositorio público `unlessDev/UNnexor`; instalador para
+Windows en GitHub Releases.
+
+### Interfaz
+- Iconos vectoriales propios (en lugar de emojis) en la barra del panel y la
+  navegación del copiloto, con estados de reposo, hover y activado.
+- Barra del panel con menos botones; «Modelos de IA» pasa al menú ☰, que se
+  organiza por secciones (Conversación, Herramientas, Modelos y
+  configuración, Extensión y soporte, Ventana) e incluye «Salir».
+- Icono en el área de notificación: acceso a panel, copiloto, captura,
+  recomendaciones, modelos, ajustes y consola desde un solo lugar; aviso
+  la primera vez.
+
+### Licencia y distribución
+- `LICENSE` (Apache-2.0) y `NOTICE`; el SBOM declara la licencia y la
+  verificación de artefactos lo comprueba (ADR-0004 aceptado).
+- Enlace de descarga directa del instalador en el README y en
+  `docs/INSTALLATION.md`.
+
 ### UNnexor — nueva identidad
 - **Extdator pasa a llamarse UNnexor** (UN = UnlessDev; *nexor* = indexación).
   Nombre visible actualizado en la aplicación, la extensión, ventanas,

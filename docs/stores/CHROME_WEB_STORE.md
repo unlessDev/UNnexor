@@ -29,7 +29,7 @@ El ZIP contiene solo `manifest.json`, `background.js`, `content.js`,
 | Categoría | Productividad |
 | Idioma | Español |
 | Página principal | Pendiente de URL pública |
-| Soporte | `https://github.com/unlessDev/Extdator/issues` (el repositorio debe ser público o habilitarse un canal público) |
+| Soporte | `https://github.com/unlessDev/UNnexor/issues` (el repositorio debe ser público o habilitarse un canal público) |
 | Política de privacidad | Pendiente de URL pública; el HTML está en `browser-extension/privacy.html` |
 
 ### Descripción extensa (borrador)

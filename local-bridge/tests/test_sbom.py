@@ -16,7 +16,7 @@ assert _spec.loader is not None
 _spec.loader.exec_module(sbom_build)
 
 
-def test_sbom_is_cyclonedx_and_discloses_pending_license(tmp_path: Path) -> None:
+def test_sbom_is_cyclonedx_and_declares_license(tmp_path: Path) -> None:
     report = sbom_build.build(tmp_path, timestamp="2026-11-21T00:00:00+00:00")
     sbom = json.loads(report["file"].read_text(encoding="utf-8"))
 
@@ -27,8 +27,8 @@ def test_sbom_is_cyclonedx_and_discloses_pending_license(tmp_path: Path) -> None
     assert root["name"] == "UNnexor"
     assert root["version"] == sbom_build.app_version()
     properties = {item["name"]: item["value"] for item in root["properties"]}
-    assert properties["unnexor:license-status"] == "pending-owner-decision"
-    assert "licenses" not in root
+    assert properties["unnexor:license-status"] == "Apache-2.0"
+    assert root["licenses"] == [{"license": {"id": "Apache-2.0"}}]
 
     names = {component["name"] for component in sbom["components"]}
     assert "UNnexor browser extension" in names

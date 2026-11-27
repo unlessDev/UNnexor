@@ -595,45 +595,48 @@ class BridgeWindow(QMainWindow):
             apply_noactivate(hwnd)
 
     def _open_menu(self) -> None:
+        """Menú ☰ organizado por secciones (antes: lista plana de 14 entradas)."""
+        from . import icons
+
         menu = QMenu(self)
 
-        recommend_action = menu.addAction("✨  Recomendar configuración…")
-        recommend_action.triggered.connect(self.open_recommendations)
-        copilot_action = menu.addAction("🧭  Copiloto en tiempo real…")
-        copilot_action.triggered.connect(self.open_copilot)
-        models_action = menu.addAction("🤖  Modelos de IA…")
-        models_action.triggered.connect(lambda: self._open_model_selector())
-        providers_action = menu.addAction("🔌  Proveedores de API…")
-        providers_action.triggered.connect(self._open_providers)
-        settings_action = menu.addAction("⚙  Ajustes…")
-        settings_action.triggered.connect(lambda: self._open_settings())
-        pairing_action = menu.addAction("🔗  Emparejar extensión…")
-        pairing_action.triggered.connect(self._open_pairing)
-        onboarding_action = menu.addAction("🚀  Asistente de inicio…")
-        onboarding_action.triggered.connect(self._open_onboarding)
-        diagnostics_action = menu.addAction("🧰  Exportar diagnóstico…")
-        diagnostics_action.triggered.connect(self._export_diagnostics)
+        def add(section_menu, icon_name, text, slot, shortcut_hint=""):
+            action = section_menu.addAction(icons.menu_icon(icon_name), text)
+            if shortcut_hint:
+                action.setToolTip(shortcut_hint)
+            action.triggered.connect(slot)
+            return action
 
-        menu.addSeparator()
+        menu.addSection("Conversación")
+        add(menu, "copy", "Copiar la última respuesta", self._copy_last)
+        add(menu, "new", "Nueva conversación", self._clear_conversation)
+        add(menu, "stop", "Detener la generación", self._stop_generation)
 
-        copy_action = menu.addAction("⧉  Copiar última respuesta")
-        copy_action.triggered.connect(self._copy_last)
-        clear_action = menu.addAction("⟲  Nueva conversación")
-        clear_action.triggered.connect(self._clear_conversation)
-        stop_action = menu.addAction("■  Detener generación")
-        stop_action.triggered.connect(self._stop_generation)
+        menu.addSection("Herramientas")
+        add(menu, "copilot", "Copiloto en tiempo real…", self.open_copilot)
+        add(menu, "capture", "Capturar una región de la pantalla…", self._start_capture)
 
-        console_action = menu.addAction("🖥  Consola del puente (registros)")
+        menu.addSection("Modelos y configuración")
+        add(menu, "sparkles", "Recomendar configuración…", self.open_recommendations)
+        add(menu, "models", "Modelos de IA…", lambda: self._open_model_selector())
+        add(menu, "providers", "Proveedores de API…", self._open_providers)
+        add(menu, "settings", "Ajustes…", lambda: self._open_settings())
+
+        more = menu.addMenu(icons.menu_icon("link"), "Extensión y soporte")
+        add(more, "link", "Emparejar la extensión…", self._open_pairing)
+        add(more, "rocket", "Asistente de inicio…", self._open_onboarding)
+        add(more, "diagnostics", "Exportar diagnóstico…", self._export_diagnostics)
+        console_action = add(
+            more, "terminal", "Consola del puente (registros)", self.toggle_log_console
+        )
         console_action.setCheckable(True)
         console_action.setChecked(
             self._log_console is not None and self._log_console.isVisible()
         )
         console_action.setEnabled(self._log_console is not None)
-        console_action.triggered.connect(self.toggle_log_console)
 
-        menu.addSeparator()
-
-        pin_action = menu.addAction("📌  Siempre visible")
+        menu.addSection("Ventana")
+        pin_action = menu.addAction(icons.menu_icon("pin"), "Siempre visible")
         pin_action.setCheckable(True)
         pin_action.setChecked(self._on_top)
         pin_action.toggled.connect(self.set_on_top)
@@ -652,6 +655,9 @@ class BridgeWindow(QMainWindow):
         opacity_action.setDefaultWidget(opacity_widget)
         menu.addAction(opacity_action)
         slider.valueChanged.connect(self._on_opacity_changed)
+
+        menu.addSeparator()
+        add(menu, "quit", "Salir de UNnexor", self.close)
 
         menu.popup(QCursor.pos())
 

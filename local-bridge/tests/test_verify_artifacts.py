@@ -129,10 +129,11 @@ def _sbom(release: Path) -> None:
                 "type": "application",
                 "name": "UNnexor",
                 "version": VERSION,
+                "licenses": [{"license": {"id": "Apache-2.0"}}],
                 "properties": [
                     {
                         "name": "unnexor:license-status",
-                        "value": "pending-owner-decision",
+                        "value": "Apache-2.0",
                     }
                 ],
             }
@@ -222,7 +223,7 @@ def test_report_hash_mismatch_fails(release: Path) -> None:
     assert any("no coincide con el hash real" in error for error in extension["errors"])
 
 
-def test_sbom_must_declare_pending_license(release: Path) -> None:
+def test_sbom_must_declare_project_license(release: Path) -> None:
     base = release / "sbom"
     name = f"unnexor-{VERSION}.cdx.json"
     path = base / name
@@ -236,7 +237,7 @@ def test_sbom_must_declare_pending_license(release: Path) -> None:
 
     assert report["ok"] is False
     sbom = _product(report, "UNnexor SBOM")
-    assert any("licencia pendiente" in error for error in sbom["errors"])
+    assert any("licencia del proyecto" in error for error in sbom["errors"])
 
 
 def test_missing_build_report_fails(release: Path) -> None:
