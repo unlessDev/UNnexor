@@ -279,7 +279,7 @@ class OnboardingDialog(QDialog):
 
         intro = QLabel(
             "UNnexor muestra las respuestas en un panel flotante mientras "
-            "sigues trabajando en el navegador. Selecciona texto, pulsa ✦ y "
+            "sigues trabajando en el navegador. Selecciona texto, pulsa la X de UNnexor y "
             "el panel aparecerá sin robarte el foco."
         )
         intro.setWordWrap(True)
@@ -622,7 +622,7 @@ class OnboardingDialog(QDialog):
         self._set_status(
             self._pair_status,
             "ok",
-            "Extensión vinculada. Ya puedes seleccionar texto y pulsar ✦.",
+            "Extensión vinculada. Ya puedes seleccionar texto y pulsar la X de UNnexor.",
         )
         self._next.setText("Finalizar")
 

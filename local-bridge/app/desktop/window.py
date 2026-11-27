@@ -131,7 +131,7 @@ class BridgeWindow(QMainWindow):
         # Estado del pie/spinner (debe existir antes de _build_ui).
         self._spinner_frame = 0
         self._footer_stable = (
-            "UNnexor listo. Selecciona texto en el navegador y pulsa el botón ✦."
+            "UNnexor listo. Selecciona texto en el navegador y pulsa la X."
         )
         self._footer_transient_until = 0.0
         self._footer_transient_text = ""
