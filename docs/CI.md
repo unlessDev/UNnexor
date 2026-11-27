@@ -64,7 +64,7 @@ y su `SHA256SUMS.txt` sin dependencias externas:
 - formato CycloneDX 1.5 con `serialNumber` determinista para el mismo
   conjunto de componentes;
 - componente raíz `UNnexor` con versión, repositorio, estado de licencia
-  (`pending-owner-decision`), estado de distribución (`not-published`) y
+  (`Apache-2.0`), estado de distribución (`not-published`) y
   firma (`unsigned`);
 - componentes de producto: extensión, puente local y entorno de build;
 - bibliotecas Python instaladas en el entorno que ejecuta el script, con
@@ -75,8 +75,8 @@ y su `SHA256SUMS.txt` sin dependencias externas:
 
 Decisiones y límites:
 
-- la licencia principal **no se inventa**: se declara pendiente hasta que
-  el propietario la apruebe;
+- la licencia del proyecto (Apache-2.0, decidida por el propietario) se
+  declara en el SBOM y se verifica;
 - el SBOM describe el entorno Python de build/runtime; la extensión no
   tiene dependencias empaquetadas ni código remoto, y los modelos de
   Ollama, pesos OCR y datos de usuario quedan fuera por diseño;
@@ -98,7 +98,7 @@ Decisiones y límites:
 - en escritorio: build sin firma declarado, smoke headless y GUI correctos;
 - en instalador: ciclo completo superado, self-check correcto, datos y
   token preservados, purga y desinstalación correctas;
-- en SBOM: CycloneDX 1.5, versión correcta, licencia pendiente declarada y
+- en SBOM: CycloneDX 1.5, versión correcta, licencia Apache-2.0 declarada y
   componentes presentes.
 
 El informe resultante (`release/verification-report.json`) resume cada

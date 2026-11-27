@@ -452,6 +452,14 @@ def run_bridge(
     if console.show_at_start():
         console.show()
 
+    from .desktop.tray import AppTray
+
+    tray = None
+    if AppTray.isSystemTrayAvailable():
+        tray = AppTray(window, app.windowIcon())
+        tray.show()
+        tray.introduce()
+
     supervisor = start_ollama_supervisor(cfg, wait=False)
     if cfg.online_catalog:
         start_catalog_refresh(supervisor)
@@ -461,6 +469,8 @@ def run_bridge(
         # puerto) y, solo si lo inició UNnexor, Ollama.
         window.stop_workers()
         console.close()
+        if tray is not None:
+            tray.hide()  # sin icono "fantasma" en el área de notificación
         server.should_exit = True
         thread.join(timeout=5)
         if supervisor.stop():

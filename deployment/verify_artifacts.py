@@ -316,9 +316,15 @@ def verify_sbom(release: Path, version: str) -> dict:
             for item in component.get("properties") or []
             if isinstance(item, dict)
         }
+        declared = [
+            (item.get("license") or {}).get("id")
+            for item in component.get("licenses") or []
+            if isinstance(item, dict)
+        ]
         _check(
-            properties.get("unnexor:license-status") == "pending-owner-decision",
-            "El SBOM no declara la licencia pendiente.",
+            properties.get("unnexor:license-status") == "Apache-2.0"
+            and declared == ["Apache-2.0"],
+            "El SBOM no declara la licencia del proyecto (Apache-2.0).",
             errors,
         )
         _check(bool(sbom.get("components")), "El SBOM no contiene componentes.", errors)

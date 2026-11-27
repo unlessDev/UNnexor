@@ -10,10 +10,11 @@ from __future__ import annotations
 
 import logging
 
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QSize, QTimer
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QListWidget,
+    QListWidgetItem,
     QMainWindow,
     QMessageBox,
     QStackedWidget,
@@ -38,14 +39,23 @@ from .pages_session import ConversationPage, TranslationPage
 log = logging.getLogger("extdator.copilot.ui")
 
 PAGES = [
-    ("home", "🏠  Inicio"),
-    ("conversation", "🎧  Conversación"),
-    ("translation", "🌐  Traducción"),
-    ("challenges", "🧩  Desafíos"),
-    ("profiles", "👤  Perfiles y documentos"),
-    ("engines", "⚙  Motores y modelos"),
-    ("privacy", "🔒  Privacidad"),
+    ("home", "Inicio"),
+    ("conversation", "Conversación"),
+    ("translation", "Traducción"),
+    ("challenges", "Desafíos en pantalla"),
+    ("profiles", "Perfiles y documentos"),
+    ("engines", "Motores y modelos"),
+    ("privacy", "Privacidad"),
 ]
+PAGE_ICONS = {
+    "home": "home",
+    "conversation": "copilot",
+    "translation": "globe",
+    "challenges": "puzzle",
+    "profiles": "user",
+    "engines": "models",
+    "privacy": "shield",
+}
 
 
 class CopilotWindow(QMainWindow):
@@ -76,8 +86,12 @@ class CopilotWindow(QMainWindow):
         self.nav = QListWidget()
         self.nav.setObjectName("nav")
         self.nav.setFixedWidth(220)
-        for _key, label in PAGES:
-            self.nav.addItem(label)
+        from .. import icons
+
+        self.nav.setIconSize(QSize(18, 18))
+        for key, label in PAGES:
+            item = QListWidgetItem(icons.icon(PAGE_ICONS[key], "#c9cde0"), label)
+            self.nav.addItem(item)
         layout.addWidget(self.nav)
         self.stack = QStackedWidget()
         layout.addWidget(self.stack, 1)

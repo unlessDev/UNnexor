@@ -1,6 +1,6 @@
 # ADR-0004 — Licencia principal pendiente
 
-- **Estado:** propuesto; requiere aprobación del propietario
+- **Estado:** aceptado (2026-11-27) — licencia **Apache-2.0**
 - **Fecha:** 2026-11-19
 
 ## Contexto
@@ -33,16 +33,18 @@ sustituir las bibliotecas).
 
 ## Decisión
 
-No se elige ninguna licencia en esta fase. Hasta que el propietario lo
-apruebe por escrito:
-
-- el repositorio permanece privado;
-- no se publican releases públicas;
-- `README.md` y `THIRD_PARTY_NOTICES.md` indican que la licencia está
-  pendiente.
+El propietario eligió **Apache License 2.0** el 2026-11-27 (versión 2.0.0).
+`LICENSE` contiene el texto oficial y `NOTICE` el aviso de copyright
+(«Copyright 2026 UnlessDev»). El repositorio es público y se publican
+releases en GitHub.
 
 ## Consecuencias
 
-La publicación en Chrome Web Store/Edge Add-ons y la distribución del
-instalador quedan bloqueadas hasta resolver esta decisión y revisar las
-obligaciones de LGPL de Qt/PySide6.
+- Cualquiera puede usar, modificar y redistribuir el código, también con
+  fines comerciales, conservando `LICENSE` y `NOTICE`; la licencia incluye
+  una concesión explícita de patentes.
+- Qt/PySide6 (LGPL-3.0) se distribuye como bibliotecas dinámicas en la
+  carpeta del programa (build one-folder), por lo que el usuario puede
+  sustituirlas; sus licencias se listan en `THIRD_PARTY_NOTICES.md`.
+- La publicación en tiendas sigue requiriendo cuentas de desarrollador y la
+  URL pública de la política de privacidad.

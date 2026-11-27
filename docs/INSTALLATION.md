@@ -12,14 +12,32 @@
 
 Puedes ejecutar `scripts\check_environment.ps1` para un diagnóstico completo.
 
-## Instalación con el instalador (recomendada para usuarios)
+## Descarga directa (Windows)
+
+> **[⬇ Descargar UNnexor para Windows — instalador `.exe`](https://github.com/unlessDev/UNnexor/releases/latest/download/UNnexor-Setup-Windows-x64.exe)**
+>
+> Windows 10/11 de 64 bits · no requiere administrador · ~85 MB.
+> Otras descargas (ZIP portable, SHA-256, SBOM):
+> [última versión](https://github.com/unlessDev/UNnexor/releases/latest).
+> macOS y Linux: próximamente.
+
+1. Descarga y ejecuta el instalador. Como todavía no está firmado
+   digitalmente, Windows SmartScreen puede avisar: pulsa **Más información →
+   Ejecutar de todas formas**. Puedes comprobar el archivo con
+   `Get-FileHash UNnexor-Setup-Windows-x64.exe` y el `SHA256SUMS.txt` de la
+   release.
+2. Instala [Ollama](https://ollama.com/download) si aún no lo tienes
+   (UNnexor lo iniciará cuando lo necesite).
+3. Abre **UNnexor** desde el menú Inicio; usa **☰ → Recomendar
+   configuración** para elegir modelos adecuados a tu equipo.
+4. Carga la extensión (sección 4) y emparéjala con el código de 6 dígitos.
+
+## Generar el instalador desde el código
 
 El instalador permite usar UNnexor sin Python ni el entorno de desarrollo.
-Todavía **no hay release pública**: se genera localmente y no se ha enviado
-a ninguna tienda ni publicado en GitHub Releases.
 
 ```powershell
-cd G:\Proyectos\UNnexor\local-bridge
+cd <carpeta del repositorio>\local-bridge
 .venv\Scripts\python.exe ..\deployment\installer\build.py
 ```
 

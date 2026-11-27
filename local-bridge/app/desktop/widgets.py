@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from PySide6.QtCore import QObject, Qt, QTimer, Signal
+from PySide6.QtCore import QObject, QSize, Qt, QTimer, Signal
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QFrame,
@@ -46,11 +46,18 @@ class IconButton(QToolButton):
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
-        font = QFont()
-        font.setFamilies(FONT_FAMILIES)
-        font.setPointSize(11)
-        self.setFont(font)
-        self.setText(glyph)
+        from . import icons
+
+        if glyph in icons.PATHS:
+            # Icono vectorial propio (coherente en cualquier Windows).
+            self.setIcon(icons.icon(glyph, checkable=object_name == "pinBtn"))
+            self.setIconSize(QSize(16, 16))
+        else:
+            font = QFont()
+            font.setFamilies(FONT_FAMILIES)
+            font.setPointSize(11)
+            self.setFont(font)
+            self.setText(glyph)
         self.setToolTip(tooltip)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
@@ -110,30 +117,35 @@ class TitleBar(QWidget):
         layout.addStretch(1)
 
         self._pin = IconButton(
-            "📌", "Siempre visible (encima de las demás ventanas)", "pinBtn"
+            "pin", "Siempre visible (encima de las demás ventanas)", "pinBtn"
         )
         self._pin.setCheckable(True)
         self._pin.toggled.connect(self.pinToggled)
-        self._copy = IconButton("⧉", "Copiar última respuesta")
+        self._copy = IconButton("copy", "Copiar la última respuesta")
         self._copy.clicked.connect(self.copyClicked)
-        self._clear = IconButton("⟲", "Nueva conversación")
+        self._clear = IconButton("new", "Nueva conversación")
         self._clear.clicked.connect(self.clearClicked)
-        self._stop = IconButton("■", "Detener generación")
+        self._stop = IconButton("stop", "Detener la generación")
         self._stop.clicked.connect(self.stopClicked)
         self._stop.setVisible(False)
-        self._models = IconButton("🤖", "Modelos de IA (elegir, evaluar, descargar)")
+        self._models = IconButton(
+            "models", "Modelos de IA (elegir, evaluar, descargar)"
+        )
         self._models.clicked.connect(self.modelsClicked)
-        self._shot = IconButton("📷", "Capturar región de pantalla (OCR o visión)")
+        self._models.setVisible(False)  # en el menú ☰ → Modelos de IA
+        self._shot = IconButton(
+            "capture", "Capturar una región de la pantalla (visión u OCR)"
+        )
         self._shot.clicked.connect(self.screenshotClicked)
         self._copilot = IconButton(
-            "🧭", "Copiloto en tiempo real (conversación, traducción, desafíos)"
+            "copilot", "Copiloto en tiempo real (conversación, traducción, desafíos)"
         )
         self._copilot.clicked.connect(self.copilotClicked)
-        self._menu = IconButton("⚙", "Opciones (opacidad, copiar, reiniciar)")
+        self._menu = IconButton("menu", "Menú: configuración, herramientas y ventana")
         self._menu.clicked.connect(self.menuClicked)
-        self._min = IconButton("—", "Minimizar")
+        self._min = IconButton("minimize", "Minimizar a la barra de tareas")
         self._min.clicked.connect(self.minimizeClicked)
-        self._close = IconButton("✕", "Cerrar", "closeBtn")
+        self._close = IconButton("close", "Cerrar UNnexor", "closeBtn")
         self._close.clicked.connect(self.closeClicked)
 
         for button in (

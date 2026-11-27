@@ -2,7 +2,7 @@
 ;
 ; Compilar con:
 ;   "C:\Users\<usuario>\AppData\Local\Programs\Inno Setup 6\ISCC.exe" ^
-;       /DMyAppVersion=1.2.0 deployment\installer\UNnexor.iss
+;       /DMyAppVersion=2.0.0 deployment\installer\UNnexor.iss
 ;
 ; O, preferiblemente, con deployment\installer\build.py, que valida el
 ; ejecutable, compila, prueba la instalación y genera SHA-256 e informe.
@@ -15,7 +15,7 @@
 ; usuario elija la limpieza completa.
 
 #ifndef MyAppVersion
-  #define MyAppVersion "1.2.0"
+  #define MyAppVersion "2.0.0"
 #endif
 #define MyAppName "UNnexor"
 #define MyAppExeName "UNnexor.exe"
