@@ -28,6 +28,6 @@ keyring>=24,<27
 numpy>=1.26,<3
 soundcard>=0.4.5,<0.5
 faster-whisper>=1.1,<2
-pypdf>=5,<7
+pypdf>=7.1.1,<8
 pytest>=8,<9
 black>=24,<27
