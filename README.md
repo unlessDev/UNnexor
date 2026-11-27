@@ -1,15 +1,55 @@
-# UNnexor
+<p align="center">
+  <img src="branding/source/unnexor-logo-reference.png" alt="UNnexor AI Bridge" width="640">
+</p>
 
-**Asistente local inmediato**: selecciona texto en Chrome, Brave o Edge,
-pulsa el botón ✦ y recibe la respuesta de tu modelo local (Ollama) en un
-panel flotante **siempre visible** — sin perder el foco del navegador. Por
-defecto no usa la nube; los proveedores remotos son opcionales.
+<p align="center">
+  <b>Tu IA local, conectada a tu navegador y a tu escritorio.</b><br>
+  Selecciona, pregunta, escucha y traduce con modelos que corren en tu propio equipo.<br>
+  <sub>UNnexor AI Bridge · desarrollado por UnlessDev</sub>
+</p>
 
-> **v1.2.0** — selector de modelos con semáforo según tu hardware,
-> proveedores de IA remotos (clave en el keyring del sistema),
-> configuración desde la propia app (menú ⚙), captura por región con
-> visión u OCR local, emparejamiento de la extensión por código de 6
-> dígitos y asistentes de primer inicio en la extensión y en el escritorio.
+<p align="center">
+  <a href="docs/UNNEXOR_OVERVIEW.md"><b>¿Qué es UNnexor? →</b></a> ·
+  <a href="docs/INSTALLATION.md">Instalación</a> ·
+  <a href="docs/COPILOT.md">Copiloto</a> ·
+  <a href="ARCHITECTURE.md">Arquitectura</a> ·
+  <a href="CHANGELOG.md">Novedades</a>
+</p>
+
+---
+
+**UNnexor** (*UN* de UnlessDev, *nexor* de indexación) une una extensión de
+navegador, una aplicación de escritorio y modelos de IA locales (Ollama):
+
+- ✦ **Texto del navegador**: selecciona texto y pulsa la X → *Enviar
+  directamente* o *Consultar…* con tu propia pregunta.
+- 🧭 **Copiloto en tiempo real**: asistencia en conversaciones (escucha
+  continua, temporizada o con tecla), traducción en vivo y desafíos en
+  pantalla (visión u OCR).
+- 📄 **Perfil con tus documentos** (.md / .txt) como contexto local.
+- ✨ **Recomendar configuración**: evalúa tu CPU, RAM, GPU y disco y propone
+  modelos y parámetros por función, en tres perfiles de consumo.
+- 🔒 **Local por defecto**: los proveedores remotos son opcionales y
+  requieren tu consentimiento.
+
+> Presentación completa del proyecto: **[docs/UNNEXOR_OVERVIEW.md](docs/UNNEXOR_OVERVIEW.md)**.
+> Identidad gráfica y nombres técnicos conservados: [docs/BRANDING.md](docs/BRANDING.md).
+
+### Requisitos principales
+
+- Windows 10/11 de 64 bits.
+- [Ollama](https://ollama.com/download) instalado (UNnexor lo inicia si no
+  está abierto y lo detiene al salir solo si lo inició él).
+- Chrome, Brave o Edge para la extensión.
+- Desde el código fuente: Python 3.12.
+
+### Usar la versión distribuida
+
+Cuando haya una versión publicada: ejecuta el instalador
+`UNnexor-<versión>-win64-setup.exe` y abre **UNnexor** desde el menú Inicio
+(o `UNnexor.exe`). Al abrirse inicia el puente local, comprueba Ollama y
+muestra el panel; al cerrarlo detiene todo lo que inició. Ver
+[docs/INSTALLATION.md](docs/INSTALLATION.md).
 
 ## Estado del proyecto
 
@@ -17,8 +57,8 @@ defecto no usa la nube; los proveedores remotos son opcionales.
 |---|---|
 | Extensión MV3 | Funcional; paquete de tienda generado y validado localmente |
 | Puente local + panel | Funcional; ejecutable one-folder generado y validado |
-| Copiloto en tiempo real | Funcional desde el código fuente (conversación, traducción, desafíos); aún no incluido en el ejecutable |
-| Pruebas | `428 passed, 1 skipped` (2026-11-25) |
+| Copiloto en tiempo real | Funcional (conversación con escucha continua/temporizada/manual, traducción, desafíos); incluido en el ejecutable |
+| Pruebas | `492 passed, 1 skipped` (2026-11-27) |
 | Instalador Windows | **Generado y probado localmente** (Inno Setup por usuario) |
 | Publicación en tiendas | No iniciada; requiere cuentas, URL de privacidad, capturas y licencia |
 | Licencia | **Pendiente de decisión del propietario** (ver abajo) |
@@ -27,9 +67,9 @@ El repositorio remoto es privado. No se publican releases ni se cambia la
 visibilidad sin autorización expresa.
 
 ```
-Selección en el navegador → Botón ✦ → Puente local (FastAPI)
+Selección en el navegador → Botón X (Enviar / Consultar) → Puente local (FastAPI)
                               → Ollama local (streaming HTTP)
-                              → Panel flotante PySide6 (always on top + hover scroll)
+                              → Panel flotante PySide6 (siempre visible por ventana + hover scroll)
 ```
 
 ## Módulos
