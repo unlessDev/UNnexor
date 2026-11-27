@@ -51,9 +51,7 @@ def test_bridge_svg_is_the_master():
 def _png_size(path: Path) -> tuple[int, int, int]:
     """(ancho, alto, tipo de color) leídos de la cabecera IHDR (sin Pillow)."""
     data = path.read_bytes()[:33]
-    assert data[:8] == b"PNG
-
-"
+    assert data[:8] == b"\x89PNG\r\n\x1a\n"
     width, height = struct.unpack(">II", data[16:24])
     return width, height, data[25]
 
@@ -206,6 +204,10 @@ def test_log_console_hidden_by_default(qapp, tmp_path, monkeypatch):
     window.toggle()
     assert not window.isVisible()
     window.close()
+    # Liberar el widget antes de que se destruya la QApplication de la sesión.
+    window.deleteLater()
+    qapp.sendPostedEvents(None, 52)  # QEvent.DeferredDelete
+    del window
 
 
 # ------------------------------------------------------------ Ollama
