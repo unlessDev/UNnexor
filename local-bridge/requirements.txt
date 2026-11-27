@@ -18,7 +18,7 @@
 #   pytest         → pruebas
 #   black          → formateo del código (herramienta de desarrollo)
 fastapi>=0.115,<1
-uvicorn>=0.30,<1
+uvicorn>=0.54.0,<1
 httpx>=0.27,<1
 pydantic>=2.7,<3
 python-dotenv>=1.0,<2
