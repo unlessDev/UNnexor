@@ -75,33 +75,35 @@ tareas; escucha temporizada de 45 s con audio TTS real → transcripción →
 respuesta local (`scripts/listen_window_e2e.py`); recomendaciones sobre el
 equipo real (Ryzen 5 2600X, 16 GB, RX 590 8 GB).
 
-## 5. Artefactos generados (2026-11-27, sin firma)
+## 5. Versión 2.0.0 publicada (2026-11-27)
 
-| Artefacto | Resultado |
-|---|---|
-| `release/windows/UNnexor/UNnexor.exe` (+ ZIP 121,6 MB) | Self-check OK (incluye componentes del copiloto); prueba real: ventana con la X, 📌 con `WS_EX_TOPMOST` real, cierre con código 0, puerto libre, Ollama del usuario intacto |
-| `release/installer/UNnexor-1.2.0-win64-setup.exe` (84,8 MB) | Instalación, self-check, conservación de datos, purga y desinstalación OK. **Actualización desde Extdator 1.2.0 probada**: misma carpeta, retira `Extdator.exe` y el grupo antiguo del menú Inicio, una sola entrada de desinstalación |
-| `release/browser-extension/{chrome,edge}.zip` | Regenerado con la X (antes era el paquete del 19/11 llamado Extdator) |
-| `release/sbom/unnexor-1.2.0.cdx.json` | Regenerado; `verify_artifacts.py`: 4/4 OK |
+- Repositorio público **`unlessDev/UNnexor`** (renombrado por el propietario),
+  licencia **Apache-2.0** (`LICENSE`, `NOTICE`, ADR-0004 aceptado).
+- `develop` → `main` (PR #23, CI completa en verde), etiqueta `v2.0.0` y
+  [GitHub Release](https://github.com/unlessDev/UNnexor/releases/tag/v2.0.0)
+  con instalador, portable, extensiones, SBOM y `SHA256SUMS.txt`.
+- Enlace estable de descarga (verificado, mismo SHA-256):
+  `https://github.com/unlessDev/UNnexor/releases/latest/download/UNnexor-Setup-Windows-x64.exe`.
+  En cada release futura hay que subir también el instalador con ese nombre.
+- Validado con el `.exe` real: con Ollama cerrado, UNnexor lanzó
+  `ollama serve` como proceso hijo y al cerrar lo detuvo (código de salida 0).
+  Actualización desde Extdator 1.2.0 probada. El usuario probó a mano el menú
+  de la X en el navegador.
+- Modelos configurados para el equipo del propietario (RX 590 8 GB):
+  panel y copiloto `qwen3:8b` sin razonamiento; visión y desafíos
+  `qwen2.5vl:7b`; temperaturas por tarea.
+- Interfaz: iconos vectoriales propios, menú ☰ por secciones, icono en el
+  área de notificación como centro de ventanas.
 
-La página de opciones de la extensión tiene cabecera animada con la X y
-«UNnexor · AI BRIDGE · by UnlessDev» (PR #21).
+## 6. Pendiente
 
-## 6. Pendiente / no verificado
-
-1. Fusionar el PR #21 cuando la CI esté verde.
-2. Prueba manual en el navegador: recargar la extensión en
-   `chrome://extensions` (o cargar `release/browser-extension/chrome`),
-   recargar las pestañas y probar el menú de la X y *Consultar…*.
-3. Arranque automático de Ollama **cuando no está abierto** (solo con
-   simulación; en este equipo Ollama ya estaba abierto y no se cerró).
+1. Versiones para **macOS y Linux** (empaquetado, captura de audio
+   —WASAPI solo existe en Windows—, atajos globales y «siempre visible»
+   tienen implementación solo para Windows).
+2. Firma Authenticode del instalador (evita el aviso de SmartScreen).
+3. Publicación en Chrome Web Store / Edge Add-ons (cuentas de desarrollador;
+   la política de privacidad ya puede apuntar al repositorio público).
 4. Pulsar físicamente los atajos de escucha con la aplicación real.
-5. Velocidad del copiloto: el router eligió `deepseek-r1:8b` (~70 s por
-   respuesta); aplicar «Recomendar configuración».
-6. Ollama 0.40.17 instalado; disponible 0.40.18 (la app solo avisa).
-7. Decisiones del propietario: licencia, renombrar el repositorio, número de
-   versión (sigue en 1.2.0), firma Authenticode, publicación en tiendas,
-   publicar una release (`develop` → `main`).
-8. Programa 1 aún abierto: auditoría de seguridad final, prueba en un equipo
-   limpio, CUDA/NVIDIA y claves reales de OpenAI/Deepgram/Anthropic (ver
-   `docs/COPILOT_STATUS.md`).
+5. Ollama 0.40.17 instalado; disponible 0.40.18 (la app solo avisa).
+6. Programa 1 aún abierto: auditoría de seguridad final, prueba en un equipo
+   limpio y en NVIDIA/CUDA, claves reales de OpenAI/Deepgram/Anthropic.
