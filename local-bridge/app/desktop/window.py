@@ -597,6 +597,8 @@ class BridgeWindow(QMainWindow):
     def _open_menu(self) -> None:
         menu = QMenu(self)
 
+        recommend_action = menu.addAction("✨  Recomendar configuración…")
+        recommend_action.triggered.connect(self.open_recommendations)
         copilot_action = menu.addAction("🧭  Copiloto en tiempo real…")
         copilot_action.triggered.connect(self.open_copilot)
         models_action = menu.addAction("🤖  Modelos de IA…")
@@ -717,6 +719,10 @@ class BridgeWindow(QMainWindow):
                 from .copilot.window import CopilotWindow
 
                 self._copilot_window = CopilotWindow(self._cfg)
+                self._copilot_window.home.recommendRequested.connect(
+                    self.open_recommendations
+                )
+                self._copilot_window.home.full_recommendations = True
             except ImportError as exc:
                 # Edición sin los componentes de audio/voz (p. ej. un build
                 # que no los empaqueta): se informa en lugar de cerrarse.
@@ -730,6 +736,27 @@ class BridgeWindow(QMainWindow):
                 )
                 return
         self._copilot_window.bring_to_front()
+
+    def open_recommendations(self, _checked: bool = False) -> None:
+        """Evaluación del equipo y configuración recomendada por función."""
+        from .recommend_dialog import RecommendationDialog
+
+        controller = (
+            self._copilot_window.controller
+            if self._copilot_window is not None
+            else None
+        )
+        dialog = RecommendationDialog(
+            self._cfg,
+            self._ollama,
+            apply_main=self.apply_settings,
+            # Con el copiloto abierto, sus ajustes en memoria son la fuente de
+            # verdad (si no, los sobrescribiría al guardar).
+            copilot_settings=(lambda: controller.settings) if controller else None,
+            save_copilot=controller.save_settings if controller else None,
+            parent=self,
+        )
+        dialog.exec()
 
     def _open_providers(self) -> None:
         from .providers_dialog import ProvidersDialog

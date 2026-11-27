@@ -40,6 +40,8 @@ class CopilotSettings:
     strategy: str = Strategy.LOCAL_FIRST.value
     pinned: dict[str, str] = field(default_factory=dict)  # task → "prov:model"
     remote_models: dict[str, list[str]] = field(default_factory=dict)
+    # Temperatura por tarea (Recomendar configuración); vacío = la de cada flujo.
+    task_temperature: dict[str, float] = field(default_factory=dict)
     # Ventana flotante y atajos
     overlay_opacity: int = 92
     overlay_on_top: bool = True

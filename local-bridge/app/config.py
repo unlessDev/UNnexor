@@ -74,6 +74,9 @@ class Config:
     # Ollama: iniciar `ollama serve` si no está en ejecución (y detener al
     # salir SOLO ese proceso; un Ollama ya abierto nunca se toca).
     ollama_autostart: bool = True
+    # Consultar al iniciar la biblioteca de ollama.com y la última versión
+    # de Ollama (solo lectura; nunca descarga modelos).
+    online_catalog: bool = True
 
     # Logs
     log_level: str = "INFO"
@@ -231,6 +234,7 @@ def load_config(env_file: Optional[Path] = None) -> Config:
         always_on_top=_bool(env.get("ALWAYS_ON_TOP", "1"), "ALWAYS_ON_TOP"),
         hover_scroll_hook=_bool(env.get("HOVER_SCROLL_HOOK", "1"), "HOVER_SCROLL_HOOK"),
         ollama_autostart=_bool(env.get("OLLAMA_AUTOSTART", "1"), "OLLAMA_AUTOSTART"),
+        online_catalog=_bool(env.get("ONLINE_CATALOG", "1"), "ONLINE_CATALOG"),
         log_level=env.get("LOG_LEVEL", Config.log_level).strip().upper(),
         log_privacy=_bool(env.get("LOG_PRIVACY", "1"), "LOG_PRIVACY"),
     )

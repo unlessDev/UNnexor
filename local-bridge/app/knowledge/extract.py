@@ -26,6 +26,14 @@ MAX_TEXT_CHARS = 2_000_000
 MAX_PDF_PAGES = 400
 MAX_DOCX_XML_BYTES = 40 * 1024 * 1024
 
+# Formatos recomendados para el contexto del perfil: el texto llega al
+# modelo tal cual, sin extracción intermedia.
+RECOMMENDED_SUFFIXES = frozenset({".md", ".markdown", ".txt"})
+# Extracción disponible pero no recomendada (maquetación, columnas, tablas
+# y PDF escaneados pueden dar texto incompleto o desordenado).
+EXPERIMENTAL_SUFFIXES = frozenset({".pdf", ".docx"})
+MAX_TEXT_FILE_BYTES = 5 * 1024 * 1024  # .md/.txt: un CV o apuntes caben de sobra
+
 SUPPORTED = {
     ".txt": "text",
     ".md": "markdown",
@@ -62,6 +70,10 @@ class ExtractedDocument:
         return sum(len(p.text) for p in self.pages)
 
 
+def is_recommended(path: Path) -> bool:
+    return path.suffix.lower() in RECOMMENDED_SUFFIXES
+
+
 def detect_kind(path: Path) -> str:
     kind = SUPPORTED.get(path.suffix.lower())
     if kind is None:
@@ -86,6 +98,13 @@ def extract(path: Path, data: bytes | None = None) -> ExtractedDocument:
         raise ExtractionError("El archivo supera el tamaño máximo permitido.")
     pages: tuple[ExtractedPage, ...]
     if kind in ("text", "markdown"):
+        if len(data) > MAX_TEXT_FILE_BYTES:
+            raise ExtractionError(
+                "El archivo de texto supera "
+                f"{MAX_TEXT_FILE_BYTES // (1024 * 1024)} MB; divídelo en partes."
+            )
+        if not data.strip():
+            raise ExtractionError("El archivo está vacío.")
         pages = (ExtractedPage(_decode_text(data)),)
     elif kind == "pdf":
         pages = _extract_pdf(data)

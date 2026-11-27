@@ -45,6 +45,7 @@ ALLOWED_KEYS: Dict[str, Dict[str, Any]] = {
     "always_on_top": {"type": bool, "restart": False},
     "hover_scroll_hook": {"type": bool, "restart": True},
     "ollama_autostart": {"type": bool, "restart": True},
+    "online_catalog": {"type": bool, "restart": False},
     # Proveedor de IA activo (Fase 4): "ollama" o id de proveedor remoto.
     "provider": {"type": str, "restart": False},
     "remote_model": {"type": str, "restart": False},

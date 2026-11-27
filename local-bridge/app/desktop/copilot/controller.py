@@ -135,6 +135,9 @@ class CopilotController(QObject):
             has_key=_has_key,
             hardware=lambda: self._hardware,
             ledger=self.ledger,
+            task_temperature=lambda task: self.settings.task_temperature.get(
+                task.value
+            ),
         )
         self.assistant = ConversationAssistant(
             self.engine,
