@@ -15,7 +15,7 @@ Las operaciones de red corren en QThreads (la GUI nunca se bloquea).
 
 from __future__ import annotations
 
-from typing import Any, List, Optional
+from typing import List, Optional
 
 from PySide6.QtCore import QThread, Signal
 from PySide6.QtWidgets import (
@@ -34,17 +34,33 @@ from PySide6.QtWidgets import (
 )
 
 from ..providers import manager
+from ..providers.access import AccessTier
 from ..providers.base import ProviderError
 from ..providers.presets import PRESETS
 from .styles import ACCENT, BORDER, GREEN, MUTED, PANEL, RED, TEXT
 
-# Agrupación por acceso documentado (ver presets.py para las fuentes).
-CATEGORIES = [
-    ("Gratuitos con límites documentados", ("groq", "mistral", "gemini", "cerebras")),
-    ("Créditos según plan", ("hf_router", "nvidia_nim")),
-    ("Gateways con modelos free y de pago", ("openrouter",)),
-    ("De pago", ("openai", "together", "xai", "moonshot", "zai")),
+# Agrupación por acceso documentado (campo ``access`` de presets.py): un
+# proveedor nuevo aparece en su grupo sin tocar la interfaz.
+_GROUP_TITLES = [
+    (AccessTier.FREE_LIMITED, "Gratuitos con límites documentados"),
+    (AccessTier.CREDITS, "Créditos iniciales o según plan"),
+    (AccessTier.MIXED, "Gateways con modelos gratuitos y de pago"),
+    (AccessTier.PAY_AS_YOU_GO, "Pago por consumo"),
+    (AccessTier.SUBSCRIPTION, "Suscripción"),
+    (AccessTier.UNKNOWN, "Plan sin verificar"),
 ]
+
+
+def provider_groups() -> list[tuple[str, tuple[str, ...]]]:
+    groups = []
+    for tier, title in _GROUP_TITLES:
+        ids = tuple(p["id"] for p in PRESETS if p.get("access") == tier.value)
+        if ids:
+            groups.append((title, ids))
+    return groups
+
+
+CATEGORIES = provider_groups()
 
 
 # --------------------------------------------------------------------- #
@@ -163,7 +179,7 @@ class ProviderCard(QFrame):
         kind.setStyleSheet(f"color: {MUTED}; font-size: 10px;")
         layout.addWidget(kind)
 
-    def mousePressEvent(self, event) -> None:  # noqa: N802 (PySide)
+    def mousePressEvent(self, event) -> None:
         self.clicked.emit(self.provider_id)
         super().mousePressEvent(event)
 
@@ -178,7 +194,7 @@ class ProvidersDialog(QDialog):
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Proveedores de IA — Extdator")
+        self.setWindowTitle("Proveedores de IA — UNnexor")
         self.setMinimumSize(600, 620)
         self.setStyleSheet(
             f"QDialog {{ background: #12141a; color: {TEXT}; }}\n"
@@ -321,7 +337,8 @@ class ProvidersDialog(QDialog):
             preset = next(p for p in PRESETS if p["id"] == provider_id)
             self._detail_title.setText(preset["label"])
             self._detail_desc.setText(
-                f"{preset['description']}\nAcceso: {preset['kind']} · "
+                f"{preset['description']}\nAcceso: "
+                f"{AccessTier(preset.get('access', 'unknown')).label} ({preset['kind']}) · "
                 f"Formato de clave: {preset['key_format']}\n"
                 f"Documentación: {preset['docs']}"
             )
@@ -341,7 +358,14 @@ class ProvidersDialog(QDialog):
         self._connect_btn.setText(
             "Probar y conectar" if not connected else "Reemplazar clave"
         )
-        self._choose_btn.setEnabled(connected)
+        selected = next((p for p in PRESETS if p["id"] == self._selected_id), None)
+        chat_capable = selected is None or "chat" in selected.get(
+            "capabilities", ["chat"]
+        )
+        self._choose_btn.setEnabled(connected and chat_capable)
+        self._choose_btn.setToolTip(
+            "" if chat_capable else "Proveedor solo de voz: se usa en el copiloto."
+        )
         self._disconnect_btn.setEnabled(connected)
 
     # ------------------------------------------------------------------ #
@@ -455,7 +479,7 @@ class ProvidersDialog(QDialog):
             f"color: {RED if error else MUTED}; font-size: 10px;"
         )
 
-    def closeEvent(self, event) -> None:  # noqa: N802 (PySide)
+    def closeEvent(self, event) -> None:
         for worker in self._workers:
             if worker.isRunning():
                 worker.wait(1500)

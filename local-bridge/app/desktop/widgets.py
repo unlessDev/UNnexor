@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from PySide6.QtCore import QObject, Qt, QTimer, Signal
+from PySide6.QtCore import QObject, QSize, Qt, QTimer, Signal
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QFrame,
@@ -26,6 +26,7 @@ from PySide6.QtWidgets import (
 )
 
 from ..math_unicode import to_human_math
+from .brand import LogoLabel
 
 FONT_FAMILIES = ["Segoe UI Emoji", "Segoe UI Symbol", "Segoe UI", "Arial"]
 
@@ -45,11 +46,18 @@ class IconButton(QToolButton):
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
-        font = QFont()
-        font.setFamilies(FONT_FAMILIES)
-        font.setPointSize(11)
-        self.setFont(font)
-        self.setText(glyph)
+        from . import icons
+
+        if glyph in icons.PATHS:
+            # Icono vectorial propio (coherente en cualquier Windows).
+            self.setIcon(icons.icon(glyph, checkable=object_name == "pinBtn"))
+            self.setIconSize(QSize(16, 16))
+        else:
+            font = QFont()
+            font.setFamilies(FONT_FAMILIES)
+            font.setPointSize(11)
+            self.setFont(font)
+            self.setText(glyph)
         self.setToolTip(tooltip)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
@@ -69,6 +77,7 @@ class TitleBar(QWidget):
     menuClicked = Signal()
     modelsClicked = Signal()
     screenshotClicked = Signal()
+    copilotClicked = Signal()
 
     HEIGHT = 40
 
@@ -88,39 +97,55 @@ class TitleBar(QWidget):
         self.dot.setObjectName("connDot")
         self.dot.setToolTip("Estado de conexión con Ollama")
 
-        self.title = QLabel("EXTDATOR")
+        self.logo = LogoLabel(13)
+        self.title = QLabel("UNnexor")
         self.title.setObjectName("titleLabel")
 
         self.model = QLabel(model_name)
         self.model.setObjectName("modelLabel")
+        # Con poco ancho cede espacio el modelo, nunca el nombre de la app.
+        self.model.setSizePolicy(
+            QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred
+        )
+        self.model.setMinimumWidth(0)
+        self.title.setMinimumWidth(self.title.sizeHint().width() + 4)
 
         layout.addWidget(self.dot)
+        layout.addWidget(self.logo)
         layout.addWidget(self.title)
         layout.addWidget(self.model)
         layout.addStretch(1)
 
         self._pin = IconButton(
-            "📌", "Siempre visible (encima de las demás ventanas)", "pinBtn"
+            "pin", "Siempre visible (encima de las demás ventanas)", "pinBtn"
         )
         self._pin.setCheckable(True)
-        self._pin.setChecked(True)
         self._pin.toggled.connect(self.pinToggled)
-        self._copy = IconButton("⧉", "Copiar última respuesta")
+        self._copy = IconButton("copy", "Copiar la última respuesta")
         self._copy.clicked.connect(self.copyClicked)
-        self._clear = IconButton("⟲", "Nueva conversación")
+        self._clear = IconButton("new", "Nueva conversación")
         self._clear.clicked.connect(self.clearClicked)
-        self._stop = IconButton("■", "Detener generación")
+        self._stop = IconButton("stop", "Detener la generación")
         self._stop.clicked.connect(self.stopClicked)
         self._stop.setVisible(False)
-        self._models = IconButton("🤖", "Modelos de IA (elegir, evaluar, descargar)")
+        self._models = IconButton(
+            "models", "Modelos de IA (elegir, evaluar, descargar)"
+        )
         self._models.clicked.connect(self.modelsClicked)
-        self._shot = IconButton("📷", "Capturar región de pantalla (OCR o visión)")
+        self._models.setVisible(False)  # en el menú ☰ → Modelos de IA
+        self._shot = IconButton(
+            "capture", "Capturar una región de la pantalla (visión u OCR)"
+        )
         self._shot.clicked.connect(self.screenshotClicked)
-        self._menu = IconButton("⚙", "Opciones (opacidad, copiar, reiniciar)")
+        self._copilot = IconButton(
+            "copilot", "Copiloto en tiempo real (conversación, traducción, desafíos)"
+        )
+        self._copilot.clicked.connect(self.copilotClicked)
+        self._menu = IconButton("menu", "Menú: configuración, herramientas y ventana")
         self._menu.clicked.connect(self.menuClicked)
-        self._min = IconButton("—", "Minimizar")
+        self._min = IconButton("minimize", "Minimizar a la barra de tareas")
         self._min.clicked.connect(self.minimizeClicked)
-        self._close = IconButton("✕", "Cerrar", "closeBtn")
+        self._close = IconButton("close", "Cerrar UNnexor", "closeBtn")
         self._close.clicked.connect(self.closeClicked)
 
         for button in (
@@ -130,6 +155,7 @@ class TitleBar(QWidget):
             self._stop,
             self._models,
             self._shot,
+            self._copilot,
             self._menu,
             self._min,
             self._close,
@@ -149,6 +175,17 @@ class TitleBar(QWidget):
 
     def set_model(self, name: str) -> None:
         self.model.setText(name)
+
+    def set_pinned(self, pinned: bool) -> None:
+        """Refleja el estado real de «Siempre visible» sin reemitir la señal."""
+        self._pin.blockSignals(True)
+        self._pin.setChecked(pinned)
+        self._pin.blockSignals(False)
+        self._pin.setToolTip(
+            "Siempre visible: ACTIVADO (clic para desactivar)"
+            if pinned
+            else "Siempre visible: desactivado (clic para fijar encima)"
+        )
 
     def set_generating(self, generating: bool) -> None:
         self._stop.setVisible(generating)
@@ -249,7 +286,9 @@ class AssistantMessage(QFrame):
     modo que el LaTeX crudo nunca es lo que el usuario lee o copia.
     """
 
-    def __init__(self, model: str = "", parent: QWidget | None = None) -> None:
+    def __init__(
+        self, model: str = "", parent: QWidget | None = None, role: str = "OLLAMA"
+    ) -> None:
         super().__init__(parent)
         self.setObjectName("assistantMessage")
         self._parts: list[str] = []
@@ -261,7 +300,7 @@ class AssistantMessage(QFrame):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(10, 8, 10, 8)
         layout.setSpacing(2)
-        layout.addWidget(MessageHeader("OLLAMA", model))
+        layout.addWidget(MessageHeader(role, model))
 
         self.browser = QTextBrowser()
         self.browser.setObjectName("assistantText")
@@ -297,7 +336,7 @@ class AssistantMessage(QFrame):
         if self._stream_pending:
             return
         self._stream_pending = True
-        QTimer.singleShot(0, self._render_streaming)
+        QTimer.singleShot(0, self, self._render_streaming)
 
     def _render_streaming(self) -> None:
         self._stream_pending = False
@@ -339,7 +378,7 @@ class AssistantMessage(QFrame):
             style.polish(self)
 
     # ------------------------------------------------------------------
-    def resizeEvent(self, event) -> None:  # noqa: N802 (API de Qt)
+    def resizeEvent(self, event) -> None:
         """Recalcula la altura cuando cambia el ancho (el texto se re-envuelve)."""
         super().resizeEvent(event)
         self._schedule_height_update()
@@ -348,7 +387,7 @@ class AssistantMessage(QFrame):
         if self._height_pending:
             return
         self._height_pending = True
-        QTimer.singleShot(0, self._update_height)
+        QTimer.singleShot(0, self, self._update_height)
 
     def _update_height(self) -> None:
         self._height_pending = False

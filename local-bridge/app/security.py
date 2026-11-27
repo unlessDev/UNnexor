@@ -50,10 +50,14 @@ class RequestGuard:
         self._token = token
         self._auth_required = auth_required
         self._origin_regexes: List[Pattern[str]] = [
-            compile_origin_regex(pattern) for pattern in allowed_origins if pattern.strip()
+            compile_origin_regex(pattern)
+            for pattern in allowed_origins
+            if pattern.strip()
         ]
 
-    def token_ok(self, header_token: Optional[str], body_token: Optional[str]) -> Tuple[bool, str]:
+    def token_ok(
+        self, header_token: Optional[str], body_token: Optional[str]
+    ) -> Tuple[bool, str]:
         if not self._auth_required:
             return True, ""
         supplied = (header_token or "").strip()
@@ -70,7 +74,9 @@ class RequestGuard:
         if not supplied:
             return False, "Falta el token de autenticación."
         # compare_digest exige longitudes seguras y evita comparaciones con timing.
-        if not secrets.compare_digest(supplied.encode("utf-8"), self._token.encode("utf-8")):
+        if not secrets.compare_digest(
+            supplied.encode("utf-8"), self._token.encode("utf-8")
+        ):
             return False, "Token inválido."
         return True, ""
 

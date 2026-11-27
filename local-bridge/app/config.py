@@ -1,4 +1,4 @@
-"""Configuración del puente local de Extdator.
+"""Configuración del puente local de UNnexor.
 
 Lee la configuración desde variables de entorno y desde el archivo
 ``local-bridge/.env`` (creado a partir de ``.env.example``). Ningún valor
@@ -9,17 +9,18 @@ from __future__ import annotations
 
 import json
 import os
-import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from dotenv import dotenv_values
 
-BASE_DIR = Path(__file__).resolve().parent.parent      # local-bridge/
-PROJECT_ROOT = BASE_DIR.parent                          # Extdator/
-DEFAULT_ENV_FILE = BASE_DIR / ".env"
-LOG_DIR = BASE_DIR / "logs"
+from . import paths
+
+BASE_DIR = paths.BASE_DIR  # local-bridge/
+PROJECT_ROOT = paths.PROJECT_ROOT  # UNnexor/
+DEFAULT_ENV_FILE = paths.env_file()
+LOG_DIR = paths.logs_dir()
 
 _TRUE = {"1", "true", "yes", "on", "sí", "si"}
 _FALSE = {"0", "false", "no", "off"}
@@ -38,9 +39,7 @@ class Config:
     port: int = 5000
     auth_required: bool = True
     token: str = ""
-    allowed_origins: List[str] = field(
-        default_factory=lambda: ["chrome-extension://*"]
-    )
+    allowed_origins: List[str] = field(default_factory=lambda: ["chrome-extension://*"])
     max_text_length: int = 32_000
     rate_limit_per_minute: int = 30
 
@@ -72,6 +71,13 @@ class Config:
     always_on_top: bool = True
     hover_scroll_hook: bool = True
 
+    # Ollama: iniciar `ollama serve` si no está en ejecución (y detener al
+    # salir SOLO ese proceso; un Ollama ya abierto nunca se toca).
+    ollama_autostart: bool = True
+    # Consultar al iniciar la biblioteca de ollama.com y la última versión
+    # de Ollama (solo lectura; nunca descarga modelos).
+    online_catalog: bool = True
+
     # Logs
     log_level: str = "INFO"
     log_privacy: bool = True  # jamás registrar el contenido de las selecciones
@@ -87,7 +93,9 @@ class Config:
             raise ConfigError("RATE_LIMIT_PER_MINUTE debe ser al menos 1.")
         if self.window_width < 320 or self.window_height < 320:
             raise ConfigError("La ventana no puede medir menos de 320x320.")
-        if self.ollama_temperature is not None and not (0.0 <= self.ollama_temperature <= 2.0):
+        if self.ollama_temperature is not None and not (
+            0.0 <= self.ollama_temperature <= 2.0
+        ):
             raise ConfigError("OLLAMA_TEMPERATURE debe estar entre 0.0 y 2.0.")
         if self.ollama_timeout <= 0:
             raise ConfigError("OLLAMA_TIMEOUT debe ser positivo.")
@@ -141,11 +149,13 @@ def _extra_options(raw: str, name: str) -> Dict[str, Any]:
             f'(ej. {{"num_ctx":8192}}): {exc.msg} en la posición {exc.pos}.'
         ) from exc
     if not isinstance(parsed, dict):
-        raise ConfigError(f"{name} debe ser un objeto JSON (ej. {{\"num_ctx\":8192}}).")
+        raise ConfigError(f'{name} debe ser un objeto JSON (ej. {{"num_ctx":8192}}).')
     clean: Dict[str, Any] = {}
     for key, value in parsed.items():
         if not isinstance(key, str) or not key.strip():
-            raise ConfigError(f"{name}: las claves deben ser nombres de opción válidos.")
+            raise ConfigError(
+                f"{name}: las claves deben ser nombres de opción válidos."
+            )
         if isinstance(value, bool) or not isinstance(value, (int, float, str)):
             raise ConfigError(
                 f"{name}: el valor de '{key}' debe ser número o texto "
@@ -176,9 +186,7 @@ def load_config(env_file: Optional[Path] = None) -> Config:
         port=_int(env.get("BRIDGE_PORT", str(Config.port)), "BRIDGE_PORT"),
         auth_required=_bool(env.get("AUTH_REQUIRED", "1"), "AUTH_REQUIRED"),
         token=env.get("BRIDGE_TOKEN", "").strip(),
-        allowed_origins=_origins(
-            env.get("ALLOWED_ORIGINS", "chrome-extension://*")
-        ),
+        allowed_origins=_origins(env.get("ALLOWED_ORIGINS", "chrome-extension://*")),
         max_text_length=_int(
             env.get("MAX_TEXT_LENGTH", str(Config.max_text_length)), "MAX_TEXT_LENGTH"
         ),
@@ -188,13 +196,17 @@ def load_config(env_file: Optional[Path] = None) -> Config:
         ),
         ollama_host=env.get("OLLAMA_HOST", Config.ollama_host).strip().rstrip("/"),
         ollama_model=env.get("OLLAMA_MODEL", Config.ollama_model).strip(),
-        ollama_system_prompt=env.get("OLLAMA_SYSTEM_PROMPT", Config.ollama_system_prompt),
+        ollama_system_prompt=env.get(
+            "OLLAMA_SYSTEM_PROMPT", Config.ollama_system_prompt
+        ),
         ollama_temperature=(
             None
             if env.get("OLLAMA_TEMPERATURE", "").strip() == ""
             else _float(env.get("OLLAMA_TEMPERATURE", ""), "OLLAMA_TEMPERATURE")
         ),
-        ollama_keep_alive=env.get("OLLAMA_KEEP_ALIVE", Config.ollama_keep_alive).strip(),
+        ollama_keep_alive=env.get(
+            "OLLAMA_KEEP_ALIVE", Config.ollama_keep_alive
+        ).strip(),
         ollama_timeout=_float(
             env.get("OLLAMA_TIMEOUT", str(Config.ollama_timeout)), "OLLAMA_TIMEOUT"
         ),
@@ -221,6 +233,8 @@ def load_config(env_file: Optional[Path] = None) -> Config:
         ),
         always_on_top=_bool(env.get("ALWAYS_ON_TOP", "1"), "ALWAYS_ON_TOP"),
         hover_scroll_hook=_bool(env.get("HOVER_SCROLL_HOOK", "1"), "HOVER_SCROLL_HOOK"),
+        ollama_autostart=_bool(env.get("OLLAMA_AUTOSTART", "1"), "OLLAMA_AUTOSTART"),
+        online_catalog=_bool(env.get("ONLINE_CATALOG", "1"), "ONLINE_CATALOG"),
         log_level=env.get("LOG_LEVEL", Config.log_level).strip().upper(),
         log_privacy=_bool(env.get("LOG_PRIVACY", "1"), "LOG_PRIVACY"),
     )

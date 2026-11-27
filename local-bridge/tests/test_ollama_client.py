@@ -43,8 +43,12 @@ def test_stream_collects_chunks_and_stats():
             content=ndjson(
                 {"message": {"content": "Hola "}, "done": False},
                 {"message": {"content": "mundo"}, "done": False},
-                {"message": {"content": ""}, "done": True,
-                 "eval_count": 4, "eval_duration": 2_000_000_000},
+                {
+                    "message": {"content": ""},
+                    "done": True,
+                    "eval_count": 4,
+                    "eval_duration": 2_000_000_000,
+                },
             ),
         )
 
@@ -165,9 +169,12 @@ def test_is_reachable_false_when_down():
 
 def test_list_models():
     def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json={
-            "models": [{"name": "llama3:latest"}, {"name": "mistral:latest"}],
-        })
+        return httpx.Response(
+            200,
+            json={
+                "models": [{"name": "llama3:latest"}, {"name": "mistral:latest"}],
+            },
+        )
 
     client = make_client(handler)
     assert client.list_models() == ["llama3:latest", "mistral:latest"]

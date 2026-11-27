@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Launcher de consola del puente Extdator.
+"""Launcher de consola del puente UNnexor.
 
 Uso:
     python run.py                → puente completo (servidor + panel flotante)
@@ -14,7 +14,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from app.main import main  # noqa: E402
+from app.main import main
 
 if __name__ == "__main__":
     sys.exit(main())

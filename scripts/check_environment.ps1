@@ -1,5 +1,5 @@
 ﻿# =====================================================================
-# Extdator — check_environment.ps1
+# UNnexor — check_environment.ps1
 # Diagnóstico completo del entorno: Python, venv, dependencias, Ollama,
 # modelos, puertos y navegadores. No modifica nada.
 # =====================================================================
@@ -16,7 +16,7 @@ function Ok($m)   { Write-Host "[ok] $m" -ForegroundColor Green }
 function Warn($m) { Write-Host "[warn] $m" -ForegroundColor Yellow }
 function Info($m) { Write-Host "[info] $m" -ForegroundColor Cyan }
 
-Write-Host "=== Diagnóstico del entorno para Extdator ===" -ForegroundColor Magenta
+Write-Host "=== Diagnóstico del entorno para UNnexor ===" -ForegroundColor Magenta
 
 Section "Sistema"
 $os = Get-CimInstance Win32_OperatingSystem
@@ -74,7 +74,7 @@ foreach ($port in @(5000, 11434)) {
     }
 }
 
-Section "Puente Extdator"
+Section "Puente UNnexor"
 try {
     $health = Invoke-RestMethod -Uri "http://127.0.0.1:5000/health" -TimeoutSec 2
     Ok "Puente activo (versión $($health.version), modelo $($health.model))"

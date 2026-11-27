@@ -9,19 +9,19 @@ import httpx
 import pytest
 
 from app.hardware import HardwareInfo, detect
+from app.model_catalog import catalog_entry, recommended_catalog
 from app.model_evaluator import (
-    TIER_ALTO,
     TIER_IMPOSIBLE,
     TIER_PERFECTO,
     TIER_REGULAR,
+    TIER_SIN_EVALUAR,
     assess_model,
     context_warning,
     estimate_requirements,
     gpu_budget,
-    parse_parameter_count,
     params_from_size,
+    parse_parameter_count,
 )
-from app.model_catalog import catalog_entry, recommended_catalog
 from app.ollama_client import (
     ModelNotFoundError,
     OllamaClient,
@@ -144,9 +144,10 @@ def test_no_disk_space_for_pull_is_imposible():
     assert any("espacio" in r.lower() for r in a.reasons)
 
 
-def test_unknown_data_falls_back_to_regular():
+def test_unknown_data_is_not_evaluated():
     a = assess_model("modelo-misterioso", None, None, None, _hw_gpu())
-    assert a.tier == TIER_REGULAR
+    assert a.tier == TIER_SIN_EVALUAR
+    assert a.label == "NO EVALUADO"
     assert any("sin datos" in r.lower() for r in a.reasons)
 
 

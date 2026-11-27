@@ -1,9 +1,11 @@
 """Gestor de conexiones de proveedores: keyring + estado sin secretos.
 
 Seguridad:
-  * Las claves API viven EXCLUSIVAMENTE en el keyring del sistema
+  * Las claves conectadas desde la app viven en el keyring del sistema
     (Windows Credential Manager). ``data/providers.json`` guarda solo
     estado no sensible (fecha de conexión, nº de modelos vistos).
+  * Las copias manuales en ``.env`` se migran sin borrarse; la purga de
+    secretos las retira.
   * Los errores/mensajes jamás incluyen la clave.
   * La validación se hace con ``GET /models`` (no consume tokens de chat).
 """
@@ -17,15 +19,16 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from .. import paths
 from .base import ProviderError
 from .openai_compat import OpenAICompatClient
-from .presets import PRESETS, preset
+from .presets import PRESETS, SPEECH_ONLY_PROVIDER_IDS, preset
 
 log = logging.getLogger("extdator.providers")
 
 SERVICE = "Extdator"
 ACCOUNT_PREFIX = "provider-key"
-CONFIG_FILE = Path(__file__).resolve().parent.parent / "data" / "providers.json"
+CONFIG_FILE = paths.providers_file()
 CONF_LOCK = threading.Lock()
 
 
@@ -85,6 +88,28 @@ def delete_key(provider_id: str) -> None:
         pass
 
 
+def purge_all_keys() -> List[str]:
+    """Elimina las claves de todos los proveedores conocidos y su estado.
+
+    Se usa antes de una desinstalación completa y desde
+    ``UNnexor.exe --purge-secrets``. Incluye presets aunque no figuren en
+    ``providers.json`` para retirar credenciales huérfanas. No crea el
+    directorio de datos si no existe y nunca registra las claves.
+    """
+    known = (
+        {item["id"] for item in PRESETS} | {"custom"} | set(SPEECH_ONLY_PROVIDER_IDS)
+    )
+    with CONF_LOCK:
+        known.update(_read_config()["providers"].keys())
+    for provider_id in sorted(known):
+        delete_key(provider_id)
+    with CONF_LOCK:
+        if CONFIG_FILE.exists():
+            _write_config({"version": 1, "providers": {}})
+    log.info("Credenciales de proveedores eliminadas (%d revisadas).", len(known))
+    return sorted(known)
+
+
 # --------------------------------------------------------------------- #
 # API pública del gestor
 # --------------------------------------------------------------------- #
@@ -135,9 +160,8 @@ def connect(
         resolved_label = data["label"]  # type: ignore[index]
     if not key.strip():
         raise ProviderError("Introduce la clave API del proveedor.", "auth")
-    client = OpenAICompatClient(
-        provider_id, resolved_base, key.strip(), timeout=timeout
-    )
+    protocol = (data or {}).get("protocol", "openai")
+    client = _make_client(protocol, provider_id, resolved_base, key.strip(), timeout)
     try:
         result = client.test_connection()
     finally:
@@ -169,8 +193,61 @@ def disconnect(provider_id: str) -> None:
     log.info("Proveedor '%s' desconectado.", provider_id)
 
 
-def get_client_for(provider_id: str, timeout: float = 120.0) -> OpenAICompatClient:
-    """Cliente listo para usar con la clave del keyring."""
+class DeepgramAccountClient:
+    """Solo valida claves de Deepgram (``GET /v1/projects``): sin coste de
+    transcripción. La voz se gestiona en ``app/stt/deepgram_engine.py``."""
+
+    def __init__(self, base_url: str, key: str, timeout: float = 20.0) -> None:
+        import httpx
+
+        self._client = httpx.Client(
+            base_url=base_url.rstrip("/") + "/",
+            headers={"Authorization": f"Token {key}"},
+            timeout=timeout,
+        )
+
+    def test_connection(self) -> Dict[str, Any]:
+        import httpx
+
+        try:
+            response = self._client.get("projects")
+        except httpx.HTTPError as exc:
+            raise ProviderError(
+                "No se pudo conectar con Deepgram (revisa la conexión).", "network"
+            ) from exc
+        if response.status_code in (401, 403):
+            raise ProviderError("Clave de Deepgram inválida o sin permisos.", "auth")
+        if response.status_code != 200:
+            raise ProviderError(
+                f"Deepgram devolvió HTTP {response.status_code} al validar la clave.",
+                "general",
+            )
+        projects = response.json().get("projects") or []
+        return {"ok": True, "model_count": 0, "projects": len(projects), "sample": []}
+
+    def close(self) -> None:
+        self._client.close()
+
+
+def _make_client(
+    protocol: str, provider_id: str, base_url: str, key: str, timeout: float
+) -> Any:
+    if protocol == "anthropic":
+        from .anthropic import AnthropicClient
+
+        return AnthropicClient(key, base_url=base_url, timeout=timeout)
+    if protocol == "deepgram":
+        return DeepgramAccountClient(base_url, key, timeout=timeout)
+    return OpenAICompatClient(provider_id, base_url, key, timeout=timeout)
+
+
+def get_client_for(provider_id: str, timeout: float = 120.0) -> Any:
+    """Cliente de chat listo para usar con la clave del keyring.
+
+    Devuelve ``OpenAICompatClient`` o ``AnthropicClient`` (misma interfaz
+    ``list_models``/``chat_stream``). Los proveedores solo de voz no tienen
+    cliente de chat.
+    """
     key = get_key(provider_id)
     if not key:
         raise ProviderError(
@@ -190,7 +267,15 @@ def get_client_for(provider_id: str, timeout: float = 120.0) -> OpenAICompatClie
     data = preset(provider_id)
     if data is None:
         raise ProviderError(f"Proveedor desconocido: '{provider_id}'.")
-    return OpenAICompatClient(provider_id, data["base_url"], key, timeout=timeout)
+    if "chat" not in data.get("capabilities", ["chat"]):
+        raise ProviderError(
+            f"{data['label']} solo ofrece reconocimiento de voz; elígelo en el "
+            "copiloto como motor de voz.",
+            "general",
+        )
+    return _make_client(
+        data.get("protocol", "openai"), provider_id, data["base_url"], key, timeout
+    )
 
 
 def available_presets() -> List[Dict[str, Any]]:

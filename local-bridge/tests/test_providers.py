@@ -279,9 +279,11 @@ def test_connect_invalid_key_does_not_store(manager_env):
 
     import unittest.mock as mock
 
-    with mock.patch.object(manager.OpenAICompatClient, "__init__", init_patch):
-        with pytest.raises(ProviderError) as excinfo:
-            manager.connect("groq", "bad-key")
+    with (
+        mock.patch.object(manager.OpenAICompatClient, "__init__", init_patch),
+        pytest.raises(ProviderError) as excinfo,
+    ):
+        manager.connect("groq", "bad-key")
     assert excinfo.value.kind == "auth"
     assert manager.connected_providers() == []
     assert "groq" not in manager_env["keys"]
@@ -374,3 +376,24 @@ def test_available_presets_includes_connection_state(manager_env, mock_catalog):
     openai = next(p for p in presets if p["id"] == "openai")
     assert groq["connected"] is True
     assert openai["connected"] is False
+
+
+def test_streaming_error_body_is_read_and_reported():
+    """Regresión: con un estado no tabulado (p. ej. 400) en streaming, el
+    cuerpo no se leía y httpx lanzaba ResponseNotRead en lugar de un
+    ProviderError con el mensaje del proveedor."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.dumps({"error": {"message": "model does not support chat"}})
+        # Cuerpo como iterador = respuesta en streaming real (no precargada).
+        return httpx.Response(
+            400,
+            content=iter([body.encode("utf-8")]),
+            headers={"content-type": "application/json"},
+        )
+
+    client = make_client(handler)
+    with pytest.raises(ProviderError) as info:
+        client.chat_stream([{"role": "user", "content": "x"}], model="guard")
+    assert "model does not support chat" in info.value.message
+    assert "HTTP 400" in info.value.message

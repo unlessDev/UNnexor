@@ -1,0 +1,6 @@
+# Herramientas de calidad (no son dependencias de ejecución)
+# Uso: .venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+#   ruff → lint y orden de imports (config en pyproject.toml)
+#   mypy → verificación de tipos (estricta en los paquetes del copiloto)
+ruff>=0.8,<1
+mypy>=1.13,<2

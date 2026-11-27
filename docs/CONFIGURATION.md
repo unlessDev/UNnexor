@@ -1,4 +1,4 @@
-# Configuración de Extdator
+# Configuración de UNnexor
 
 Toda la configuración vive en `local-bridge\.env` (creado desde
 `.env.example`) como valores **base**. Desde la v1.2.0 también se puede
@@ -22,6 +22,8 @@ El menú ⚙ del panel flotante ofrece:
 * **Emparejar extensión** — genera el código de 6 dígitos que la página
   de opciones de la extensión usa para obtener su token (sin copiar
   tokens a mano).
+* **Asistente de inicio** y **Exportar diagnóstico** — reabre el asistente
+  de primer uso o genera un ZIP saneado para soporte (ver más abajo).
 
 Los ajustes desde la UI se aplican **en caliente** cuando es posible
 (modelo, prompt, temperatura, keep_alive, opacidad, always-on-top,
@@ -146,11 +148,47 @@ Las imágenes temporales (`%TEMP%\extdator_capture_*.png`) se borran tras
 procesar. La imagen no sale de la máquina salvo que uses un proveedor
 remoto con un modelo de visión (y solo hacia ese proveedor).
 
+## Asistente de primer inicio (escritorio)
+
+En el primer arranque real, el panel abre un asistente modal de tres pasos
+(se puede reabrir desde **⚙ → Asistente de inicio**):
+
+1. **Bienvenida y privacidad** — qué hace UNnexor y qué datos salen del
+   equipo (por defecto, solo hacia Ollama en `127.0.0.1`).
+2. **Requisitos** — comprueba Ollama y el modelo activo en segundo plano,
+   sin descargar nada. Permite reintentar, elegir otro modelo o abrir
+   Ajustes; se puede continuar aunque falte algo para configurarlo luego.
+3. **Conectar extensión** — muestra el código efímero de 6 dígitos y
+   detecta automáticamente cuándo la extensión completa la vinculación.
+
+Se muestra una sola vez (clave `onboarding/seen` en `QSettings`). En
+pruebas y smoke tests con plataforma `offscreen` no se abre. No modifica
+el `.env`, no descarga modelos y no envía datos a terceros.
+
+## Exportar diagnóstico (soporte)
+
+**⚙ → Exportar diagnóstico…** genera un ZIP (por ejemplo
+`UNnexor-diagnostico-20261124-1030.zip`) con `LEEME.txt`,
+`resumen.json`, `diagnostico.txt` y `logs/bridge.log*` si existen. La
+recogida de estado de Ollama y la lectura de logs ocurren en segundo plano;
+la interfaz sigue respondiendo.
+
+* Incluye: versión, SO, rutas normalizadas, configuración sin secretos,
+  comprobaciones, estado de Ollama/modelo, emparejamiento (solo sí/no),
+  recuento de historial y logs redactados.
+* No incluye: `BRIDGE_TOKEN`, claves API, `.env`, `user_settings.json`
+  completo, historial de conversación ni capturas.
+* Los logs se limitan a los 4 archivos más recientes (~200 KB por archivo,
+  ~600 KB en total) y se redactan tokens, claves, correos, rutas de usuario,
+  IDs de extensión y parámetros de URL.
+* Con `LOG_PRIVACY=0` se omiten las líneas de selección/imagen conocidas,
+  pero conviene revisar el ZIP antes de compartirlo.
+
 ## Extensión (opciones — asistente v1.2.0)
 
 La página de opciones es un asistente de 4 pasos:
 
-1. **Bienvenida** — cómo funciona Extdator.
+1. **Bienvenida** — cómo funciona UNnexor.
 2. **Conectar** — pega el código de 6 dígitos del panel (⚙ → Emparejar
    extensión). La extensión obtiene su token por `POST /api/pair/confirm`
    (el código vale 10 minutos y un solo uso). Abajo queda un panel

@@ -1,4 +1,4 @@
-"""Ventana flotante de Extdator (PySide6).
+"""Ventana flotante de UNnexor (PySide6).
 
 Características:
   * Estética terminal oscura, frameless, arrastrable y redimensionable.
@@ -17,11 +17,12 @@ import os
 import tempfile
 from typing import Optional
 
-from PySide6.QtCore import QTimer, QSettings, Qt
+from PySide6.QtCore import QPoint, QRect, QSettings, QStandardPaths, Qt, QTimer
 from PySide6.QtGui import QCursor, QGuiApplication, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
     QDialog,
+    QFileDialog,
     QHBoxLayout,
     QLabel,
     QMainWindow,
@@ -35,6 +36,7 @@ from PySide6.QtWidgets import (
 
 from .. import ocr_manager
 from ..config import Config
+from ..diagnostics import default_archive_name, ensure_zip_suffix
 from ..ollama_client import OllamaClient, OllamaError
 from ..queue_manager import (
     Bus,
@@ -50,18 +52,23 @@ from ..settings_store import (
     SettingsValidationError,
     restart_required_for,
 )
+from .onboarding import (
+    ONBOARDING_SEEN_KEY,
+    OnboardingDialog,
+    should_show_onboarding,
+)
 from .styles import APP_QSS
+from .topmost import IS_WINDOWS, set_topmost
 from .widgets import (
     AssistantMessage,
     ChatScroller,
-    IconButton,
     SystemNote,
     TitleBar,
     UserMessage,
     make_chat_area,
 )
 from .window_manager import HoverScrollHook, NoActivateFilter, apply_noactivate
-from .workers import GenerationWorker, OCRWorker, StatusWorker
+from .workers import DiagnosticsWorker, GenerationWorker, OCRWorker, StatusWorker
 
 log = logging.getLogger("extdator.window")
 
@@ -87,16 +94,20 @@ class BridgeWindow(QMainWindow):
         parent: Optional[QWidget] = None,
         settings_store: Optional[SettingsStore] = None,
         pairing=None,
+        show_onboarding: bool = True,
     ) -> None:
         flags = (
             Qt.WindowType.Window
             | Qt.WindowType.FramelessWindowHint
             | Qt.WindowType.WindowDoesNotAcceptFocus
         )
-        if cfg.always_on_top:
+        # En Windows «Siempre visible» se aplica sobre el HWND ya creado
+        # (topmost.set_topmost); con la bandera de Qt la ventana se recrearía
+        # al cambiarla. En otros sistemas se usa la bandera.
+        if cfg.always_on_top and not IS_WINDOWS:
             flags |= Qt.WindowType.WindowStaysOnTopHint
         super().__init__(None, flags)
-        self.setWindowTitle("Extdator")
+        self.setWindowTitle("UNnexor")
 
         self._cfg = cfg
         self._bus = bus
@@ -104,6 +115,11 @@ class BridgeWindow(QMainWindow):
         self._ollama = ollama
         self._settings_store = settings_store
         self._pairing = pairing
+        self._show_onboarding = show_onboarding
+        self._onboarding_scheduled = False
+        self._onboarding_dialog: Optional[OnboardingDialog] = None
+        self._diagnostics_worker: Optional[DiagnosticsWorker] = None
+        self._log_console = None  # LogConsoleWindow (opcional)
         self._on_top = cfg.always_on_top
         self._opacity = cfg.window_opacity
         self._settings = QSettings("Extdator", "Bridge")
@@ -115,7 +131,7 @@ class BridgeWindow(QMainWindow):
         # Estado del pie/spinner (debe existir antes de _build_ui).
         self._spinner_frame = 0
         self._footer_stable = (
-            "Extdator listo. Selecciona texto en el navegador y pulsa el botón ✦."
+            "UNnexor listo. Selecciona texto en el navegador y pulsa la X."
         )
         self._footer_transient_until = 0.0
         self._footer_transient_text = ""
@@ -124,7 +140,11 @@ class BridgeWindow(QMainWindow):
         self._capture_selector = None
         self._capture_was_visible = True
         self._ocr_workers: list = []
+        # Redimensionado manual: (cursor global, marco inicial, bordes).
+        self._resize_origin: Optional[tuple[QPoint, QRect, Qt.Edge]] = None
         self._pending_ocr_instruction: Optional[str] = None
+        # Copiloto en tiempo real (se crea al abrirlo por primera vez).
+        self._copilot_window = None
 
         self._build_ui()
 
@@ -183,6 +203,7 @@ class BridgeWindow(QMainWindow):
         self._titlebar.menuClicked.connect(self._open_menu)
         self._titlebar.modelsClicked.connect(self._open_model_selector)
         self._titlebar.screenshotClicked.connect(self._start_capture)
+        self._titlebar.copilotClicked.connect(self.open_copilot)
         layout.addWidget(self._titlebar)
 
         self._chat_scroll, self._chat_container, self._chat_vbox = make_chat_area()
@@ -198,6 +219,11 @@ class BridgeWindow(QMainWindow):
         self.setStyleSheet(APP_QSS)
         self.setMinimumSize(MIN_W, MIN_H)
         self._install_native_filter()
+        # Los bordes están cubiertos por el contenido: el redimensionado se
+        # gestiona a nivel de aplicación (ver desktop/frameless.py).
+        from .frameless import enable_frameless_resize
+
+        enable_frameless_resize(self)
 
     # ------------------------------------------------------------------ #
     # Helpers nativos
@@ -223,7 +249,7 @@ class BridgeWindow(QMainWindow):
             self._native_filter_installed = False
 
     # ------------------------------------------------------------------ #
-    def showEvent(self, event) -> None:  # noqa: N802 (PySide)
+    def showEvent(self, event) -> None:
         super().showEvent(event)
         hwnd = self._hwnd()
         if hwnd:
@@ -232,8 +258,15 @@ class BridgeWindow(QMainWindow):
                 self._hook.install(hwnd)
             else:
                 self._hook.update_target(hwnd)
+        # Estado real del sistema → botón 📌 (nunca un valor supuesto).
+        self._on_top = set_topmost(self, self._on_top)
+        self._titlebar.set_pinned(self._on_top)
+        if self._show_onboarding and not self._onboarding_scheduled:
+            self._onboarding_scheduled = True
+            # Dejar que la ventana se pinte antes de abrir el diálogo modal.
+            QTimer.singleShot(700, self._maybe_show_onboarding)
 
-    def closeEvent(self, event) -> None:  # noqa: N802 (PySide)
+    def closeEvent(self, event) -> None:
         self._save_geometry()
         self.stop_workers()
         self._hook.uninstall()
@@ -241,8 +274,21 @@ class BridgeWindow(QMainWindow):
         log.info("Ventana cerrada.")
         super().closeEvent(event)
 
+    def set_log_console(self, console) -> None:
+        """Consola de registros opcional (se crea en ``main.run_bridge``)."""
+        self._log_console = console
+
+    def toggle_log_console(self) -> None:
+        if self._log_console is not None:
+            self._log_console.toggle()
+
     def stop_workers(self) -> None:
         """Detiene workers de forma ordenada (idempotente)."""
+        if (
+            self._diagnostics_worker is not None
+            and self._diagnostics_worker.isRunning()
+        ):
+            self._diagnostics_worker.wait(15000)
         if self._status_worker.isRunning():
             self._status_worker.stop()
             self._status_worker.wait(1500)
@@ -254,6 +300,9 @@ class BridgeWindow(QMainWindow):
                 self._ollama.close()
                 self._worker.wait(2000)
         self._stop_ocr_workers()
+        if self._copilot_window is not None:
+            self._copilot_window.shutdown()
+            self._copilot_window = None
 
     # ------------------------------------------------------------------ #
     # Persistencia de geometría
@@ -289,16 +338,16 @@ class BridgeWindow(QMainWindow):
     def on_window_moved(self) -> None:
         self._save_geometry()
 
-    def resizeEvent(self, event) -> None:  # noqa: N802 (PySide)
+    def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
         self._save_geometry()
 
     # ------------------------------------------------------------------ #
     # Redimensionado manual (frameless)
     # ------------------------------------------------------------------ #
-    def _edge_at(self, pos) -> int:
+    def _edge_at(self, pos) -> Qt.Edge:
         """Devuelve los bordes Qt para el cursor en ``pos`` (coords ventana)."""
-        edges = 0
+        edges = Qt.Edge(0)
         width, height = self.width(), self.height()
         if pos.x() <= RESIZE_BAND:
             edges |= Qt.Edge.LeftEdge
@@ -313,7 +362,7 @@ class BridgeWindow(QMainWindow):
     def _over_titlebar_controls(self, pos) -> bool:
         return pos.y() <= TitleBar.HEIGHT and bool(self._titlebar.childAt(pos))
 
-    def mousePressEvent(self, event) -> None:  # noqa: N802 (PySide)
+    def mousePressEvent(self, event) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
             pos = event.position().toPoint()
             edges = self._edge_at(pos)
@@ -328,9 +377,9 @@ class BridgeWindow(QMainWindow):
                 return
         super().mousePressEvent(event)
 
-    def mouseMoveEvent(self, event) -> None:  # noqa: N802 (PySide)
+    def mouseMoveEvent(self, event) -> None:
         pos = event.position().toPoint()
-        if hasattr(self, "_resize_origin") and getattr(self, "_resize_origin", None):
+        if self._resize_origin is not None:
             origin_global, origin_frame, edges = self._resize_origin
             delta = event.globalPosition().toPoint() - origin_global
             new = origin_frame.adjusted(
@@ -359,8 +408,8 @@ class BridgeWindow(QMainWindow):
             self.unsetCursor()
         super().mouseMoveEvent(event)
 
-    def mouseReleaseEvent(self, event) -> None:  # noqa: N802 (PySide)
-        if getattr(self, "_resize_origin", None):
+    def mouseReleaseEvent(self, event) -> None:
+        if self._resize_origin is not None:
             self._resize_origin = None
             self.unsetCursor()
             self._save_geometry()
@@ -420,7 +469,7 @@ class BridgeWindow(QMainWindow):
         self._streaming_widget = None
         while self._chat_vbox.count() > 1:
             item = self._chat_vbox.takeAt(0)
-            widget = item.widget()
+            widget = item.widget() if item is not None else None
             if widget is not None:
                 widget.deleteLater()
         self._last_assistant_text = ""
@@ -524,39 +573,70 @@ class BridgeWindow(QMainWindow):
         self._set_footer_transient("Deteniendo generación…", seconds=2.5)
 
     def set_on_top(self, enabled: bool) -> None:
-        self._on_top = enabled
-        self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, enabled)
-        if self.isVisible():
-            self.show()
+        """Activa/desactiva «Siempre visible» y lo persiste.
+
+        El estado que se guarda y se muestra es el que informa el sistema
+        tras aplicar el cambio, no el solicitado.
+        """
+        self._on_top = bool(enabled)  # antes de aplicar (showEvent puede reentrar)
+        actual = set_topmost(self, bool(enabled)) if self.isVisible() else enabled
+        self._on_top = actual
+        self._titlebar.set_pinned(actual)
         self._save_geometry()
+        if self._cfg.always_on_top != actual:
+            self._cfg.always_on_top = actual
+            if self._settings_store is not None:
+                try:
+                    self._settings_store.update({"always_on_top": actual})
+                except Exception as exc:  # pragma: no cover - disco lleno, etc.
+                    log.warning("No se pudo guardar «Siempre visible»: %s", exc)
         hwnd = self._hwnd()
         if hwnd:
             apply_noactivate(hwnd)
 
     def _open_menu(self) -> None:
+        """Menú ☰ organizado por secciones (antes: lista plana de 14 entradas)."""
+        from . import icons
+
         menu = QMenu(self)
 
-        models_action = menu.addAction("🤖  Modelos de IA…")
-        models_action.triggered.connect(self._open_model_selector)
-        providers_action = menu.addAction("🔌  Proveedores de API…")
-        providers_action.triggered.connect(self._open_providers)
-        settings_action = menu.addAction("⚙  Ajustes…")
-        settings_action.triggered.connect(self._open_settings)
-        pairing_action = menu.addAction("🔗  Emparejar extensión…")
-        pairing_action.triggered.connect(self._open_pairing)
+        def add(section_menu, icon_name, text, slot, shortcut_hint=""):
+            action = section_menu.addAction(icons.menu_icon(icon_name), text)
+            if shortcut_hint:
+                action.setToolTip(shortcut_hint)
+            action.triggered.connect(slot)
+            return action
 
-        menu.addSeparator()
+        menu.addSection("Conversación")
+        add(menu, "copy", "Copiar la última respuesta", self._copy_last)
+        add(menu, "new", "Nueva conversación", self._clear_conversation)
+        add(menu, "stop", "Detener la generación", self._stop_generation)
 
-        copy_action = menu.addAction("⧉  Copiar última respuesta")
-        copy_action.triggered.connect(self._copy_last)
-        clear_action = menu.addAction("⟲  Nueva conversación")
-        clear_action.triggered.connect(self._clear_conversation)
-        stop_action = menu.addAction("■  Detener generación")
-        stop_action.triggered.connect(self._stop_generation)
+        menu.addSection("Herramientas")
+        add(menu, "copilot", "Copiloto en tiempo real…", self.open_copilot)
+        add(menu, "capture", "Capturar una región de la pantalla…", self._start_capture)
 
-        menu.addSeparator()
+        menu.addSection("Modelos y configuración")
+        add(menu, "sparkles", "Recomendar configuración…", self.open_recommendations)
+        add(menu, "models", "Modelos de IA…", lambda: self._open_model_selector())
+        add(menu, "providers", "Proveedores de API…", self._open_providers)
+        add(menu, "settings", "Ajustes…", lambda: self._open_settings())
 
-        pin_action = menu.addAction("📌  Siempre visible")
+        more = menu.addMenu(icons.menu_icon("link"), "Extensión y soporte")
+        add(more, "link", "Emparejar la extensión…", self._open_pairing)
+        add(more, "rocket", "Asistente de inicio…", self._open_onboarding)
+        add(more, "diagnostics", "Exportar diagnóstico…", self._export_diagnostics)
+        console_action = add(
+            more, "terminal", "Consola del puente (registros)", self.toggle_log_console
+        )
+        console_action.setCheckable(True)
+        console_action.setChecked(
+            self._log_console is not None and self._log_console.isVisible()
+        )
+        console_action.setEnabled(self._log_console is not None)
+
+        menu.addSection("Ventana")
+        pin_action = menu.addAction(icons.menu_icon("pin"), "Siempre visible")
         pin_action.setCheckable(True)
         pin_action.setChecked(self._on_top)
         pin_action.toggled.connect(self.set_on_top)
@@ -576,6 +656,9 @@ class BridgeWindow(QMainWindow):
         menu.addAction(opacity_action)
         slider.valueChanged.connect(self._on_opacity_changed)
 
+        menu.addSeparator()
+        add(menu, "quit", "Salir de UNnexor", self.close)
+
         menu.popup(QCursor.pos())
 
     def _on_opacity_changed(self, value: int) -> None:
@@ -588,10 +671,12 @@ class BridgeWindow(QMainWindow):
     # ------------------------------------------------------------------ #
     # Selector de modelos / proveedores / ajustes / emparejamiento
     # ------------------------------------------------------------------ #
-    def _open_model_selector(self) -> None:
+    def _open_model_selector(self, parent: Optional[QWidget] = None) -> None:
         from .dialogs import ModelSelectorDialog
 
-        dialog = ModelSelectorDialog(self._ollama, self._cfg.ollama_model, parent=self)
+        dialog = ModelSelectorDialog(
+            self._ollama, self._cfg.ollama_model, parent=parent or self
+        )
         dialog.modelSelected.connect(self.apply_model)
         dialog.exec()
 
@@ -633,6 +718,52 @@ class BridgeWindow(QMainWindow):
             seconds=4,
         )
 
+    def open_copilot(self, _checked: bool = False) -> None:
+        """Abre (o trae al frente) la ventana del copiloto en tiempo real."""
+        if self._copilot_window is None:
+            try:
+                from .copilot.window import CopilotWindow
+
+                self._copilot_window = CopilotWindow(self._cfg)
+                self._copilot_window.home.recommendRequested.connect(
+                    self.open_recommendations
+                )
+                self._copilot_window.home.full_recommendations = True
+            except ImportError as exc:
+                # Edición sin los componentes de audio/voz (p. ej. un build
+                # que no los empaqueta): se informa en lugar de cerrarse.
+                log.exception("El copiloto no está disponible en esta edición")
+                QMessageBox.warning(
+                    self,
+                    "Copiloto no disponible",
+                    "Esta instalación no incluye los componentes del copiloto "
+                    f"en tiempo real ({exc.name or exc}). Reinstala la versión "
+                    "completa de UNnexor.",
+                )
+                return
+        self._copilot_window.bring_to_front()
+
+    def open_recommendations(self, _checked: bool = False) -> None:
+        """Evaluación del equipo y configuración recomendada por función."""
+        from .recommend_dialog import RecommendationDialog
+
+        controller = (
+            self._copilot_window.controller
+            if self._copilot_window is not None
+            else None
+        )
+        dialog = RecommendationDialog(
+            self._cfg,
+            self._ollama,
+            apply_main=self.apply_settings,
+            # Con el copiloto abierto, sus ajustes en memoria son la fuente de
+            # verdad (si no, los sobrescribiría al guardar).
+            copilot_settings=(lambda: controller.settings) if controller else None,
+            save_copilot=controller.save_settings if controller else None,
+            parent=self,
+        )
+        dialog.exec()
+
     def _open_providers(self) -> None:
         from .providers_dialog import ProvidersDialog
 
@@ -640,10 +771,10 @@ class BridgeWindow(QMainWindow):
         dialog.providerChosen.connect(self._use_remote_provider)
         dialog.exec()
 
-    def _open_settings(self) -> None:
+    def _open_settings(self, parent: Optional[QWidget] = None) -> None:
         from .dialogs import SettingsDialog
 
-        dialog = SettingsDialog(self._cfg, parent=self)
+        dialog = SettingsDialog(self._cfg, parent=parent or self)
         dialog.settingsChanged.connect(self.apply_settings)
         dialog.exec()
 
@@ -655,7 +786,7 @@ class BridgeWindow(QMainWindow):
                 QMessageBox.information(
                     self,
                     "Ajustes restaurados",
-                    "Tus ajustes guardados se borraron. Reinicia Extdator "
+                    "Tus ajustes guardados se borraron. Reinicia UNnexor "
                     "para volver a los valores del archivo .env.",
                 )
             return
@@ -663,7 +794,7 @@ class BridgeWindow(QMainWindow):
             QMessageBox.warning(
                 self,
                 "Ajustes no disponibles",
-                "Extdator arrancó sin almacén de ajustes; edita local-bridge\\.env.",
+                "UNnexor arrancó sin almacén de ajustes; edita local-bridge\\.env.",
             )
             return
         try:
@@ -673,6 +804,11 @@ class BridgeWindow(QMainWindow):
             return
         for key, value in applied.items():
             setattr(self._cfg, key, value)
+        if (
+            "always_on_top" in applied
+            and bool(applied["always_on_top"]) != self._on_top
+        ):
+            self.set_on_top(bool(applied["always_on_top"]))
         live = {k: v for k, v in applied.items() if k in LIVE_KEYS}
         if live:
             # Cambios en caliente: el worker los aplica en la próxima petición
@@ -686,7 +822,7 @@ class BridgeWindow(QMainWindow):
             QMessageBox.information(
                 self,
                 "Reinicio necesario",
-                "Los siguientes ajustes requieren reiniciar Extdator para "
+                "Los siguientes ajustes requieren reiniciar UNnexor para "
                 f"aplicarse:\n· {chr(10).join(restart)}",
             )
         self._set_footer_transient(f"Ajustes guardados ({len(applied)}).", seconds=3)
@@ -703,6 +839,107 @@ class BridgeWindow(QMainWindow):
             return
         dialog = PairingDialog(self._pairing, parent=self)
         dialog.exec()
+
+    # ------------------------------------------------------------------ #
+    # Asistente de primer inicio
+    # ------------------------------------------------------------------ #
+    def _maybe_show_onboarding(self) -> None:
+        """Abre el asistente una sola vez, tras pintar la ventana."""
+        if not self.isVisible() or self._onboarding_dialog is not None:
+            return
+        seen = bool(self._settings.value(ONBOARDING_SEEN_KEY, False, type=bool))
+        if not should_show_onboarding(
+            seen=seen, platform_name=QGuiApplication.platformName()
+        ):
+            return
+        self._open_onboarding()
+
+    def _open_onboarding(self, _checked: bool = False) -> None:
+        if self._onboarding_dialog is not None:
+            return
+        dialog = OnboardingDialog(self._cfg, self._ollama, self._pairing, parent=self)
+        dialog.openModelsRequested.connect(
+            lambda: self._open_model_selector(parent=dialog)
+        )
+        dialog.openSettingsRequested.connect(lambda: self._open_settings(parent=dialog))
+        # Se marca como visto al mostrarlo: cerrar el asistente no debe
+        # hacer que reaparezca en cada arranque. Sigue disponible en ⚙.
+        self._settings.setValue(ONBOARDING_SEEN_KEY, True)
+        self._settings.sync()
+        self._onboarding_dialog = dialog
+        try:
+            dialog.exec()
+        finally:
+            self._onboarding_dialog = None
+
+    # ------------------------------------------------------------------ #
+    # Diagnóstico para soporte
+    # ------------------------------------------------------------------ #
+    def _export_diagnostics(self) -> None:
+        if (
+            self._diagnostics_worker is not None
+            and self._diagnostics_worker.isRunning()
+        ):
+            self._set_footer_transient(
+                "Ya se está generando un diagnóstico.", seconds=3
+            )
+            return
+        folder = QStandardPaths.writableLocation(
+            QStandardPaths.StandardLocation.DocumentsLocation
+        ) or os.path.expanduser("~")
+        suggested = os.path.join(folder, default_archive_name())
+        selected, _ = QFileDialog.getSaveFileName(
+            self,
+            "Guardar diagnóstico",
+            suggested,
+            "Archivo ZIP (*.zip)",
+        )
+        if not selected:
+            return
+        target = ensure_zip_suffix(selected)
+        worker = DiagnosticsWorker(
+            target,
+            self._cfg,
+            self._state,
+            self._bus,
+            self._pairing,
+            self._ollama,
+            parent=self,
+        )
+        worker.bundleReady.connect(self._on_diagnostics_ready)
+        worker.bundleFailed.connect(self._on_diagnostics_failed)
+        worker.finished.connect(self._on_diagnostics_finished)
+        self._diagnostics_worker = worker
+        self._set_footer_transient("Generando diagnóstico…", seconds=30)
+        worker.start()
+
+    def _on_diagnostics_ready(self, path: str) -> None:
+        self._set_footer_transient("Diagnóstico guardado.", seconds=5)
+        QMessageBox.information(
+            self,
+            "Diagnóstico exportado",
+            "Se guardó el paquete de diagnóstico en:\n"
+            f"{path}\n\n"
+            "Revisa el ZIP antes de compartirlo: no incluye token ni claves, "
+            "pero puede contener rutas o nombres de modelos.",
+        )
+
+    def _on_diagnostics_failed(self, message: str) -> None:
+        self._set_footer_transient(
+            "No se pudo generar el diagnóstico.", error=True, seconds=5
+        )
+        QMessageBox.warning(
+            self,
+            "Diagnóstico no generado",
+            f"No se pudo crear el ZIP de diagnóstico:\n{message}",
+        )
+
+    def _on_diagnostics_finished(self) -> None:
+        worker = self.sender()
+        if worker is self._diagnostics_worker:
+            self._diagnostics_worker = None
+        if worker is not None:
+            worker.deleteLater()
 
     # ------------------------------------------------------------------ #
     # Captura de pantalla por región
@@ -775,6 +1012,11 @@ class BridgeWindow(QMainWindow):
 
     def _dispatch_capture(self, pixmap: QPixmap, method: str, instruction: str) -> None:
         """Guarda temporal y enruta: visión directa o OCR local."""
+        if method == "vision":
+            # El OCR aprovecha la resolución completa; la visión no.
+            from .screenshot import fit_for_vision
+
+            pixmap = fit_for_vision(pixmap)
         path = self._save_capture_temp(pixmap)
         if path is None:
             self._set_footer_transient(

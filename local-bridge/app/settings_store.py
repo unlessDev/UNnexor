@@ -21,11 +21,12 @@ import shutil
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from . import paths
 from .config import Config
 
 log = logging.getLogger("extdator.settings")
 
-SETTINGS_FILE = Path(__file__).resolve().parent / "data" / "user_settings.json"
+SETTINGS_FILE = paths.settings_file()
 
 # Clave → (tipo esperado, requiere reinicio, validador opcional)
 ALLOWED_KEYS: Dict[str, Dict[str, Any]] = {
@@ -43,6 +44,8 @@ ALLOWED_KEYS: Dict[str, Dict[str, Any]] = {
     "window_opacity": {"type": int, "restart": False, "min": 40, "max": 100},
     "always_on_top": {"type": bool, "restart": False},
     "hover_scroll_hook": {"type": bool, "restart": True},
+    "ollama_autostart": {"type": bool, "restart": True},
+    "online_catalog": {"type": bool, "restart": False},
     # Proveedor de IA activo (Fase 4): "ollama" o id de proveedor remoto.
     "provider": {"type": str, "restart": False},
     "remote_model": {"type": str, "restart": False},

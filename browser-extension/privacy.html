@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Privacidad — UNnexor</title>
+<style>
+  :root {
+    --bg: #12141a; --panel: #171a21; --border: #262b36;
+    --text: #e8eaf0; --muted: #9aa3b2; --accent: #7c9cff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.65 "Segoe UI", system-ui, sans-serif;
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 40px 22px 64px; }
+  header { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .logo {
+    width: 40px; height: 40px; border-radius: 10px;
+    display: grid; place-items: center; font-size: 22px;
+    background: linear-gradient(135deg, #24304f, #1a1f2b);
+    border: 1px solid var(--border); color: var(--accent);
+    object-fit: contain; padding: 7px 5px;
+  }
+  h1 { font-size: 26px; margin: 0; }
+  h2 { font-size: 17px; margin: 30px 0 8px; }
+  p, li { color: var(--text); }
+  .sub, .updated { color: var(--muted); }
+  .updated { font-size: 13px; margin-top: 4px; }
+  .card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 14px; padding: 18px 20px; margin-top: 22px;
+  }
+  a { color: var(--accent); }
+  code {
+    background: #0e1016; border: 1px solid var(--border);
+    border-radius: 5px; padding: 1px 5px; font-size: 13px;
+  }
+  ul { padding-left: 22px; }
+  footer {
+    margin-top: 36px; padding-top: 16px; border-top: 1px solid var(--border);
+    color: var(--muted); font-size: 13px;
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <img class="logo" src="assets/unnexor-x.svg" alt="" aria-hidden="true">
+    <div>
+      <h1>Política de privacidad de UNnexor</h1>
+      <div class="updated">Última actualización: 19 de noviembre de 2026</div>
+    </div>
+  </header>
+
+  <p class="sub">
+    UNnexor es un asistente que conecta la extensión del navegador con una
+    aplicación de escritorio que tú ejecutas en tu propio equipo. Esta
+    política explica qué datos trata la extensión y con qué finalidad.
+  </p>
+
+  <div class="card">
+    <strong>Resumen</strong>
+    <ul>
+      <li>No hay cuentas, analítica, publicidad ni rastreadores.</li>
+      <li>El texto que seleccionas se envía únicamente a la aplicación
+        local (<code>127.0.0.1</code>) que tú controlas.</li>
+      <li>Si configuras un proveedor de IA remoto en la aplicación, el texto
+        se enviará a ese proveedor y solo a ese.</li>
+      <li>La extensión no vende ni comparte datos con terceros.</li>
+    </ul>
+  </div>
+
+  <h2>1. Qué datos trata la extensión</h2>
+  <ul>
+    <li><b>Texto seleccionado</b>: solo cuando pulsas el botón X de UNnexor o usas una
+      acción equivalente. No se lee el contenido de la página de forma
+      continua ni se recopila texto que no envíes.</li>
+    <li><b>Dirección de la página de origen</b>: se adjunta a la petición
+      para que la aplicación muestre el contexto de la selección.</li>
+    <li><b>Fecha y hora</b> de la solicitud.</li>
+    <li><b>Configuración local</b>: dirección de la aplicación, token de
+      vinculación y preferencias de interfaz, guardadas en
+      <code>chrome.storage.local</code> de tu navegador.</li>
+  </ul>
+
+  <h2>2. Finalidad y destino</h2>
+  <p>
+    Los datos se usan exclusivamente para enviar la selección a la
+    aplicación UNnexor instalada en tu equipo y mostrar la respuesta en el
+    panel flotante. La extensión se comunica por HTTP con
+    <code>127.0.0.1</code> o <code>localhost</code>; no contacta con
+    servidores propios ni de terceros.
+  </p>
+  <p>
+    La aplicación de escritorio puede usar un modelo local (por ejemplo,
+    Ollama) o un proveedor remoto que tú configures expresamente. En ese
+    segundo caso, el texto se transmite al proveedor elegido bajo su propia
+    política de privacidad. UNnexor no decide ni impone proveedores.
+  </p>
+
+  <h2>3. Qué NO hace la extensión</h2>
+  <ul>
+    <li>No recopila analítica, telemetría, identificadores de usuario ni
+      datos de uso.</li>
+    <li>No muestra anuncios ni vende datos.</li>
+    <li>No accede a tu historial, marcadores, pestañas ni contraseñas.</li>
+    <li>No ejecuta código remoto ni carga scripts de servidores externos.</li>
+    <li>No conserva el texto seleccionado: la aplicación lo procesa en
+      memoria y no lo guarda por defecto.</li>
+  </ul>
+
+  <h2>4. Permisos y por qué son necesarios</h2>
+  <ul>
+    <li><b>Acceso a páginas http/https</b>: la selección puede producirse
+      en cualquier web, por lo que el content script debe estar disponible
+      en todas ellas. Solo actúa cuando hay una selección de texto.</li>
+    <li><b>Almacenamiento</b>: guarda la configuración local y el token de
+      vinculación.</li>
+    <li><b>Acceso a <code>127.0.0.1</code> y <code>localhost</code></b>:
+      necesario para hablar con la aplicación instalada en tu equipo.</li>
+  </ul>
+
+  <h2>5. Conservación y seguridad</h2>
+  <p>
+    La extensión no almacena el texto enviado. La configuración permanece en
+    tu navegador hasta que la borres o desinstales la extensión. La
+    vinculación usa un token generado por la aplicación y guardado localmente;
+    no se comparte con páginas web. La comunicación se limita a la interfaz
+    de loopback del equipo.
+  </p>
+
+  <h2>6. Menores</h2>
+  <p>
+    UNnexor no está dirigida a menores de 13 años ni recopila datos
+    personales de forma consciente.
+  </p>
+
+  <h2>7. Cambios en esta política</h2>
+  <p>
+    Si cambian los datos tratados o su finalidad, se actualizará esta página
+    y la fecha de revisión. La versión vigente se incluye con la extensión y
+    se publicará en la ficha de la tienda cuando el producto se distribuya
+    oficialmente.
+  </p>
+
+  <h2>8. Contacto</h2>
+  <p>
+    Para consultas de privacidad o soporte, utiliza el repositorio del
+    proyecto: <a href="https://github.com/unlessDev/UNnexor/issues"
+    target="_blank" rel="noreferrer">github.com/unlessDev/UNnexor</a>.
+    No se publica una dirección de correo mientras el propietario no la
+    confirme.
+  </p>
+
+  <footer>
+    UNnexor · El procesamiento local es el comportamiento por defecto; los
+    proveedores remotos son opcionales y los eliges tú.
+  </footer>
+</main>
+</body>
+</html>

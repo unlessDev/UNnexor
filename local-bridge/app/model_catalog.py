@@ -139,15 +139,46 @@ _CATALOG_RAW: List[Dict[str, Any]] = [
 PULL_SIZE_UNCERTAINTY = "El tamaño real de descarga puede variar según el tag y las actualizaciones del registry."
 
 
-def recommended_catalog() -> List[Dict[str, Any]]:
-    """Copia del catálogo con la fuente anotada."""
+MAX_ONLINE_ENTRIES = 60
+
+
+def _pulls_value(text: str) -> float:
+    """``"44.9M"`` → 44_900_000 (para ordenar por popularidad)."""
+    raw = (text or "").replace(",", "").strip().upper()
+    factor = {"K": 1e3, "M": 1e6, "B": 1e9}.get(raw[-1:], 1.0)
+    try:
+        return float(raw.rstrip("KMB") or 0) * factor
+    except ValueError:
+        return 0.0
+
+
+def recommended_catalog(include_online: bool = True) -> List[Dict[str, Any]]:
+    """Catálogo curado + modelos de la biblioteca de Ollama (caché local).
+
+    Los curados llevan tamaños verificados; los de la biblioteca en línea
+    llevan tamaños ESTIMADOS (``estimated=True``) y se marcan ``new`` si no
+    estaban en la consulta anterior. Sin duplicados: gana el curado.
+    """
     entries: List[Dict[str, Any]] = []
     for item in _CATALOG_RAW:
         entry = dict(item)
         entry["size_bytes"] = int(entry["size_gb"] * (1024**3))
         entry["source"] = CATALOG_SOURCE
+        entry["estimated"] = False
+        entry["new"] = False
         entries.append(entry)
-    return entries
+    if not include_online:
+        return entries
+    from .ollama_library import catalog_entries, default_catalog
+
+    curated = {e["name"].lower() for e in entries}
+    online = [
+        e
+        for e in catalog_entries(default_catalog().load_cached())
+        if e["name"].lower() not in curated
+    ]
+    online.sort(key=lambda e: (not e["new"], -_pulls_value(e.get("pulls", ""))))
+    return entries + online[:MAX_ONLINE_ENTRIES]
 
 
 def catalog_entry(name: str) -> Optional[Dict[str, Any]]:

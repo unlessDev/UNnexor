@@ -1,0 +1,50 @@
+name: Feature request
+description: Proponer una mejora o funcionalidad
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe el problema antes de proponer la solución. No prometas
+        funcionalidades que dependan de cuentas, certificados o pagos sin
+        indicarlo.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problema o necesidad
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Propuesta
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternativas consideradas
+  - type: dropdown
+    id: component
+    attributes:
+      label: Componente
+      options:
+        - Extensión
+        - Panel de escritorio
+        - Puente/API local
+        - Instalador/distribución
+        - OCR/visión
+        - Proveedores
+        - Documentación
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Comprobaciones
+      options:
+        - label: He buscado una propuesta existente.
+          required: true
+        - label: Entiendo que la implementación requiere revisión y pruebas.
+          required: true

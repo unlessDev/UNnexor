@@ -1,4 +1,4 @@
-/* Extdator — background service worker.
+/* UNnexor — background service worker.
  *
  * Única responsabilidad: recibir la selección del content script y hacer la
  * petición HTTP POST al puente local (FastAPI). Toda la lógica de UI vive en
@@ -11,37 +11,22 @@ const DEFAULT_CONFIG = {
 };
 const REQUEST_TIMEOUT_MS = 15000;
 
-chrome.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener(async (details) => {
   // Garantiza valores por defecto sin sobrescribir la configuración del usuario.
-  chrome.storage.local.get(DEFAULT_CONFIG).then((cfg) => {
-    chrome.storage.local.set(cfg);
-  });
-  // Los content scripts del manifest SOLO se inyectan en páginas cargadas a
-  // partir de ahora. Las pestañas ya abiertas cuando se instala/recarga la
-  // extensión quedarían sin botón ✦ — se re-inyectan aquí de una vez.
-  injectIntoOpenTabs();
+  const cfg = await chrome.storage.local.get(DEFAULT_CONFIG);
+  await chrome.storage.local.set(cfg);
+  // Primer arranque sin vinculación: abrimos el asistente de configuración.
+  // No se re-inyecta en pestañas existentes para no solicitar acceso a
+  // todos los sitios; las páginas nuevas ya reciben el content script.
+  if (details.reason === "install" && !cfg.token) {
+    chrome.runtime.openOptionsPage();
+  }
 });
 
-async function injectIntoOpenTabs() {
-  try {
-    const tabs = await chrome.tabs.query({});
-    for (const tab of tabs) {
-      if (!tab.id || !tab.url || !/^https?:/i.test(tab.url)) {
-        continue; // chrome://, edge://, tienda, PDFs internos: sin permiso
-      }
-      try {
-        await chrome.scripting.executeScript({
-          target: { tabId: tab.id, allFrames: true },
-          files: ["content.js"],
-        });
-      } catch (_) {
-        // Sin host permission para esa pestaña o página especial: se ignora.
-      }
-    }
-  } catch (_) {
-    // chrome.tabs no disponible en este contexto: no es crítico.
-  }
-}
+// El icono de la barra abre la configuración (no hay popup).
+chrome.action.onClicked.addListener(() => {
+  chrome.runtime.openOptionsPage();
+});
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (!msg || msg.type !== "extdator:send-selection") return false;
@@ -93,13 +78,12 @@ async function handleSend(msg, sender) {
     if (name === "TimeoutError" || name === "AbortError") {
       return {
         ok: false,
-        error: "El puente local no respondió (timeout). ¿Ejecutaste scripts\\start.ps1?",
+        error: "La aplicación UNnexor tardó demasiado en responder. Comprueba que siga abierta.",
       };
     }
     return {
       ok: false,
-      error: "No se pudo conectar con el puente local en " + cfg.backendUrl +
-        ". Inicia el servidor con scripts\\start.ps1.",
+      error: "No se pudo conectar con la aplicación UNnexor. Ábrela y vuelve a intentarlo.",
     };
   }
 
@@ -111,25 +95,29 @@ async function handleSend(msg, sender) {
   }
 
   if (resp.ok) {
-    return { ok: true, message: (body && body.message) || "Texto enviado a Ollama." };
+    return { ok: true, message: (body && body.message) || "Texto enviado a la aplicación." };
   }
 
   switch (resp.status) {
     case 401:
       return {
         ok: false,
-        error: "Token inválido. Copia BRIDGE_TOKEN de local-bridge\\.env en las opciones de la extensión.",
+        error: "La vinculación no es válida. Abre UNnexor → ⚙ → Emparejar extensión y vuelve a conectar.",
       };
     case 403:
-      return { ok: false, error: "Origen no autorizado por el puente local." };
+      return {
+        ok: false,
+        error: "La aplicación rechazó la conexión. Vuelve a emparejar la extensión desde Opciones.",
+      };
     case 413:
-      return { ok: false, error: "El texto es demasiado extenso para el límite configurado." };
+      return { ok: false, error: "El texto es demasiado extenso. Selecciona un fragmento más corto." };
     case 429:
       return { ok: false, error: "Demasiadas solicitudes seguidas. Espera unos segundos." };
     default:
       return {
         ok: false,
-        error: (body && body.error) || "Error HTTP " + resp.status + " del puente local.",
+        error: (body && (body.detail || body.error)) ||
+          "La aplicación devolvió un error (" + resp.status + ").",
       };
   }
 }

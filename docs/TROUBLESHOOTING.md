@@ -1,4 +1,4 @@
-# Solución de problemas (Extdator)
+# Solución de problemas (UNnexor)
 
 ## La extensión no conecta con el puente
 
@@ -27,6 +27,32 @@
   tu `ALLOWED_ORIGINS` no incluye `chrome-extension://<TU_ID>`. Copia el ID
   desde las opciones de la extensión y ponlo en el `.env`.
 
+## Instalador, SmartScreen y desinstalación
+
+**SmartScreen muestra "aplicación desconocida"**
+
+El instalador no está firmado con Authenticode. Verifica el SHA-256 con el
+`SHA256SUMS.txt` que acompaña al instalador; si coincide, elige
+**Más información > Ejecutar de todos modos**. No ejecutes un instalador
+cuya suma no coincida.
+
+**Quiero borrar el token y las claves API sin desinstalar**
+
+```powershell
+& "$env:LOCALAPPDATA\Programs\UNnexor\UNnexor.exe" --purge-secrets
+```
+
+Elimina las claves de proveedores del Administrador de credenciales,
+vacía `BRIDGE_TOKEN` y retira `*_API_KEY` del `.env`; conserva el resto de
+ajustes. Al volver a abrir UNnexor se genera un token nuevo y hay que
+volver a emparejar la extensión.
+
+**Al desinstalar se conservan mis datos**
+
+Es el comportamiento por defecto. Si querías borrarlos, desinstala de nuevo
+(o usa Configuración > Aplicaciones) y elige la limpieza completa. También
+puedes borrar manualmente `%LOCALAPPDATA%\Extdator`.
+
 ## Ollama
 
 **"No se pudo conectar con Ollama" / indicador rojo**
@@ -52,11 +78,11 @@
   `Get-Process -Id <PID>`.
 * Si es otra aplicación, cámbialo en el `.env` (`BRIDGE_PORT=5001`) y
   actualiza la URL en las opciones de la extensión.
-* Si quedó un Extdator huérfano: `scripts\stop.ps1`.
+* Si quedó un UNnexor huérfano: `scripts\stop.ps1`.
 
 ## El Hover Scroll no funciona (rueda sobre el panel sin clic)
 
-Extdator usa tres capas; revisa cuál falta:
+UNnexor usa tres capas; revisa cuál falta:
 
 1. **Hook interno** (`HOVER_SCROLL_HOOK=1`, por defecto activo): es el
    mecanismo principal y funciona aunque el sistema esté configurado al
@@ -76,12 +102,11 @@ Verificación automática:
 
 Verificado con diagnóstico CDP sobre Chromium real (v1.1.0, `tests-manual/`):
 
-**1. Pestañas abiertas ANTES de instalar/recargar la extensión** (causa más
+**1. Pestañas abiertas ANTES de instalar la extensión** (causa más
 común). Los content scripts de MV3 solo se inyectan en páginas cargadas a
-partir de ese momento. Desde v1.1.0 no hace falta recargar nada: al instalar
-(o recargar) la extensión, su service worker re-inyecta el content script en
-todas las pestañas http/https ya abiertas (`chrome.scripting` en
-`onInstalled`). Si usas la v1.0.0: recarga las pestañas o actualiza a v1.1.0.
+partir de ese momento. Para no solicitar permisos de host globales, la
+extensión no re-inyecta en pestañas existentes: recarga esas pestañas (F5)
+o abre una nueva. Las páginas nuevas reciben el script automáticamente.
 
 **2. Contenido dentro de iframes** (Google Docs, algunos foros/editores).
 Desde v1.1.0 el content script corre con `all_frames: true`; en la v1.0.0
@@ -95,7 +120,7 @@ manifest: solo `http://` y `https://`).
 **4. Selección vacía o de solo espacios** — por diseño no hay botón.
 
 **5. La extensión no está activa en ese navegador** — verifica en
-`chrome://extensions` que la tarjeta de Extdator esté activada y que no haya
+`chrome://extensions` que la tarjeta de UNnexor esté activada y que no haya
 errores ("Errores" en rojo). Tras copiar/pegar archivos, usa el botón de
 recargar (⟳) de la tarjeta.
 
@@ -171,7 +196,7 @@ del botón derecho no está implementado).
 
 **No aparece la opción OCR**
 
-* Ningún motor OCR está instalado. Instala uno (ver abajo). Extdator
+* Ningún motor OCR está instalado. Instala uno (ver abajo). UNnexor
   nunca los instala por su cuenta.
 
 **Los archivos `extdator_capture_*.png` se quedan en %TEMP%**
@@ -254,7 +279,7 @@ $$\alpha \leq \beta \Rightarrow \pi$$    →   α ≤ β ⇒ π
 
 **¿Dónde está mi clave?**
 
-* En el Windows Credential Manager (servicio `Extdator`, cuenta
+* En el Windows Credential Manager (servicio `UNnexor`, cuenta
   `provider-key:<id>`). `data\providers.json` nunca contiene claves.
 
 ## Los ajustes de la UI no se aplican (v1.2.0)
@@ -282,6 +307,27 @@ $$\alpha \leq \beta \Rightarrow \pi$$    →   α ≤ β ⇒ π
 | 422 | JSON inválido / texto vacío | Reintenta la selección. |
 | 429 | Límite de tasa | Espera unos segundos (`Retry-After`). |
 | 503 | Cola saturada / Ollama caído | Espera la generación o arranca Ollama. |
+
+## Paquete de diagnóstico para soporte (v1.2.0)
+
+1. Abre el menú **⚙ → Exportar diagnóstico…**.
+2. Elige dónde guardar el ZIP y espera el aviso de confirmación.
+3. Revisa `diagnostico.txt` y adjunta el ZIP a tu informe junto con una
+   descripción de lo que ocurrió.
+
+Incluye versión, SO, rutas normalizadas, configuración sin secretos, estado
+de Ollama/modelo, emparejamiento (solo sí/no), recuento de historial y logs
+redactados. **No incluye** el token del puente, claves API, `.env`,
+`user_settings.json` completo, historial de conversación ni capturas.
+
+La redacción elimina tokens, claves, correos, rutas de usuario, IDs de
+extensión y parámetros de URL. Si tienes `LOG_PRIVACY=0`, el exportador
+omite las líneas de selección/imagen conocidas, pero revisa siempre el ZIP
+antes de compartirlo. Para un diagnóstico por consola, sin interfaz:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\check_environment.ps1
+```
 
 ## Diagnóstico rápido
 

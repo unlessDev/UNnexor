@@ -21,7 +21,6 @@ from PySide6.QtWidgets import (
     QDoubleSpinBox,
     QFormLayout,
     QFrame,
-    QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -36,7 +35,7 @@ from PySide6.QtWidgets import (
 )
 
 from ..config import Config
-from ..ollama_client import OllamaClient, OllamaError
+from ..ollama_client import OllamaClient
 from ..settings_store import ALLOWED_KEYS
 from .styles import ACCENT, BORDER, MUTED, PANEL, TEXT
 from .workers import HardwareWorker, PullWorker
@@ -167,7 +166,7 @@ class ModelSelectorDialog(QDialog):
         self, ollama: OllamaClient, current_model: str, parent: Optional[QWidget] = None
     ) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Modelos de IA — Extdator")
+        self.setWindowTitle("Modelos de IA — UNnexor")
         self.setMinimumSize(560, 560)
         self.setStyleSheet(
             f"QDialog {{ background: #12141a; color: {TEXT}; }}"
@@ -225,6 +224,19 @@ class ModelSelectorDialog(QDialog):
         self._status = QLabel("Detectando hardware y catálogo de Ollama…")
         self._status.setStyleSheet(f"color: {MUTED}; font-size: 10px;")
         layout.addWidget(self._status)
+        library_row = QHBoxLayout()
+        self._library = QLabel("")
+        self._library.setWordWrap(True)
+        self._library.setStyleSheet(f"color: {MUTED}; font-size: 10px;")
+        self._refresh_btn = QPushButton("🔄 Actualizar catálogo")
+        self._refresh_btn.setToolTip(
+            "Consulta ollama.com/library y la última versión de Ollama. "
+            "No descarga ningún modelo."
+        )
+        self._refresh_btn.clicked.connect(self._refresh_library)
+        library_row.addWidget(self._library, 1)
+        library_row.addWidget(self._refresh_btn)
+        layout.addLayout(library_row)
 
         self._scroll = QScrollArea()
         self._scroll.setWidgetResizable(True)
@@ -251,7 +263,44 @@ class ModelSelectorDialog(QDialog):
         self._catalog_data = data.get("catalog", [])
         hw = data.get("hardware", {})
         self._status.setText(self._hw_summary(hw))
+        self._library.setText(self._library_summary(data.get("library") or {}))
         self._build_rows()
+
+    @staticmethod
+    def _library_summary(info: dict) -> str:
+        status = info.get("status", "unavailable")
+        date = (info.get("fetched_at") or "")[:16].replace("T", " ")
+        if status == "online":
+            text = f"Catálogo de ollama.com actualizado ({date}, {info.get('models')} modelos"
+            text += f", {info['new']} nuevos)." if info.get("new") else ")."
+        elif status == "cache":
+            text = f"Catálogo sin conexión: se muestra la copia del {date}."
+        else:
+            text = "Catálogo en línea no disponible: solo se muestran los recomendados."
+        message = info.get("version_message", "")
+        if info.get("version_state") == "update":
+            message = "⬆ " + message
+        return f"{text} {message}".strip()
+
+    def _refresh_library(self) -> None:
+        from .workers import CatalogRefreshWorker
+
+        self._refresh_btn.setEnabled(False)
+        self._library.setText("Consultando ollama.com…")
+        worker = CatalogRefreshWorker(self)
+        worker.finished_refresh.connect(self._after_refresh)
+        self._catalog_worker = worker
+        worker.start()
+
+    def _after_refresh(self, message: str) -> None:
+        self._refresh_btn.setEnabled(True)
+        self._library.setText(message)
+        self._hardware_worker = HardwareWorker(
+            self._ollama, configured_model=self._current
+        )
+        self._hardware_worker.ready.connect(self._populate)
+        self._hardware_worker.failed.connect(self._on_load_failed)
+        self._hardware_worker.start()
 
     def _on_load_failed(self, message: str) -> None:
         self._status.setText(f"⚠ {message}")
@@ -292,15 +341,29 @@ class ModelSelectorDialog(QDialog):
             key=lambda e: TIER_ORDER.get(e["assessment"]["tier"], 9),
         ):
             self._add_installed_row(entry)
+        curated = [e for e in self._catalog_data if not e.get("estimated")]
+        online = [e for e in self._catalog_data if e.get("estimated")]
         self._add_section("Recomendados para descargar")
-        if not self._catalog_data:
+        if not curated:
             empty = QLabel("Todo el catálogo recomendado ya está instalado.")
             empty.setStyleSheet(f"color: {MUTED}; font-size: 10px;")
             self._vbox.insertWidget(self._vbox.count() - 1, empty)
         else:
             for entry in sorted(
-                self._catalog_data,
+                curated,
                 key=lambda e: TIER_ORDER.get(e["assessment"]["tier"], 9),
+            ):
+                self._add_catalog_row(entry)
+        if online:
+            self._add_section(
+                "Biblioteca de Ollama (en línea · tamaños estimados · 🆕 nuevos)"
+            )
+            for entry in sorted(
+                online,
+                key=lambda e: (
+                    not e.get("new"),
+                    TIER_ORDER.get(e["assessment"]["tier"], 9),
+                ),
             ):
                 self._add_catalog_row(entry)
         self._apply_filters()
@@ -308,7 +371,7 @@ class ModelSelectorDialog(QDialog):
     def _clear_layout(self) -> None:
         while self._vbox.count() > 1:
             item = self._vbox.takeAt(0)
-            widget = item.widget()
+            widget = item.widget() if item is not None else None
             if widget is not None:
                 widget.deleteLater()
 
@@ -361,10 +424,13 @@ class ModelSelectorDialog(QDialog):
             extras.append("visión")
         if entry.get("thinking"):
             extras.append("razonamiento")
+        estimated = " (estimado)" if entry.get("estimated") else ""
         meta = (
-            f"~{entry['size_gb']:.1f} GB · {entry['params_b']}B"
+            ("🆕 " if entry.get("new") else "")
+            + f"~{entry['size_gb']:.1f} GB{estimated} · {entry['params_b']:g}B"
             + (f" · {' · '.join(extras)}" if extras else "")
             + f" · {entry['family']}"
+            + (f" · {entry['pulls']} descargas" if entry.get("pulls") else "")
         )
         impossible = assessment["tier"] == "imposible"
         explanation = f"{entry['description']} — " + (
@@ -474,7 +540,7 @@ class ModelSelectorDialog(QDialog):
             row.status.setText("error")
         self._status.setText(f"⚠ {name}: {message}")
 
-    def closeEvent(self, event) -> None:  # noqa: N802 (PySide)
+    def closeEvent(self, event) -> None:
         for worker in self._pull_workers:
             if worker.isRunning():
                 worker.stop()
@@ -494,7 +560,7 @@ class SettingsDialog(QDialog):
 
     def __init__(self, cfg: Config, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Ajustes — Extdator")
+        self.setWindowTitle("Ajustes — UNnexor")
         self.setMinimumSize(520, 500)
         self.setStyleSheet(
             f"QDialog {{ background: #12141a; color: {TEXT}; }}"
@@ -540,30 +606,37 @@ class SettingsDialog(QDialog):
         step: float = 1,
         decimals: int = 0,
         suffix: str = "",
-    ) -> QWidget:
+    ) -> QSpinBox | QDoubleSpinBox:
         spec = ALLOWED_KEYS.get(key, {})
+        widget: QSpinBox | QDoubleSpinBox
         if decimals:
-            widget = QDoubleSpinBox()
-            widget.setDecimals(decimals)
-            widget.setSingleStep(step)
+            double = QDoubleSpinBox()
+            double.setDecimals(decimals)
+            double.setSingleStep(step)
+            double.setRange(min_v, max_v)
+            widget = double
         else:
-            widget = QSpinBox()
-            widget.setSingleStep(int(step))
-        widget.setRange(min_v, max_v)
+            integer = QSpinBox()
+            integer.setSingleStep(int(step))
+            integer.setRange(int(min_v), int(max_v))
+            widget = integer
         widget.setSuffix(suffix)
         if spec.get("restart"):
-            widget.setToolTip("Requiere reiniciar Extdator para aplicarse.")
+            widget.setToolTip("Requiere reiniciar UNnexor para aplicarse.")
         self._widgets[key] = widget
         return widget
 
     def _check(self, key: str, label: str) -> QCheckBox:
         widget = QCheckBox(label)
+        # Sin esto las casillas se mostraban desmarcadas y al guardar se
+        # desactivaban opciones activas (p. ej. "Siempre visible").
+        widget.setChecked(bool(getattr(self._cfg, key, False)))
         if ALLOWED_KEYS.get(key, {}).get("restart"):
-            widget.setToolTip("Requiere reiniciar Extdator para aplicarse.")
+            widget.setToolTip("Requiere reiniciar UNnexor para aplicarse.")
         self._widgets[key] = widget
         return widget
 
-    def _text(self, key: str, placeholder: str = "") -> QWidget:
+    def _text(self, key: str, placeholder: str = "") -> QLineEdit:
         widget = QLineEdit()
         widget.setPlaceholderText(placeholder)
         self._widgets[key] = widget
@@ -634,6 +707,23 @@ class SettingsDialog(QDialog):
         keep = self._text("ollama_keep_alive", "5m / 1h / -1")
         keep.setText(self._cfg.ollama_keep_alive)
         form.addRow("Retención del modelo en memoria", keep)
+        autostart = self._check(
+            "ollama_autostart", "Iniciar Ollama al abrir UNnexor si no está abierto"
+        )
+        autostart.setToolTip(
+            "Si Ollama ya está abierto no se toca. Si lo inicia UNnexor, se "
+            "detiene al cerrar UNnexor. Requiere reiniciar UNnexor."
+        )
+        form.addRow("", autostart)
+        online = self._check(
+            "online_catalog",
+            "Consultar el catálogo de ollama.com y la versión de Ollama al iniciar",
+        )
+        online.setToolTip(
+            "Solo lectura: lista modelos nuevos y avisa si hay una versión más "
+            "reciente de Ollama. Nunca descarga ni instala nada por sí solo."
+        )
+        form.addRow("", online)
         return tab
 
     def _tab_avanzado(self) -> QWidget:
@@ -672,11 +762,10 @@ class SettingsDialog(QDialog):
         changes: Dict[str, Any] = {}
         extra = dict(self._cfg.ollama_extra_options or {})
         for key, widget in self._widgets.items():
-            if key == "_num_ctx":
-                extra["num_ctx"] = int(widget.value())
-                continue
-            if key == "_num_predict":
-                extra["num_predict"] = int(widget.value())
+            if key in ("_num_ctx", "_num_predict") and isinstance(
+                widget, (QSpinBox, QDoubleSpinBox)
+            ):
+                extra[key[1:]] = int(widget.value())
                 continue
             if isinstance(widget, QCheckBox):
                 changes[key] = widget.isChecked()
@@ -704,7 +793,7 @@ class SettingsDialog(QDialog):
             self,
             "Restaurar ajustes",
             "Se borrarán tus ajustes guardados y volverán los valores del "
-            "archivo .env.\n\n¿Continuar? (requiere reiniciar Extdator)",
+            "archivo .env.\n\n¿Continuar? (requiere reiniciar UNnexor)",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
         if answer == QMessageBox.StandardButton.Yes:
@@ -721,7 +810,7 @@ class PairingDialog(QDialog):
     def __init__(self, pairing, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self._pairing = pairing
-        self.setWindowTitle("Emparejar extensión — Extdator")
+        self.setWindowTitle("Emparejar extensión — UNnexor")
         self.setMinimumWidth(380)
         self.setStyleSheet(
             f"QDialog {{ background: #12141a; color: {TEXT}; }}"

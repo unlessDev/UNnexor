@@ -1,0 +1,4 @@
+# Herramientas de build (no son dependencias de ejecución)
+# Uso: .venv\Scripts\python.exe -m pip install -r requirements-build.txt
+pyinstaller>=6.10,<7
+pillow>=10,<14

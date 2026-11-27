@@ -1,0 +1,72 @@
+name: Bug report
+description: Reportar un fallo reproducible de UNnexor
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Gracias por reportar. No incluyas tokens, claves API, capturas con
+        datos personales ni logs que contengan texto seleccionado.
+  - type: input
+    id: version
+    attributes:
+      label: Versión de UNnexor
+      placeholder: "2.0.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Componente
+      options:
+        - Extensión (Chrome/Brave/Edge)
+        - Panel de escritorio
+        - Puente/API local
+        - Instalador
+        - OCR/visión
+        - Proveedores remotos
+        - Documentación
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Entorno
+      placeholder: "Windows 11 23H2 · Chrome 141 · Ollama 0.40.16"
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Pasos de reproducción
+      placeholder: "1. ...\n2. ...\n3. ..."
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Resultado esperado
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Resultado actual
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs o capturas (sin secretos)
+      description: Revisa que no haya tokens, claves ni datos personales.
+      render: text
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Comprobaciones
+      options:
+        - label: He revisado que no incluyo secretos ni datos personales.
+          required: true
+        - label: He buscado un issue existente con el mismo problema.
+          required: true

@@ -27,8 +27,8 @@ else:
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from PySide6.QtCore import Qt  # noqa: E402
-from PySide6.QtWidgets import (  # noqa: E402
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (
     QApplication,
     QLabel,
     QTextBrowser,
@@ -36,8 +36,8 @@ from PySide6.QtWidgets import (  # noqa: E402
     QWidget,
 )
 
-from app.desktop.styles import APP_QSS  # noqa: E402
-from app.desktop.widgets import AssistantMessage, UserMessage  # noqa: E402
+from app.desktop.styles import APP_QSS
+from app.desktop.widgets import AssistantMessage, UserMessage
 
 ANSWER = """\
 ## Resolución paso a paso

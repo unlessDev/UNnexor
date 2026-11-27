@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import base64
 import json
-from pathlib import Path
 
 import httpx
 import pytest
@@ -270,7 +269,7 @@ def test_pair_confirm_blocks_web_origins(stack):
 
 def test_pair_confirm_rate_limited(stack):
     stack["pairing"].current_code()
-    for attempt in range(5):
+    for _attempt in range(5):
         stack["client"].post(
             "/api/pair/confirm", headers=EXT_ORIGIN, json={"code": "000000"}
         )

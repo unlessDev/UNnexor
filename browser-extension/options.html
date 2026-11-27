@@ -2,32 +2,108 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Extdator — Configuración</title>
+  <title>UNnexor — Configuración</title>
   <style>
     :root {
       --bg: #12141a; --panel: #171a21; --panel2: #0e1016; --border: #262b36;
-      --text: #d6dae2; --muted: #8a93a5; --accent: #8b7cff;
+      --text: #d6dae2; --muted: #8a93a5; --accent: #3a8bff;
+      --cyan: #00e5ff; --blue: #2a4bff; --violet: #7a1cff; --magenta: #f205fc;
+      --brand: linear-gradient(90deg, var(--cyan), var(--blue) 35%, var(--violet) 65%, var(--magenta));
       --green: #3ddc97; --red: #ff6b6b; --amber: #ffd166;
     }
     * { box-sizing: border-box; }
     body {
       margin: 0; padding: 0;
-      background: var(--bg); color: var(--text);
+      background:
+        radial-gradient(900px 420px at 15% -10%, rgba(0,229,255,.10), transparent 60%),
+        radial-gradient(800px 420px at 95% 0%, rgba(242,5,252,.10), transparent 60%),
+        var(--bg);
+      color: var(--text);
       font: 14px/1.55 "Segoe UI", Roboto, sans-serif;
       min-height: 100vh;
     }
     .wrap { max-width: 660px; margin: 0 auto; padding: 28px 22px 40px; }
 
-    header { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
-    .logo {
-      width: 38px; height: 38px; border-radius: 10px; flex: none;
-      display: grid; place-items: center;
-      background: linear-gradient(135deg, #1c1f2e, #14161f);
-      border: 1px solid rgba(139,124,255,.4);
-      color: var(--accent); font-size: 18px;
+    /* -------- Héroe animado: la X + UNnexor by UnlessDev -------- */
+    .hero {
+      position: relative; overflow: hidden; text-align: center;
+      padding: 30px 20px 24px; margin-bottom: 22px; border-radius: 18px;
+      background: linear-gradient(160deg, rgba(22,26,46,.95), rgba(7,8,15,.95));
+      border: 1px solid rgba(255,255,255,.06);
+      box-shadow: 0 20px 50px rgba(0,0,0,.45);
     }
-    h1 { font-size: 19px; margin: 0; letter-spacing: .3px; }
-    .sub { color: var(--muted); font-size: 12.5px; margin: 0 0 22px 50px; }
+    .hero::before {               /* borde de luz que gira alrededor */
+      content: ""; position: absolute; inset: -2px; z-index: 0;
+      background: conic-gradient(from var(--angle), transparent 0 70%,
+        var(--cyan), var(--violet), var(--magenta), transparent 98%);
+      animation: spin 6s linear infinite;
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor; mask-composite: exclude;
+      padding: 1.5px; border-radius: 18px;
+    }
+    .hero::after {                /* rejilla tecnológica tenue */
+      content: ""; position: absolute; inset: 0; z-index: 0; opacity: .35;
+      background-image:
+        linear-gradient(rgba(58,75,255,.12) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(58,75,255,.12) 1px, transparent 1px);
+      background-size: 26px 26px;
+      -webkit-mask-image: radial-gradient(ellipse at center, #000 20%, transparent 75%);
+              mask-image: radial-gradient(ellipse at center, #000 20%, transparent 75%);
+      animation: drift 18s linear infinite;
+    }
+    .hero > * { position: relative; z-index: 1; }
+    @property --angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+    @keyframes spin { to { --angle: 360deg; } }
+    @keyframes drift { to { background-position: 26px 26px, 26px 26px; } }
+
+    .mark {
+      width: 132px; height: auto; display: block; margin: 0 auto 6px;
+      filter: drop-shadow(0 0 14px rgba(0,229,255,.35)) drop-shadow(0 0 22px rgba(242,5,252,.25));
+      animation: float 5s ease-in-out infinite, intro .9s cubic-bezier(.2,.9,.2,1.2) both;
+    }
+    @keyframes float { 50% { transform: translateY(-6px) rotate(-1.5deg); } }
+    @keyframes intro { from { opacity: 0; transform: scale(.6) rotate(-12deg); } }
+
+    .wordmark {
+      margin: 4px 0 0; font: 800 46px/1.05 "Segoe UI", "Montserrat", Roboto, sans-serif;
+      letter-spacing: 1px;
+    }
+    .wordmark .un { color: #f2f4fa; font-style: italic; letter-spacing: -1px; }
+    .wordmark .nexor {
+      background: var(--brand); background-size: 220% 100%;
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+      animation: shimmer 4.5s ease-in-out infinite;
+    }
+    @keyframes shimmer { 50% { background-position: 100% 0; } }
+    .wordmark span { display: inline-block; animation: rise .7s cubic-bezier(.2,.9,.2,1) both; }
+    .wordmark .nexor { animation: rise .7s .15s cubic-bezier(.2,.9,.2,1) both, shimmer 4.5s 1s ease-in-out infinite; }
+    @keyframes rise { from { opacity: 0; transform: translateY(14px); filter: blur(6px); } }
+
+    .tagline {
+      display: flex; align-items: center; justify-content: center; gap: 12px;
+      margin: 10px 0 4px; font: 600 12px/1 "Segoe UI", Roboto, sans-serif;
+      letter-spacing: 7px; color: #c9d3ff;
+    }
+    .tagline::before, .tagline::after {
+      content: ""; height: 2px; width: 64px; border-radius: 2px;
+      background: linear-gradient(90deg, transparent, var(--cyan));
+    }
+    .tagline::after { background: linear-gradient(90deg, var(--magenta), transparent); }
+    .byline { margin-top: 12px; font-size: 13px; color: var(--muted); }
+    .byline b {
+      color: #fff; font-weight: 700; letter-spacing: .4px;
+      text-shadow: 0 0 12px rgba(122,28,255,.7);
+    }
+    .byline b::after {            /* cursor de terminal que parpadea */
+      content: "▍"; margin-left: 2px; color: var(--cyan);
+      animation: blink 1.05s steps(1) infinite;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+    .sub { color: var(--muted); font-size: 12.5px; margin: 12px 0 0; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+    }
 
     /* -------- Stepper -------- */
     .stepper { display: flex; gap: 6px; margin: 0 0 20px; }
@@ -36,7 +112,8 @@
       padding: 7px 4px; border-radius: 8px;
       border: 1px solid var(--border); background: var(--panel);
     }
-    .step-pill.active { color: var(--text); border-color: var(--accent); }
+    .step-pill.active { color: #fff; border-color: transparent;
+      background: linear-gradient(var(--panel), var(--panel)) padding-box, var(--brand) border-box; }
     .step-pill.done { color: var(--green); border-color: rgba(61,220,151,.45); }
 
     .card {
@@ -72,9 +149,11 @@
     button:hover:not(:disabled) { border-color: var(--accent); }
     button:disabled { opacity: .45; cursor: not-allowed; }
     button.primary {
-      background: linear-gradient(135deg, #6f61e8, #8b7cff);
-      border-color: #6f61e8; color: #fff;
+      background: linear-gradient(135deg, #00b8f0 0%, #3a2bff 55%, #c010f0 100%);
+      border-color: transparent; color: #fff;
+      box-shadow: 0 6px 18px rgba(58,43,255,.35);
     }
+    button.primary:hover:not(:disabled) { filter: brightness(1.1); }
     button.ghost { background: transparent; }
     button.danger:hover:not(:disabled) { border-color: var(--red); color: var(--red); }
     .row { display: flex; gap: 10px; align-items: center; }
@@ -124,7 +203,7 @@
       left: 3px; top: 3px; background: var(--muted); border-radius: 50%;
       transition: .18s;
     }
-    .switch input:checked + .slider { background: rgba(139,124,255,.25); border-color: var(--accent); }
+    .switch input:checked + .slider { background: rgba(0,229,255,.18); border-color: var(--cyan); }
     .switch input:checked + .slider:before { transform: translateX(18px); background: var(--accent); }
 
     details.adv {
@@ -152,11 +231,13 @@
 <body>
 <div class="wrap">
 
-  <header>
-    <div class="logo">✦</div>
-    <h1>Extdator</h1>
+  <header class="hero">
+    <img class="mark" src="assets/unnexor-x.svg" alt="" />
+    <h1 class="wordmark" aria-label="UNnexor"><span class="un">UN</span><span class="nexor">nexor</span></h1>
+    <div class="tagline">AI BRIDGE</div>
+    <div class="byline">by <b>UnlessDev</b></div>
+    <p class="sub">Tu IA local: tus modelos en tu equipo y las respuestas en un panel flotante.</p>
   </header>
-  <p class="sub">Tu asistente de IA local: Ollama en tu equipo y respuestas en un panel flotante.</p>
 
   <div class="stepper">
     <div class="step-pill" data-pill="1">1 · Bienvenida</div>
@@ -168,11 +249,11 @@
   <!-- ================= PASO 1: bienvenida ================= -->
   <section class="step active" data-step="1">
     <div class="card">
-      <h2>Bienvenido a Extdator</h2>
-      <p>Así funciona (todo queda en tu equipo):</p>
+      <h2>Bienvenido a UNnexor</h2>
+      <p>Así funciona (por defecto, todo queda en tu equipo):</p>
       <ul class="features">
-        <li><b>Seleccionas texto</b> en cualquier web y pulsas el botón ✦.</li>
-        <li><b>La aplicación de escritorio</b> (Extdator Bridge) envía el texto a tu modelo de IA.</li>
+        <li><b>Seleccionas texto</b> en cualquier web y pulsas el botón con la <b>X</b> de UNnexor.</li>
+        <li><b>La aplicación de escritorio</b> envía el texto a tu modelo de IA.</li>
         <li><b>La respuesta aparece</b> en un panel flotante encima de tu navegador.</li>
       </ul>
       <p style="margin-top:14px">Este asistente conecta la extensión con la aplicación de escritorio
@@ -188,7 +269,7 @@
   <section class="step" data-step="2">
     <div class="card">
       <h2>Conectar con la aplicación de escritorio</h2>
-      <p>Si Extdator (el panel flotante) está abierto, en su menú ⚙ elige
+      <p>Si UNnexor (el panel flotante) está abierto, en su menú ⚙ elige
         <b>«Emparejar extensión…»</b> y copia el código de 6 dígitos que aparece.</p>
       <div class="field" style="margin-top:14px">
         <label for="pairCode">Código de emparejamiento</label>
@@ -205,11 +286,11 @@
       <summary>Conexión manual avanzada (pegar token a mano)</summary>
       <div style="margin-top:12px">
         <div class="field">
-          <label for="backendUrl">Dirección del puente local</label>
+          <label for="backendUrl">Dirección de la aplicación local</label>
           <input id="backendUrl" type="text" placeholder="http://127.0.0.1:5000" />
         </div>
         <div class="field">
-          <label for="token">Token de acceso (BRIDGE_TOKEN del archivo .env)</label>
+          <label for="token">Token de acceso (solo conexión manual avanzada)</label>
           <div class="row">
             <input id="token" type="password" placeholder="Pega aquí el token…" class="grow" />
             <button id="eyeBtn" class="eye-btn ghost" title="Mostrar u ocultar el token">👁</button>
@@ -230,8 +311,8 @@
   <section class="step" data-step="3">
     <div class="card">
       <h2>Diagnóstico de la conexión</h2>
-      <p>Comprobaremos que el puente local está activo, que tu token funciona
-        y que la comunicación con la extensión llega de punta a punta.</p>
+      <p>Comprobaremos que la aplicación de escritorio está activa, que la
+        vinculación funciona y que el envío llega de punta a punta.</p>
       <button id="diagBtn" class="primary">Ejecutar diagnóstico</button>
       <div style="margin-top:14px">
         <div class="statusline wait" id="stBridge">
@@ -265,7 +346,7 @@
 
       <div class="toggle-row">
         <div class="grow">
-          <div class="toggle-title">Mostrar el botón ✦ al seleccionar texto</div>
+          <div class="toggle-title">Mostrar el botón X de UNnexor al seleccionar texto</div>
           <div class="toggle-desc">Si lo desactivas, el botón no aparecerá; puedes reactivarlo aquí mismo en cualquier momento.</div>
         </div>
         <label class="switch">
@@ -276,8 +357,8 @@
     </div>
     <div class="card" id="finalCard" style="display:none; border-color: rgba(61,220,151,.5)">
       <h2 style="color:var(--green)">✓ Todo listo</h2>
-      <p>Extdator está conectado y verificado. Selecciona texto en cualquier web
-        y pulsa ✦ — la respuesta llegará al panel flotante.</p>
+      <p>UNnexor está conectado y verificado. Selecciona texto en cualquier web
+        y pulsa la X — la respuesta llegará al panel flotante.</p>
     </div>
     <div class="nav">
       <button class="ghost" data-goto="3">← Atrás</button>
@@ -286,8 +367,8 @@
   </section>
 
   <div class="foot">
-    Extdator · procesamiento 100% local con Ollama ·
-    <a href="https://ollama.com" target="_blank" rel="noreferrer">ollama.com</a>
+    <b>UNnexor AI Bridge</b> · by UnlessDev · procesamiento local por defecto; los proveedores remotos son
+    opcionales · <a href="privacy.html" target="_blank" rel="noreferrer">Privacidad</a>
   </div>
 </div>
 

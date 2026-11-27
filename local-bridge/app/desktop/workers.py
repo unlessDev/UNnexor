@@ -10,28 +10,29 @@
 
 from __future__ import annotations
 
-import base64
 import logging
 import os
 import time
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from PySide6.QtCore import QThread, Signal
+from PySide6.QtCore import QObject, QThread, Signal
 
 from .. import ocr_manager
 from ..config import Config
 from ..conversation import Conversation
+from ..diagnostics import write_diagnostics_archive
 from ..hardware import detect as detect_hardware
 from ..hardware import gpu_acceleration_active
 from ..model_catalog import recommended_catalog
 from ..model_evaluator import assess_model
+from ..ocr_manager import OCREngineError, OCRNotAvailable
 from ..ollama_client import (
     GenerationCancelled,
     ModelNotFoundError,
     OllamaClient,
     OllamaError,
 )
-from ..ocr_manager import OCREngineError, OCRNotAvailable
 from ..queue_manager import (
     Bus,
     ClearConversation,
@@ -62,7 +63,7 @@ class GenerationWorker(QThread):
         bus: Bus,
         state: RuntimeState,
         ollama: OllamaClient,
-        parent: Optional[QThread] = None,
+        parent: Optional[QObject] = None,
     ) -> None:
         super().__init__(parent)
         self._cfg = cfg
@@ -106,10 +107,10 @@ class GenerationWorker(QThread):
         if self._state.consume_clear():
             self._do_clear()
 
-        self._conversation.add_user(request.text)
+        self._conversation.add_user(request.prompt())
         self._state.set_history(len(self._conversation))
         self._state.set_generating(True)
-        self.queryStarted.emit(request.text)
+        self.queryStarted.emit(request.display())
 
         def on_chunk(delta: str) -> None:
             self.chunkReceived.emit(delta)
@@ -221,7 +222,7 @@ class GenerationWorker(QThread):
                 )
                 self.generationFailed.emit(hint, "model")
                 return
-            messages = (
+            messages: List[Dict[str, Any]] = (
                 [{"role": "system", "content": self._conversation.system_prompt}]
                 if self._conversation.system_prompt
                 else []
@@ -304,7 +305,7 @@ class StatusWorker(QThread):
     INTERVAL_S = 4.0
 
     def __init__(
-        self, cfg: Config, ollama: OllamaClient, parent: Optional[QThread] = None
+        self, cfg: Config, ollama: OllamaClient, parent: Optional[QObject] = None
     ) -> None:
         super().__init__(parent)
         self._cfg = cfg
@@ -358,7 +359,7 @@ class HardwareWorker(QThread):
         self,
         ollama: OllamaClient,
         configured_model: str = "",
-        parent: Optional[QThread] = None,
+        parent: Optional[QObject] = None,
     ) -> None:
         super().__init__(parent)
         self._ollama = ollama
@@ -415,8 +416,12 @@ class HardwareWorker(QThread):
             disk_free_gb = info.disk_free_gb
             catalog: List[Dict[str, Any]] = []
             installed_names = {row["name"].split(":")[0] for row in installed}
+            installed_full = {row["name"].lower() for row in installed}
             for item in recommended_catalog():
-                if item["name"].split(":")[0] in installed_names:
+                name = item["name"].lower()
+                if name in installed_full or (
+                    not item.get("estimated") and name.split(":")[0] in installed_names
+                ):
                     continue  # ya está instalado: aparece en la otra sección
                 assessment = assess_model(
                     model_name=item["name"],
@@ -428,17 +433,62 @@ class HardwareWorker(QThread):
                 )
                 catalog.append({**item, "assessment": assessment.to_dict()})
 
+            from ..ollama_library import default_catalog, version_status
+
+            snapshot = default_catalog().load_cached()
+            reachable, detail = self._ollama.is_reachable()
+            local_version = detail if reachable and detail != "?" else ""
+            state, version_message = version_status(
+                local_version, snapshot.latest_ollama
+            )
             self.ready.emit(
                 {
                     "hardware": hw,
                     "installed": installed,
                     "catalog": catalog,
                     "configured": self._configured,
+                    "library": {
+                        "status": snapshot.status,
+                        "fetched_at": snapshot.fetched_at,
+                        "new": len(snapshot.new_names),
+                        "models": len(snapshot.models),
+                        "version_state": state,
+                        "version_message": version_message,
+                    },
                 }
             )
         except Exception as exc:  # nunca tumbar la GUI
             log.exception("Fallo cargando modelos/hardware")
             self.failed.emit(f"Error al evaluar el equipo: {exc}")
+
+
+class CatalogRefreshWorker(QThread):
+    """Actualiza el catálogo de ollama.com en segundo plano (solo lectura)."""
+
+    finished_refresh = Signal(str)
+
+    def run(self) -> None:
+        from ..ollama_library import default_catalog
+
+        try:
+            snapshot = default_catalog().refresh()
+        except Exception as exc:  # nunca tumbar la GUI
+            log.exception("Fallo actualizando el catálogo")
+            self.finished_refresh.emit(f"No se pudo actualizar el catálogo: {exc}")
+            return
+        if snapshot.status == "online":
+            self.finished_refresh.emit(
+                f"Catálogo actualizado: {len(snapshot.models)} modelos."
+            )
+        elif snapshot.status == "cache":
+            self.finished_refresh.emit(
+                f"Sin conexión ({snapshot.error}); se mantiene la copia del "
+                f"{snapshot.fetched_at[:10]}."
+            )
+        else:
+            self.finished_refresh.emit(
+                f"No se pudo consultar ollama.com: {snapshot.error}"
+            )
 
 
 class OCRWorker(QThread):
@@ -457,7 +507,7 @@ class OCRWorker(QThread):
         image_path: str,
         engine: Optional[str] = None,
         lang: str = "es",
-        parent: Optional[QThread] = None,
+        parent: Optional[QObject] = None,
     ) -> None:
         super().__init__(parent)
         self._path = image_path
@@ -493,7 +543,7 @@ class PullWorker(QThread):
     failed = Signal(str, str)  # (modelo, mensaje)
 
     def __init__(
-        self, ollama: OllamaClient, model: str, parent: Optional[QThread] = None
+        self, ollama: OllamaClient, model: str, parent: Optional[QObject] = None
     ) -> None:
         super().__init__(parent)
         self._ollama = ollama
@@ -526,3 +576,52 @@ class PullWorker(QThread):
             self.failed.emit(self._model, "Descarga cancelada.")
         except OllamaError as exc:
             self.failed.emit(self._model, exc.message)
+
+
+class DiagnosticsWorker(QThread):
+    """Genera el ZIP de diagnóstico fuera del hilo de la GUI."""
+
+    bundleReady = Signal(str)
+    bundleFailed = Signal(str)
+
+    def __init__(
+        self,
+        target: Path | str,
+        cfg: Config,
+        state: Any,
+        bus: Any,
+        pairing: Any,
+        ollama: Optional[OllamaClient],
+        parent: Optional[QObject] = None,
+        *,
+        check_ollama: bool = True,
+        log_dir: Optional[Path | str] = None,
+    ) -> None:
+        super().__init__(parent)
+        self._target = Path(target)
+        self._cfg = cfg
+        self._state = state
+        self._bus = bus
+        self._pairing = pairing
+        self._ollama = ollama
+        self._check_ollama = check_ollama
+        self._log_dir = Path(log_dir) if log_dir is not None else None
+
+    def run(self) -> None:
+        try:
+            result = write_diagnostics_archive(
+                self._target,
+                self._cfg,
+                state=self._state,
+                bus=self._bus,
+                pairing=self._pairing,
+                ollama=self._ollama,
+                log_dir=self._log_dir,
+                check_ollama=self._check_ollama,
+            )
+        except Exception as exc:
+            log.exception("No se pudo generar el diagnóstico")
+            message = str(exc).strip() or exc.__class__.__name__
+            self.bundleFailed.emit(message)
+            return
+        self.bundleReady.emit(str(result))

@@ -119,7 +119,7 @@ def test_coerce_text_accepts_string_and_dict():
 def test_rapidocr_real_if_installed(tmp_path):
     pytest.importorskip("rapidocr_onnxruntime")
     # Imagen blanca: RapidOCR no reconocerá texto pero no debe fallar.
-    from PySide6.QtGui import QColor, QGuiApplication, QPainter, QPixmap
+    from PySide6.QtGui import QColor, QPixmap
 
     pixmap = QPixmap(240, 120)
     pixmap.fill(QColor("#ffffff"))
@@ -134,7 +134,8 @@ def test_rapidocr_real_if_installed(tmp_path):
         ocr_manager.release_engine()
 
 
-def test_pix2text_real_if_installed(tmp_path):
+def test_pix2text_real_if_installed(qapp, tmp_path):
+    """Requiere QApplication: crear un QPixmap sin ella aborta el intérprete."""
     pytest.importorskip("pix2text")
     from PySide6.QtGui import QColor, QPixmap
 
