@@ -27,7 +27,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Descargar código
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Configurar Python
         uses: actions/setup-python@v5
@@ -67,7 +67,7 @@ jobs:
     timeout-minutes: 45
     steps:
       - name: Descargar código
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Configurar Python
         uses: actions/setup-python@v5
