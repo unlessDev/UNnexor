@@ -186,9 +186,7 @@ def verify_extension(release: Path, version: str) -> dict:
                 )
     for item in checksums:
         _check(bool(item["ok"]), f"Checksum incorrecto: {item['file']}.", errors)
-    return _product_result(
-        "UNnexor browser extension", base, checksums, errors, report
-    )
+    return _product_result("UNnexor browser extension", base, checksums, errors, report)
 
 
 def verify_windows(release: Path, version: str) -> dict:
