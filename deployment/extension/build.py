@@ -275,8 +275,9 @@ def production_files(root: Path) -> List[Path]:
         if not path.is_file():
             raise FileNotFoundError(f"archivo de producción ausente: {name}")
         files.append(path)
-    for path in sorted((root / ASSET_DIR).glob("*.png")):
-        files.append(path)
+    for pattern in ("*.png", "*.svg"):  # iconos y la X de UNnexor (options.html)
+        for path in sorted((root / ASSET_DIR).glob(pattern)):
+            files.append(path)
     for path in files:
         if path.suffix.lower() in FORBIDDEN_EXTENSIONS:
             raise ValueError(f"archivo prohibido en el paquete: {path.name}")
