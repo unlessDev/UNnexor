@@ -75,26 +75,33 @@ tareas; escucha temporizada de 45 s con audio TTS real → transcripción →
 respuesta local (`scripts/listen_window_e2e.py`); recomendaciones sobre el
 equipo real (Ryzen 5 2600X, 16 GB, RX 590 8 GB).
 
-## 5. Pendiente / no verificado
+## 5. Artefactos generados (2026-11-27, sin firma)
 
-1. **Fusionar** el PR de `feature/window-pin-listen` cuando la CI esté verde.
-2. **Regenerar `UNnexor.exe` y el instalador** (`deployment/windows/build.py`,
-   `deployment/installer/build.py`) y probar: icono, arranque completo,
-   cierre, actualización encima de una instalación de Extdator 1.2.0
-   (el `.iss` retira `Extdator.exe` y los accesos antiguos; no se probó).
-3. Pruebas manuales en el navegador real: menú de la X, panel *Consultar*
-   (foco, Esc, Ctrl+Enter, sitios con atajos de teclado propios).
-4. Arranque automático de Ollama **cuando no está abierto** (cubierto con
-   pruebas simuladas; en este equipo Ollama ya estaba en ejecución y no se
-   detuvo a propósito).
-5. Atajos globales de escucha con la aplicación real (registrados con
-   `RegisterHotKey`; no pulsados físicamente).
-6. Velocidad: el router eligió `deepseek-r1:8b` (razonamiento) para el
-   copiloto → ~70 s por respuesta. Aplicar «Recomendar configuración» o fijar
-   un modelo sin razonamiento para Conversación.
-7. Ollama instalado 0.40.17; disponible 0.40.18 (la app solo avisa).
-8. Decisiones del propietario: licencia, renombrar el repositorio en GitHub,
-   publicación en tiendas, firma Authenticode, versión (sigue en 1.2.0).
-9. Etapas del programa 1 aún abiertas: auditoría de seguridad final, prueba
-   en un equipo limpio, CUDA/NVIDIA y claves reales de OpenAI/Deepgram/
-   Anthropic (ver `docs/COPILOT_STATUS.md`).
+| Artefacto | Resultado |
+|---|---|
+| `release/windows/UNnexor/UNnexor.exe` (+ ZIP 121,6 MB) | Self-check OK (incluye componentes del copiloto); prueba real: ventana con la X, 📌 con `WS_EX_TOPMOST` real, cierre con código 0, puerto libre, Ollama del usuario intacto |
+| `release/installer/UNnexor-1.2.0-win64-setup.exe` (84,8 MB) | Instalación, self-check, conservación de datos, purga y desinstalación OK. **Actualización desde Extdator 1.2.0 probada**: misma carpeta, retira `Extdator.exe` y el grupo antiguo del menú Inicio, una sola entrada de desinstalación |
+| `release/browser-extension/{chrome,edge}.zip` | Regenerado con la X (antes era el paquete del 19/11 llamado Extdator) |
+| `release/sbom/unnexor-1.2.0.cdx.json` | Regenerado; `verify_artifacts.py`: 4/4 OK |
+
+La página de opciones de la extensión tiene cabecera animada con la X y
+«UNnexor · AI BRIDGE · by UnlessDev» (PR #21).
+
+## 6. Pendiente / no verificado
+
+1. Fusionar el PR #21 cuando la CI esté verde.
+2. Prueba manual en el navegador: recargar la extensión en
+   `chrome://extensions` (o cargar `release/browser-extension/chrome`),
+   recargar las pestañas y probar el menú de la X y *Consultar…*.
+3. Arranque automático de Ollama **cuando no está abierto** (solo con
+   simulación; en este equipo Ollama ya estaba abierto y no se cerró).
+4. Pulsar físicamente los atajos de escucha con la aplicación real.
+5. Velocidad del copiloto: el router eligió `deepseek-r1:8b` (~70 s por
+   respuesta); aplicar «Recomendar configuración».
+6. Ollama 0.40.17 instalado; disponible 0.40.18 (la app solo avisa).
+7. Decisiones del propietario: licencia, renombrar el repositorio, número de
+   versión (sigue en 1.2.0), firma Authenticode, publicación en tiendas,
+   publicar una release (`develop` → `main`).
+8. Programa 1 aún abierto: auditoría de seguridad final, prueba en un equipo
+   limpio, CUDA/NVIDIA y claves reales de OpenAI/Deepgram/Anthropic (ver
+   `docs/COPILOT_STATUS.md`).

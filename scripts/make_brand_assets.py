@@ -448,6 +448,7 @@ def main() -> int:
     (BRANDING / "unnexor-icon.svg").write_text(icon, encoding="utf-8", newline="\n")
     (BRANDING / "unnexor-badge.svg").write_text(badge, encoding="utf-8", newline="\n")
     (BRIDGE_ASSETS / "unnexor-x.svg").write_text(master, encoding="utf-8", newline="\n")
+    (EXT_ASSETS / "unnexor-x.svg").write_text(master, encoding="utf-8", newline="\n")
 
     for width in (256, 512, 1024):
         (PNG_DIR / f"unnexor-x-{width}.png").write_bytes(render_png(master, width))

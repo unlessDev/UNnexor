@@ -93,6 +93,13 @@ usa [Semantic Versioning](https://semver.org/lang/es/).
   permite restaurar la configuración anterior. El copiloto respeta la
   temperatura por tarea.
 
+- **Página de opciones de la extensión rediseñada**: la X de UNnexor como
+  logotipo, cabecera animada «UNnexor · AI BRIDGE · by UnlessDev» (borde de
+  luz giratorio, brillo en degradado, logo flotante, cursor de terminal),
+  colores de la marca y sin el antiguo ✦ (también en la política de
+  privacidad). Las animaciones se desactivan con «reducir movimiento».
+  El paquete de la extensión incluye ahora `assets/unnexor-x.svg`.
+
 ### Fixed
 - El botón 📌 no funcionaba de forma fiable: arrancaba siempre marcado sin
   mirar el estado real, su estilo de "activado" nunca se aplicaba y al
