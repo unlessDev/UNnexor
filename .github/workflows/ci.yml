@@ -102,7 +102,7 @@ jobs:
         run: python deployment/verify_artifacts.py
 
       - name: Publicar artefactos verificados
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: unnexor-windows-artifacts
           if-no-files-found: error
@@ -123,7 +123,7 @@ jobs:
 
       - name: Publicar informes si algo falla
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: unnexor-ci-reports
           if-no-files-found: ignore
