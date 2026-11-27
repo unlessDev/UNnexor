@@ -63,7 +63,7 @@ class CopilotOverlay(QWidget):
         if on_top:
             flags |= Qt.WindowType.WindowStaysOnTopHint
         super().__init__(None, flags)
-        self.setWindowTitle("Extdator · Copiloto")
+        self.setWindowTitle("UNnexor · Copiloto")
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
         self.setMinimumSize(320, 220)
         self.setStyleSheet(OVERLAY_QSS)

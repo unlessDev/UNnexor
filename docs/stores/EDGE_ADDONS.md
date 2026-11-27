@@ -6,7 +6,7 @@
 
 ## Compatibilidad
 
-Extdator usa Manifest V3 y APIs estándar de Chromium (`chrome.storage`,
+UNnexor usa Manifest V3 y APIs estándar de Chromium (`chrome.storage`,
 `chrome.runtime`, `chrome.action`, content scripts y `fetch`). El paquete de
 Edge se genera con el mismo código que Chrome:
 
@@ -26,7 +26,7 @@ su propia versión mínima. La extensión requiere Chromium ≥ 110.
 
 | Campo | Contenido |
 |---|---|
-| Nombre | Extdator |
+| Nombre | UNnexor |
 | Descripción corta | Selecciona texto en cualquier web y recibe la respuesta de tu asistente de IA en un panel flotante. |
 | Categoría | Productividad |
 | Idioma | Español |

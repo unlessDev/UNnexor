@@ -194,7 +194,7 @@ class ProvidersDialog(QDialog):
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Proveedores de IA — Extdator")
+        self.setWindowTitle("Proveedores de IA — UNnexor")
         self.setMinimumSize(600, 620)
         self.setStyleSheet(
             f"QDialog {{ background: #12141a; color: {TEXT}; }}\n"

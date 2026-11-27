@@ -92,7 +92,7 @@ def ensure_env_file(
         if EXAMPLE_FILE.exists():
             shutil.copyfile(EXAMPLE_FILE, env_path)
         else:
-            env_path.write_text("# Extdator bridge\nBRIDGE_TOKEN=\n", encoding="utf-8")
+            env_path.write_text("# UNnexor bridge\nBRIDGE_TOKEN=\n", encoding="utf-8")
         created = True
 
     text = env_path.read_text(encoding="utf-8")

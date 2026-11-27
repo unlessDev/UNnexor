@@ -1,12 +1,12 @@
-Extdator
+UNnexor
 ========
 
-Gracias por instalar Extdator, el asistente local para tu navegador.
+Gracias por instalar UNnexor, el asistente local para tu navegador.
 
 QUÉ SE HA INSTALADO
 -------------------
-* Extdator.exe y sus bibliotecas, en:
-  %LOCALAPPDATA%\Programs\Extdator
+* UNnexor.exe y sus bibliotecas, en:
+  %LOCALAPPDATA%\Programs\UNnexor
 * Accesos directos en el menú Inicio (y en el escritorio si lo marcaste).
 * Un desinstalador en el menú Inicio y en Configuración > Aplicaciones.
 
@@ -37,7 +37,7 @@ de proveedores guardadas en el Administrador de credenciales de Windows.
 
 Para borrar solo los secretos (por ejemplo, antes de vender el equipo)
 sin desinstalar:
-  "%LOCALAPPDATA%\Programs\Extdator\Extdator.exe" --purge-secrets
+  "%LOCALAPPDATA%\Programs\UNnexor\UNnexor.exe" --purge-secrets
 
 AVISO DE SEGURIDAD
 ------------------

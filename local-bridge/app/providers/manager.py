@@ -92,7 +92,7 @@ def purge_all_keys() -> List[str]:
     """Elimina las claves de todos los proveedores conocidos y su estado.
 
     Se usa antes de una desinstalación completa y desde
-    ``Extdator.exe --purge-secrets``. Incluye presets aunque no figuren en
+    ``UNnexor.exe --purge-secrets``. Incluye presets aunque no figuren en
     ``providers.json`` para retirar credenciales huérfanas. No crea el
     directorio de datos si no existe y nunca registra las claves.
     """

@@ -1,5 +1,5 @@
 ; =====================================================================
-; Extdator — hover_scroll_helper.ahk  (OPCIONAL, AutoHotkey v2)
+; UNnexor — hover_scroll_helper.ahk  (OPCIONAL, AutoHotkey v2)
 ;
 ; El puente ya incorpora su propio hook de rueda de bajo nivel (WH_MOUSE_LL),
 ; por lo que este script normalmente NO es necesario. Déjalo activo solo si:
@@ -7,7 +7,7 @@
 ;     pasar el ratón por encima de ellas", y
 ;   * arrancaste el puente con HOVER_SCROLL_HOOK=0.
 ;
-; Función: cuando el cursor está sobre la ventana "Extdator", la rueda se
+; Función: cuando el cursor está sobre la ventana "UNnexor", la rueda se
 ; reenvía a esa ventana sin activarla; el navegador conserva el foco.
 ;
 ; Requiere AutoHotkey v2:  https://www.autohotkey.com/
@@ -16,10 +16,10 @@
 #SingleInstance Force
 SetTitleMatchMode 2
 
-global PANEL_TITLE := "Extdator"
+global PANEL_TITLE := "UNnexor"
 global WM_MOUSEWHEEL := 0x20A
 
-MouseIsOverExtdator(&hwnd) {
+MouseIsOverUNnexor(&hwnd) {
     hwnd := 0
     try {
         MouseGetPos ,, &win, , 2          ; coordenadas absolutas → HWND real
@@ -32,7 +32,7 @@ MouseIsOverExtdator(&hwnd) {
     return WinExist(PANEL_TITLE " ahk_id " hwnd) ? true : false
 }
 
-#HotIf MouseIsOverExtdator(&hwnd)
+#HotIf MouseIsOverUNnexor(&hwnd)
 WheelUp::   SendWheelToPanel(hwnd, 120)
 WheelDown:: SendWheelToPanel(hwnd, -120)
 #HotIf

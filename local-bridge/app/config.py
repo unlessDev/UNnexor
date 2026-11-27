@@ -1,4 +1,4 @@
-"""Configuración del puente local de Extdator.
+"""Configuración del puente local de UNnexor.
 
 Lee la configuración desde variables de entorno y desde el archivo
 ``local-bridge/.env`` (creado a partir de ``.env.example``). Ningún valor
@@ -18,7 +18,7 @@ from dotenv import dotenv_values
 from . import paths
 
 BASE_DIR = paths.BASE_DIR  # local-bridge/
-PROJECT_ROOT = paths.PROJECT_ROOT  # Extdator/
+PROJECT_ROOT = paths.PROJECT_ROOT  # UNnexor/
 DEFAULT_ENV_FILE = paths.env_file()
 LOG_DIR = paths.logs_dir()
 
@@ -70,6 +70,10 @@ class Config:
     window_opacity: int = 95
     always_on_top: bool = True
     hover_scroll_hook: bool = True
+
+    # Ollama: iniciar `ollama serve` si no está en ejecución (y detener al
+    # salir SOLO ese proceso; un Ollama ya abierto nunca se toca).
+    ollama_autostart: bool = True
 
     # Logs
     log_level: str = "INFO"
@@ -226,6 +230,7 @@ def load_config(env_file: Optional[Path] = None) -> Config:
         ),
         always_on_top=_bool(env.get("ALWAYS_ON_TOP", "1"), "ALWAYS_ON_TOP"),
         hover_scroll_hook=_bool(env.get("HOVER_SCROLL_HOOK", "1"), "HOVER_SCROLL_HOOK"),
+        ollama_autostart=_bool(env.get("OLLAMA_AUTOSTART", "1"), "OLLAMA_AUTOSTART"),
         log_level=env.get("LOG_LEVEL", Config.log_level).strip().upper(),
         log_privacy=_bool(env.get("LOG_PRIVACY", "1"), "LOG_PRIVACY"),
     )

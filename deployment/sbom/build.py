@@ -1,4 +1,4 @@
-"""Genera un SBOM CycloneDX 1.5 del entorno Python de Extdator.
+"""Genera un SBOM CycloneDX 1.5 del entorno Python de UNnexor.
 
 Uso:
     python deployment/sbom/build.py
@@ -10,7 +10,7 @@ Python instalados en el entorno que ejecuta este script (runtime y build).
 No incluye rutas locales, claves, modelos ni datos de usuario.
 
 Salida en ``release/sbom/`` (ignorado por Git):
-  * extdator-<versión>.cdx.json
+  * unnexor-<versión>.cdx.json
   * SHA256SUMS.txt
 
 La licencia principal del proyecto está pendiente de decisión; el SBOM la
@@ -140,8 +140,8 @@ def _library_component(dist) -> Dict[str, object]:
         "version": version,
         "purl": purl,
         "properties": [
-            {"name": "extdator:package-manager", "value": "pip"},
-            {"name": "extdator:environment", "value": "build-and-runtime"},
+            {"name": "unnexor:package-manager", "value": "pip"},
+            {"name": "unnexor:environment", "value": "build-and-runtime"},
         ],
     }
     licenses = _license_names(metadata)
@@ -188,10 +188,10 @@ def build(
     installed = _installed_distributions()
     libraries = [_library_component(installed[name]) for name in sorted(installed)]
 
-    extension_ref = f"extdator-browser-extension@{version}"
-    bridge_ref = f"extdator-local-bridge@{version}"
-    build_ref = f"extdator-build-environment@{version}"
-    root_ref = f"extdator@{version}"
+    extension_ref = f"unnexor-browser-extension@{version}"
+    bridge_ref = f"unnexor-local-bridge@{version}"
+    build_ref = f"unnexor-build-environment@{version}"
+    root_ref = f"unnexor@{version}"
 
     runtime_direct = _direct_requirements(REQUIREMENTS)
     build_direct = _direct_requirements(BUILD_REQUIREMENTS)
@@ -199,19 +199,19 @@ def build(
     components: List[Dict[str, object]] = [
         _product_component(
             extension_ref,
-            "Extdator browser extension",
+            "UNnexor browser extension",
             version,
             "Extensión Manifest V3 para Chrome, Edge y navegadores Chromium.",
         ),
         _product_component(
             bridge_ref,
-            "Extdator local bridge",
+            "UNnexor local bridge",
             version,
             "Puente HTTP local, panel flotante Qt y cliente de Ollama.",
         ),
         _product_component(
             build_ref,
-            "Extdator build environment",
+            "UNnexor build environment",
             version,
             "Entorno Python usado para empaquetar y verificar los artefactos.",
         ),
@@ -227,7 +227,7 @@ def build(
             or datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "tools": [
                 {
-                    "vendor": "Extdator",
+                    "vendor": "UNnexor",
                     "name": "deployment/sbom/build.py",
                     "version": TOOL_VERSION,
                 }
@@ -235,7 +235,7 @@ def build(
             "component": {
                 "type": "application",
                 "bom-ref": root_ref,
-                "name": "Extdator",
+                "name": "UNnexor",
                 "version": version,
                 "description": (
                     "Asistente local para el navegador: extensión MV3, puente "
@@ -243,31 +243,31 @@ def build(
                 ),
                 "properties": [
                     {
-                        "name": "extdator:license-status",
+                        "name": "unnexor:license-status",
                         "value": "pending-owner-decision",
                     },
                     {
-                        "name": "extdator:distribution-status",
+                        "name": "unnexor:distribution-status",
                         "value": "not-published",
                     },
-                    {"name": "extdator:signing", "value": "unsigned"},
+                    {"name": "unnexor:signing", "value": "unsigned"},
                     {
-                        "name": "extdator:python-version",
+                        "name": "unnexor:python-version",
                         "value": platform.python_version(),
                     },
                     {
-                        "name": "extdator:sbom-scope",
+                        "name": "unnexor:sbom-scope",
                         "value": "build-and-runtime-python-environment",
                     },
                 ],
             },
             "properties": [
                 {
-                    "name": "extdator:repository",
+                    "name": "unnexor:repository",
                     "value": REPO_URL,
                 },
                 {
-                    "name": "extdator:license-status",
+                    "name": "unnexor:license-status",
                     "value": "pending-owner-decision",
                 },
             ],
@@ -294,7 +294,7 @@ def build(
     bom["serialNumber"] = f"urn:uuid:{uuid.uuid5(uuid.NAMESPACE_URL, serial_seed)}"
 
     out_dir.mkdir(parents=True, exist_ok=True)
-    target = out_dir / f"extdator-{version}.cdx.json"
+    target = out_dir / f"unnexor-{version}.cdx.json"
     text = json.dumps(bom, indent=2, ensure_ascii=False) + "\n"
     # write_bytes evita que Windows convierta LF en CRLF después de calcular
     # el hash; el checksum debe corresponder a los bytes reales del archivo.

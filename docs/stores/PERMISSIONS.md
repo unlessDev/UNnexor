@@ -8,7 +8,7 @@ enviar una selección de texto a la aplicación local y mostrar la respuesta.
 | Permiso / campo | Valor | Por qué |
 |---|---|---|
 | `permissions` | `storage` | Guardar dirección local, token de vinculación y preferencias de UI en `chrome.storage.local`. No se usa para datos personales ni analítica. |
-| `host_permissions` | `http://127.0.0.1/*`, `http://localhost/*` | Único destino de red de la extensión: la aplicación Extdator en el mismo equipo. |
+| `host_permissions` | `http://127.0.0.1/*`, `http://localhost/*` | Único destino de red de la extensión: la aplicación UNnexor en el mismo equipo. |
 | `content_scripts.matches` | `http://*/*`, `https://*/*` | La selección puede ocurrir en cualquier página; el script solo muestra el botón ✦ y lee la selección cuando existe. |
 | `content_scripts.all_frames` | `true` | Permite seleccionar texto dentro de iframes legítimos (editores, documentación). |
 | `content_security_policy.extension_pages` | `script-src 'self'; object-src 'self'` | Bloquea scripts remotos, `eval` y objetos embebidos. |
@@ -36,7 +36,7 @@ background.js
    │  POST http://127.0.0.1:5000/api/selection
    │  Authorization: Bearer <token local>
    ▼
-Aplicación Extdator (mismo equipo)
+Aplicación UNnexor (mismo equipo)
    ├── Ollama local (por defecto)
    └── Proveedor remoto (solo si el usuario lo configura)
 ```

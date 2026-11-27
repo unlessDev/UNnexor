@@ -13,7 +13,7 @@ flotante con el botón **🧭** o desde **⚙ → Copiloto en tiempo real…**.
 - Avisa y obtén el consentimiento de las personas cuando grabar o
   transcribir una conversación lo requiera la ley o la plataforma.
 - Respeta las reglas de cada entrevista, examen o evaluación.
-- Extdator **no** se oculta de capturas de pantalla ni de la compartición
+- UNnexor **no** se oculta de capturas de pantalla ni de la compartición
   de pantalla, y su indicador de captura es siempre visible.
 - Las sugerencias no inventan experiencias ni datos: lo que falte aparece
   como `[completar: …]` para que lo aportes tú.
@@ -77,7 +77,7 @@ funciona igual.
 - Para usar un servicio externo, conecta su clave (⚙ → Proveedores de API)
   y marca sus permisos: **Enviar datos**, **Costos** (si puede cobrar o
   consumir saldo) y **Documentos** (extractos de tus documentos). Sin esos
-  permisos el servicio no se usa y Extdator explica por qué.
+  permisos el servicio no se usa y UNnexor explica por qué.
 - Si un modelo falla, se prueba una alternativa permitida y se avisa en el
   panel; nunca se pasa en silencio de local a remoto.
 - El historial de uso muestra solo contadores y los límites restantes que
@@ -91,7 +91,7 @@ funciona igual.
 | Escribir una pregunta | `Ctrl+Alt+Shift+A` |
 | Capturar región y analizar | `Ctrl+Alt+Shift+S` |
 
-Si otra aplicación ya usa una combinación, Windows la rechaza y Extdator lo
+Si otra aplicación ya usa una combinación, Windows la rechaza y UNnexor lo
 indica en el registro.
 
 ## Privacidad

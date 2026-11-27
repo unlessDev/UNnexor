@@ -4,7 +4,7 @@
 > en la fase de seguridad/licencias. Este documento no sustituye los textos
 > legales originales.
 
-Extdator no tiene todavía una licencia principal aprobada. Las licencias de
+UNnexor no tiene todavía una licencia principal aprobada. Las licencias de
 los componentes de terceros se conservan y se listan aquí.
 
 ## Dependencias directas de ejecución

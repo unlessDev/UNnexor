@@ -24,7 +24,7 @@ El ZIP contiene solo `manifest.json`, `background.js`, `content.js`,
 
 | Campo | Contenido |
 |---|---|
-| Nombre | Extdator |
+| Nombre | UNnexor |
 | Descripción corta (≤132) | Selecciona texto en cualquier web y recibe la respuesta de tu asistente de IA en un panel flotante. |
 | Categoría | Productividad |
 | Idioma | Español |
@@ -35,7 +35,7 @@ El ZIP contiene solo `manifest.json`, `background.js`, `content.js`,
 ### Descripción extensa (borrador)
 
 ```text
-Extdator convierte cualquier selección de texto en una consulta a tu
+UNnexor convierte cualquier selección de texto en una consulta a tu
 asistente de IA, sin salir de la página y sin perder el foco del navegador.
 
 Selecciona texto, pulsa el botón ✦ y la respuesta aparece en un panel
@@ -58,7 +58,7 @@ Privacidad:
 • Las claves de proveedores se guardan en el almacén seguro de Windows y
   nunca en la extensión.
 
-Requisito: instalar la aplicación de escritorio Extdator para Windows.
+Requisito: instalar la aplicación de escritorio UNnexor para Windows.
 ```
 
 No se incluyen capturas ni enlaces de descarga hasta que existan y estén
@@ -81,7 +81,7 @@ mockups que aparenten funcionalidades no verificadas.
 Respuestas recomendadas, sujetas a revisión final del propietario:
 
 1. **Propósito único**: enviar el texto seleccionado a la aplicación local
-   Extdator y mostrar la respuesta en un panel flotante.
+   UNnexor y mostrar la respuesta en un panel flotante.
 2. **Uso de datos**: el texto seleccionado se procesa para prestar la
    funcionalidad. No se vende, no se usa para publicidad ni para evaluar
    solvencia. Si el usuario configura un proveedor remoto en la aplicación,

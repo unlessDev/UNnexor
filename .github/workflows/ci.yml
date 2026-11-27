@@ -104,7 +104,7 @@ jobs:
       - name: Publicar artefactos verificados
         uses: actions/upload-artifact@v4
         with:
-          name: extdator-windows-artifacts
+          name: unnexor-windows-artifacts
           if-no-files-found: error
           retention-days: 14
           path: |
@@ -125,7 +125,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: extdator-ci-reports
+          name: unnexor-ci-reports
           if-no-files-found: ignore
           retention-days: 7
           path: |

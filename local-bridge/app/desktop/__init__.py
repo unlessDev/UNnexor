@@ -1,1 +1,1 @@
-"""Aplicación de escritorio flotante de Extdator (PySide6)."""
+"""Aplicación de escritorio flotante de UNnexor (PySide6)."""

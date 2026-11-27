@@ -1,4 +1,4 @@
-# Instalación de Extdator
+# Instalación de UNnexor
 
 ## Requisitos
 
@@ -14,12 +14,12 @@ Puedes ejecutar `scripts\check_environment.ps1` para un diagnóstico completo.
 
 ## Instalación con el instalador (recomendada para usuarios)
 
-El instalador permite usar Extdator sin Python ni el entorno de desarrollo.
+El instalador permite usar UNnexor sin Python ni el entorno de desarrollo.
 Todavía **no hay release pública**: se genera localmente y no se ha enviado
 a ninguna tienda ni publicado en GitHub Releases.
 
 ```powershell
-cd G:\Proyectos\Extdator\local-bridge
+cd G:\Proyectos\UNnexor\local-bridge
 .venv\Scripts\python.exe ..\deployment\installer\build.py
 ```
 
@@ -27,14 +27,14 @@ Requiere Inno Setup 6 instalado (o la variable `ISCC` apuntando a
 `ISCC.exe`). El comando compila, prueba el ciclo completo en directorios
 temporales y deja el resultado en `release\installer\`:
 
-* `Extdator-<versión>-win64-setup.exe`
+* `UNnexor-<versión>-win64-setup.exe`
 * `SHA256SUMS.txt`
 * `build-report.json` y `build.log`
 
 Pasos:
 
 1. Ejecuta el instalador. Es **por usuario**, no pide administrador y
-   instala en `%LOCALAPPDATA%\Programs\Extdator`.
+   instala en `%LOCALAPPDATA%\Programs\UNnexor`.
 2. Si SmartScreen advierte que no hay firma, comprueba el SHA-256 con
    `SHA256SUMS.txt` antes de continuar. El instalador no está firmado con
    Authenticode.
@@ -51,12 +51,12 @@ Pasos:
 * Por defecto, tus datos y credenciales se conservan para una futura
   reinstalación.
 * Si eliges la **limpieza completa**, el desinstalador ejecuta
-  `Extdator.exe --purge-secrets` y borra `%LOCALAPPDATA%\Extdator`.
+  `UNnexor.exe --purge-secrets` y borra `%LOCALAPPDATA%\Extdator`.
 
 Para borrar solo credenciales y el token sin desinstalar:
 
 ```powershell
-& "$env:LOCALAPPDATA\Programs\Extdator\Extdator.exe" --purge-secrets
+& "$env:LOCALAPPDATA\Programs\UNnexor\UNnexor.exe" --purge-secrets
 ```
 
 El token se regenera en el siguiente arranque y la extensión deberá volver
@@ -67,7 +67,7 @@ a emparejarse. Los ajustes no sensibles se conservan.
 Abre PowerShell **en la carpeta del proyecto** y ejecuta:
 
 ```powershell
-cd G:\Proyectos\Extdator
+cd G:\Proyectos\UNnexor
 powershell -ExecutionPolicy Bypass -File scripts\install.ps1
 ```
 
@@ -117,7 +117,7 @@ Para detenerlo: `scripts\stop.ps1` (solo mata procesos de *este* proyecto).
 1. Abre `chrome://extensions`.
 2. Activa **Modo de desarrollador** (esquina superior derecha).
 3. Pulsa **Cargar descomprimida** (*Load unpacked*).
-4. Selecciona la carpeta `G:\Proyectos\Extdator\browser-extension`.
+4. Selecciona la carpeta `G:\Proyectos\UNnexor\browser-extension`.
 5. Copia el **ID** de la extensión de la tarjeta (p. ej. `abcdefghijklmnop`).
 
 ### Brave
@@ -129,13 +129,13 @@ Idéntico a Chrome con `brave://extensions`.
 1. Abre `edge://extensions`.
 2. Activa **Modo de desarrollador** (menú lateral izquierdo).
 3. Pulsa **Cargar descomprimida**.
-4. Selecciona `G:\Proyectos\Extdator\browser-extension`.
+4. Selecciona `G:\Proyectos\UNnexor\browser-extension`.
    (Si Edge pregunta "Permitir extensiones de otros orígenes", acepta.)
 5. Copia el ID de la tarjeta de la extensión.
 
 ### Conectar la extensión con el puente
 
-1. Clic derecho en el icono de Extdator → **Opciones** (o detalles → opciones).
+1. Clic derecho en el icono de UNnexor → **Opciones** (o detalles → opciones).
 2. Pega el token: la primera línea `BRIDGE_TOKEN=...` de
    `local-bridge\.env`.
 3. Pulsa **Guardar** y luego **Probar conexión**: debe aparecer
@@ -181,7 +181,7 @@ Arranca el servidor, prueba `/health`, `POST /api/selection` y
 En la versión instalada (sin consola):
 
 ```powershell
-& "$env:LOCALAPPDATA\Programs\Extdator\Extdator.exe" --check
+& "$env:LOCALAPPDATA\Programs\UNnexor\UNnexor.exe" --check
 ```
 
 El resultado se escribe en

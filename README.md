@@ -1,4 +1,4 @@
-# Extdator
+# UNnexor
 
 **Asistente local inmediato**: selecciona texto en Chrome, Brave o Edge,
 pulsa el botón ✦ y recibe la respuesta de tu modelo local (Ollama) en un
@@ -45,7 +45,7 @@ Selección en el navegador → Botón ✦ → Puente local (FastAPI)
 ## Inicio rápido
 
 ```powershell
-cd G:\Proyectos\Extdator
+cd G:\Proyectos\UNnexor
 
 # 1) Instalar (venv + dependencias + .env con token + chequeo de Ollama)
 powershell -ExecutionPolicy Bypass -File scripts\install.ps1
@@ -85,8 +85,8 @@ cd local-bridge
 .venv\Scripts\python.exe ..\deployment\windows\build.py
 ```
 
-Genera `release/windows/Extdator/Extdator.exe` (one-folder, sin consola),
-un ZIP `Extdator-<versión>-win64-unsigned.zip`, `SHA256SUMS.txt` y un
+Genera `release/windows/UNnexor/UNnexor.exe` (one-folder, sin consola),
+un ZIP `UNnexor-<versión>-win64-unsigned.zip`, `SHA256SUMS.txt` y un
 informe con pruebas de humo headless y GUI offscreen. El build no está
 firmado con Authenticode y no incluye modelos, claves ni OCR pesado.
 
@@ -98,18 +98,18 @@ cd local-bridge
 ```
 
 Requiere Inno Setup 6. Compila y prueba el ciclo completo en directorios
-temporales: instalación silenciosa por usuario, `Extdator.exe --check`,
+temporales: instalación silenciosa por usuario, `UNnexor.exe --check`,
 desinstalación con datos preservados, `--purge-secrets` y limpieza
-completa. Genera `release/installer/Extdator-<versión>-win64-setup.exe`,
+completa. Genera `release/installer/UNnexor-<versión>-win64-setup.exe`,
 `SHA256SUMS.txt` y un informe. El instalador se instala por usuario en
-`%LOCALAPPDATA%\Programs\Extdator` y guarda los datos en
+`%LOCALAPPDATA%\Programs\UNnexor` y guarda los datos en
 `%LOCALAPPDATA%\Extdator`.
 
 No hay release pública todavía. Para borrar solo credenciales y el token
 sin desinstalar:
 
 ```powershell
-& "$env:LOCALAPPDATA\Programs\Extdator\Extdator.exe" --purge-secrets
+& "$env:LOCALAPPDATA\Programs\UNnexor\UNnexor.exe" --purge-secrets
 ```
 
 El token se regenera en el siguiente arranque y la extensión deberá

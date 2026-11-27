@@ -350,7 +350,7 @@ def build(
     checksums.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
     report = {
-        "product": "Extdator browser extension",
+        "product": "UNnexor browser extension",
         "version": manifest.get("version"),
         "validated": True,
         "targets": targets,

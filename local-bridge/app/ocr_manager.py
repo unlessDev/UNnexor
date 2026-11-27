@@ -1,6 +1,6 @@
 """Gestor de OCR local: registro de motores, disponibilidad, recomendación y uso.
 
-Los motores son OPCIONALES: Extdator no los instala por defecto (peso y
+Los motores son OPCIONALES: UNnexor no los instala por defecto (peso y
 dependencias solo se incorporan si el usuario los pide). Cada entrada del
 registro incluye licencia, propósito, peso de los modelos y orden de
 instalación — datos verificados contra los repositorios oficiales

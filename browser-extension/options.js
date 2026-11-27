@@ -1,4 +1,4 @@
-/* Extdator — página de opciones (rediseño Fase 6).
+/* UNnexor — página de opciones (rediseño Fase 6).
  *
  * Asistente de 4 pasos: bienvenida → conectar (código de emparejamiento)
  * → diagnóstico (bridge/auth/envío) → preferencias.
@@ -99,7 +99,7 @@ $("pairBtn").addEventListener("click", async () => {
   }
   $("pairBtn").disabled = true;
   statusBox("pairStatus", "wait",
-    "<strong>Conectando…</strong><small>Validando el código con la aplicación Extdator.</small>");
+    "<strong>Conectando…</strong><small>Validando el código con la aplicación UNnexor.</small>");
   try {
     const resp = await fetch(url + "/api/pair/confirm", {
       method: "POST",
@@ -130,7 +130,7 @@ $("pairBtn").addEventListener("click", async () => {
     }
   } catch (err) {
     statusBox("pairStatus", "err",
-      "<strong>No se alcanza la aplicación Extdator.</strong><small>Ábrela desde el menú Inicio y vuelve a intentarlo. Si acabas de instalarla, espera unos segundos.</small>");
+      "<strong>No se alcanza la aplicación UNnexor.</strong><small>Ábrela desde el menú Inicio y vuelve a intentarlo. Si acabas de instalarla, espera unos segundos.</small>");
   } finally {
     $("pairBtn").disabled = false;
   }
@@ -187,15 +187,15 @@ async function runDiagnostic() {
       ollamaDetail = o.reachable
         ? "aplicación activa · proveedor local conectado"
         : "aplicación activa · aviso: Ollama no responde (puede que uses un proveedor remoto)";
-      statusLine("stBridge", "ok", "Aplicación Extdator", ollamaDetail);
+      statusLine("stBridge", "ok", "Aplicación UNnexor", ollamaDetail);
     } else {
-      statusLine("stBridge", "err", "Aplicación Extdator",
-        "el puerto responde pero no es Extdator. ¿Otra aplicación usa el " +
+      statusLine("stBridge", "err", "Aplicación UNnexor",
+        "el puerto responde pero no es UNnexor. ¿Otra aplicación usa el " +
         "puerto 5000?");
     }
   } catch (err) {
-    statusLine("stBridge", "err", "Aplicación Extdator",
-      "sin conexión en " + url + " — abre la aplicación Extdator y reintenta");
+    statusLine("stBridge", "err", "Aplicación UNnexor",
+      "sin conexión en " + url + " — abre la aplicación UNnexor y reintenta");
   }
 
   // 2) Autenticación (GET /api/status con token).
@@ -231,7 +231,7 @@ async function runDiagnostic() {
         method: "POST",
         headers,
         body: JSON.stringify({
-          text: "Prueba de diagnóstico de Extdator: si ves este mensaje, la conexión funciona.",
+          text: "Prueba de diagnóstico de UNnexor: si ves este mensaje, la conexión funciona.",
           source_url: "diagnostic://options",
           timestamp: new Date().toISOString(),
         }),

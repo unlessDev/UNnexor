@@ -58,11 +58,16 @@ _IMAGE_MAGIC = (b"\x89PNG", b"\xff\xd8\xff")  # PNG, JPEG
 # --------------------------------------------------------------------- #
 # Modelos de entrada
 # --------------------------------------------------------------------- #
+MAX_QUESTION_LENGTH = 4000
+
+
 class SelectionIn(BaseModel):
     text: str = Field(min_length=1)
     source_url: str = ""
     timestamp: str = ""
     token: Optional[str] = None
+    # Opción "Consultar" de la extensión: pregunta sobre el texto.
+    question: str = Field(default="", max_length=MAX_QUESTION_LENGTH)
 
 
 class ConfigIn(BaseModel):
@@ -109,7 +114,7 @@ def create_app(
     pair_limiter = RateLimiter(5)  # confirmaciones de emparejamiento
 
     app = FastAPI(
-        title="Extdator Bridge",
+        title="UNnexor Bridge",
         version=__version__,
         docs_url=None,
         redoc_url=None,
@@ -187,10 +192,12 @@ def create_app(
                 headers={"Retry-After": str(retry)},
             )
 
+        question = payload.question.strip()
         event = SelectionRequest(
             text=text,
             source_url=payload.source_url[:2048],
             received_at=payload.timestamp or _utcnow_iso(),
+            question=question,
         )
         if not bus.publish(event):
             raise HTTPException(
@@ -199,16 +206,32 @@ def create_app(
             )
 
         if cfg.log_privacy:
-            log.info("Selección aceptada: %d caracteres.", len(text))
+            log.info(
+                "Selección aceptada: %d caracteres%s.",
+                len(text),
+                " con pregunta" if question else "",
+            )
         else:
-            log.info("Selección aceptada de %s: %r", payload.source_url, text[:80])
+            log.info(
+                "Selección aceptada de %s: %r (pregunta: %r)",
+                payload.source_url,
+                text[:80],
+                question[:80],
+            )
 
         return JSONResponse(
             status_code=202,
             content={
                 "accepted": True,
                 "pending": bus.qsize(),
-                "message": "Texto en cola. Ollama lo procesará en breve.",
+                # La extensión comprueba este campo: un puente antiguo
+                # ignoraría la pregunta en silencio.
+                "question_received": bool(question),
+                "message": (
+                    "Consulta en cola. El modelo la procesará en breve."
+                    if question
+                    else "Texto en cola. Ollama lo procesará en breve."
+                ),
             },
         )
 
@@ -451,7 +474,7 @@ def create_app(
         log.info("Ajustes de usuario restaurados (%d claves).", len(removed))
         return {
             "removed": sorted(removed),
-            "note": "Reinicia Extdator para recuperar los valores base del .env.",
+            "note": "Reinicia UNnexor para recuperar los valores base del .env.",
         }
 
     @app.post("/api/pair/confirm")

@@ -1,4 +1,4 @@
-# Extdator local bridge — dependencias Python
+# UNnexor local bridge — dependencias Python
 # Justificadas una a una:
 #   fastapi        → servidor HTTP con validación Pydantic integrada
 #   uvicorn        → servidor ASGI ligero para FastAPI

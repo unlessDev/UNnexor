@@ -1,6 +1,6 @@
-# Proveedores de IA remotos (Extdator)
+# Proveedores de IA remotos (UNnexor)
 
-Además de Ollama (local), Extdator puede usar proveedores de IA en la nube
+Además de Ollama (local), UNnexor puede usar proveedores de IA en la nube
 compatibles con la API de OpenAI. El panel de escritorio administra las
 conexiones (⚙ → **Proveedores de IA**); la clave nunca sale del equipo
 salvo hacia el propio proveedor al generar.
@@ -9,11 +9,11 @@ salvo hacia el propio proveedor al generar.
 
 * Las claves conectadas desde el panel se guardan **solo** en el almacén
   de credenciales del sistema operativo (Windows Credential Manager), vía
-  la librería `keyring`. Servicio: `Extdator`, cuenta:
+  la librería `keyring`. Servicio: `UNnexor`, cuenta:
   `provider-key:<id>`.
 * Si migras claves desde `.env`, el archivo original no se borra
   automáticamente (migración no destructiva). Ejecuta
-  `Extdator.exe --purge-secrets` para eliminar esas copias del `.env`.
+  `UNnexor.exe --purge-secrets` para eliminar esas copias del `.env`.
 * El archivo `local-bridge\data\providers.json` guarda **solo** el estado:
   proveedor conectado, `base_url` personalizada (proveedor "custom") y el
   modelo elegido. **Nunca contiene claves.**

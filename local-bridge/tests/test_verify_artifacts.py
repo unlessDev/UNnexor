@@ -58,7 +58,7 @@ def _extension(release: Path) -> None:
     _write_report(
         base,
         {
-            "product": "Extdator browser extension",
+            "product": "UNnexor browser extension",
             "version": VERSION,
             "validated": True,
             "targets": targets,
@@ -68,20 +68,20 @@ def _extension(release: Path) -> None:
 
 def _windows(release: Path) -> None:
     base = release / "windows"
-    exe_digest = _write(base / "Extdator" / "Extdator.exe", b"exe-sintetico")
-    archive_name = f"Extdator-{VERSION}-win64-unsigned.zip"
+    exe_digest = _write(base / "UNnexor" / "UNnexor.exe", b"exe-sintetico")
+    archive_name = f"UNnexor-{VERSION}-win64-unsigned.zip"
     archive_digest = _write(base / archive_name, b"zip-sintetico")
     _write_checksums(
         base,
-        {"Extdator/Extdator.exe": exe_digest, archive_name: archive_digest},
+        {"UNnexor/UNnexor.exe": exe_digest, archive_name: archive_digest},
     )
     _write_report(
         base,
         {
-            "product": "Extdator desktop",
+            "product": "UNnexor desktop",
             "version": VERSION,
             "signed": False,
-            "exe": "Extdator/Extdator.exe",
+            "exe": "UNnexor/UNnexor.exe",
             "exe_sha256": exe_digest,
             "archive": archive_name,
             "archive_sha256": archive_digest,
@@ -93,13 +93,13 @@ def _windows(release: Path) -> None:
 
 def _installer(release: Path) -> None:
     base = release / "installer"
-    name = f"Extdator-{VERSION}-win64-setup.exe"
+    name = f"UNnexor-{VERSION}-win64-setup.exe"
     digest = _write(base / name, b"instalador-sintetico")
     _write_checksums(base, {name: digest})
     _write_report(
         base,
         {
-            "product": "Extdator installer",
+            "product": "UNnexor installer",
             "version": VERSION,
             "desktop_version": VERSION,
             "signed": False,
@@ -127,11 +127,11 @@ def _sbom(release: Path) -> None:
         "metadata": {
             "component": {
                 "type": "application",
-                "name": "Extdator",
+                "name": "UNnexor",
                 "version": VERSION,
                 "properties": [
                     {
-                        "name": "extdator:license-status",
+                        "name": "unnexor:license-status",
                         "value": "pending-owner-decision",
                     }
                 ],
@@ -139,7 +139,7 @@ def _sbom(release: Path) -> None:
         },
         "components": [{"type": "library", "name": "fastapi", "version": "0.115"}],
     }
-    name = f"extdator-{VERSION}.cdx.json"
+    name = f"unnexor-{VERSION}.cdx.json"
     digest = _write(base / name, json.dumps(data, indent=2).encode())
     _write_checksums(base, {name: digest})
 
@@ -164,10 +164,10 @@ def test_verification_passes_on_complete_release(release: Path) -> None:
     assert report["ok"] is True
     assert len(report["products"]) == 4
     assert {item["product"] for item in report["products"]} == {
-        "Extdator browser extension",
-        "Extdator desktop",
-        "Extdator installer",
-        "Extdator SBOM",
+        "UNnexor browser extension",
+        "UNnexor desktop",
+        "UNnexor installer",
+        "UNnexor SBOM",
     }
     written = json.loads(
         (release / "verification-report.json").read_text(encoding="utf-8")
@@ -181,18 +181,18 @@ def test_tampered_artifact_fails(release: Path) -> None:
     report = verify_artifacts.verify_release(release)
 
     assert report["ok"] is False
-    extension = _product(report, "Extdator browser extension")
+    extension = _product(report, "UNnexor browser extension")
     assert extension["ok"] is False
     assert any("Checksum incorrecto" in error for error in extension["errors"])
 
 
 def test_missing_artifact_fails(release: Path) -> None:
-    (release / "windows" / "Extdator" / "Extdator.exe").unlink()
+    (release / "windows" / "UNnexor" / "UNnexor.exe").unlink()
 
     report = verify_artifacts.verify_release(release)
 
     assert report["ok"] is False
-    desktop = _product(report, "Extdator desktop")
+    desktop = _product(report, "UNnexor desktop")
     assert any("Falta el artefacto" in error for error in desktop["errors"])
 
 
@@ -203,7 +203,7 @@ def test_unsafe_checksum_path_is_rejected(release: Path) -> None:
     report = verify_artifacts.verify_release(release)
 
     assert report["ok"] is False
-    installer = _product(report, "Extdator installer")
+    installer = _product(report, "UNnexor installer")
     assert any(
         "insegura" in error or "no relativa" in error for error in installer["errors"]
     )
@@ -218,13 +218,13 @@ def test_report_hash_mismatch_fails(release: Path) -> None:
     report = verify_artifacts.verify_release(release)
 
     assert report["ok"] is False
-    extension = _product(report, "Extdator browser extension")
+    extension = _product(report, "UNnexor browser extension")
     assert any("no coincide con el hash real" in error for error in extension["errors"])
 
 
 def test_sbom_must_declare_pending_license(release: Path) -> None:
     base = release / "sbom"
-    name = f"extdator-{VERSION}.cdx.json"
+    name = f"unnexor-{VERSION}.cdx.json"
     path = base / name
     data = json.loads(path.read_text(encoding="utf-8"))
     data["metadata"]["component"]["properties"][0]["value"] = "MIT"
@@ -235,7 +235,7 @@ def test_sbom_must_declare_pending_license(release: Path) -> None:
     report = verify_artifacts.verify_release(release)
 
     assert report["ok"] is False
-    sbom = _product(report, "Extdator SBOM")
+    sbom = _product(report, "UNnexor SBOM")
     assert any("licencia pendiente" in error for error in sbom["errors"])
 
 
@@ -245,5 +245,5 @@ def test_missing_build_report_fails(release: Path) -> None:
     report = verify_artifacts.verify_release(release)
 
     assert report["ok"] is False
-    desktop = _product(report, "Extdator desktop")
+    desktop = _product(report, "UNnexor desktop")
     assert any("build-report.json" in error for error in desktop["errors"])

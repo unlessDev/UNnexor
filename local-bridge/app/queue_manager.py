@@ -23,6 +23,31 @@ class SelectionRequest:
     text: str
     source_url: str = ""
     received_at: str = ""  # ISO-8601 informado por el cliente
+    # Pregunta opcional del usuario sobre el texto ("Consultar" en la
+    # extensión). Vacía = envío directo (comportamiento histórico).
+    question: str = ""
+
+    def prompt(self) -> str:
+        """Mensaje que recibe el modelo: el texto solo, o pregunta + texto."""
+        question = self.question.strip()
+        if not question:
+            return self.text
+        return (
+            f"{question}\n\n"
+            "Responde a la pregunta anterior basándote en este texto "
+            "seleccionado:\n"
+            f'"""\n{self.text}\n"""'
+        )
+
+    def display(self) -> str:
+        """Versión breve para el historial del panel."""
+        question = self.question.strip()
+        if not question:
+            return self.text
+        excerpt = " ".join(self.text.split())
+        if len(excerpt) > 280:
+            excerpt = excerpt[:279] + "…"
+        return f"{question}\n\n› {excerpt}"
 
 
 @dataclass(frozen=True)

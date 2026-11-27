@@ -61,7 +61,7 @@ def main() -> int:
     ollama = OllamaClient(cfg)
     pairing = PairingManager(cfg.token or "smoke-token")
 
-    print("Smoke test GUI (offscreen) — Extdator")
+    print("Smoke test GUI (offscreen) — UNnexor")
 
     def model_selector():
         dlg = ModelSelectorDialog(ollama, current_model=cfg.ollama_model)

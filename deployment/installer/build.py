@@ -1,4 +1,4 @@
-"""Compila y prueba el instalador Windows de Extdator con Inno Setup 6.
+"""Compila y prueba el instalador Windows de UNnexor con Inno Setup 6.
 
 Uso:
     python deployment/installer/build.py
@@ -6,18 +6,18 @@ Uso:
     python deployment/installer/build.py --build-desktop
 
 Requiere:
-  * El ejecutable one-folder en ``release/windows/Extdator`` (o usar
+  * El ejecutable one-folder en ``release/windows/UNnexor`` (o usar
     ``--build-desktop`` para generarlo antes).
   * Inno Setup 6 instalado (ISCC.exe). Se puede indicar la ruta con la
     variable de entorno ``ISCC``.
 
 Salida en ``release/installer/`` (ignorado por Git):
-  * Extdator-<versión>-win64-setup.exe
+  * UNnexor-<versión>-win64-setup.exe
   * SHA256SUMS.txt
   * build-report.json y build.log
 
 La prueba por defecto instala en un directorio temporal con /VERYSILENT,
-ejecuta ``Extdator.exe --check`` con datos aislados, desinstala y comprueba
+ejecuta ``UNnexor.exe --check`` con datos aislados, desinstala y comprueba
 que los datos se conservan. Después reinstala y prueba ``--purge-secrets``
 y la limpieza completa con ``/PURGEDATA``.
 """
@@ -42,10 +42,10 @@ from typing import Optional
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 LOCAL_BRIDGE = PROJECT_ROOT / "local-bridge"
 INSTALLER_DIR = PROJECT_ROOT / "deployment" / "installer"
-ISS_FILE = INSTALLER_DIR / "Extdator.iss"
+ISS_FILE = INSTALLER_DIR / "UNnexor.iss"
 DESKTOP_BUILD = PROJECT_ROOT / "deployment" / "windows" / "build.py"
-DESKTOP_DIR = PROJECT_ROOT / "release" / "windows" / "Extdator"
-DESKTOP_EXE = DESKTOP_DIR / "Extdator.exe"
+DESKTOP_DIR = PROJECT_ROOT / "release" / "windows" / "UNnexor"
+DESKTOP_EXE = DESKTOP_DIR / "UNnexor.exe"
 DESKTOP_REPORT = PROJECT_ROOT / "release" / "windows" / "build-report.json"
 OUT_DIR = PROJECT_ROOT / "release" / "installer"
 APP_INIT = LOCAL_BRIDGE / "app" / "__init__.py"
@@ -150,13 +150,13 @@ def _desktop_report(version: str) -> dict:
 
 def compile_installer(iscc: Path, version: str) -> tuple[Path, str, str]:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    for stale in OUT_DIR.glob("Extdator-*-win64-setup.exe"):
+    for stale in OUT_DIR.glob("UNnexor-*-win64-setup.exe"):
         stale.unlink()
     command = [
         str(iscc),
         f"/DMyAppVersion={version}",
         f"/O{OUT_DIR}",
-        f"/FExtdator-{version}-win64-setup",
+        f"/FUNnexor-{version}-win64-setup",
         str(ISS_FILE),
     ]
     result = _run(command, timeout=1800, cwd=PROJECT_ROOT)
@@ -165,7 +165,7 @@ def compile_installer(iscc: Path, version: str) -> tuple[Path, str, str]:
         tail = "\n".join(log.splitlines()[-40:])
         raise RuntimeError(f"ISCC falló (exit={result.returncode}):\n{tail}")
 
-    setup = OUT_DIR / f"Extdator-{version}-win64-setup.exe"
+    setup = OUT_DIR / f"UNnexor-{version}-win64-setup.exe"
     if not setup.is_file():
         raise RuntimeError(f"ISCC no generó {setup}")
     # El log incluye "Compiler engine version: Inno Setup 6.7.3"; la primera
@@ -196,8 +196,8 @@ def _install(setup: Path, install_dir: Path, log_file: Path, timeout: float) -> 
             ((result.stdout or "") + "\n" + (result.stderr or "")).splitlines()[-30:]
         )
         raise RuntimeError(f"La instalación falló (exit={result.returncode}):\n{tail}")
-    if not _wait_until(lambda: (install_dir / "Extdator.exe").is_file(), 30):
-        raise RuntimeError("El instalador no creó Extdator.exe.")
+    if not _wait_until(lambda: (install_dir / "UNnexor.exe").is_file(), 30):
+        raise RuntimeError("El instalador no creó UNnexor.exe.")
     if not _wait_until(lambda: (install_dir / "unins000.exe").is_file(), 30):
         raise RuntimeError("El instalador no creó el desinstalador.")
 
@@ -284,9 +284,9 @@ def _uninstall(
     # Un directorio vacío residual no invalida la desinstalación.
     if (
         not _wait_until(lambda: not install_dir.exists(), 60)
-        and (install_dir / "Extdator.exe").exists()
+        and (install_dir / "UNnexor.exe").exists()
     ):
-        raise RuntimeError("La desinstalación no eliminó Extdator.exe.")
+        raise RuntimeError("La desinstalación no eliminó UNnexor.exe.")
     # El desinstalador de Inno puede copiarse a %TEMP% y terminar en segundo
     # plano después de borrar el directorio. Damos margen para que cierre su
     # clave de registro y no compita con la siguiente instalación.
@@ -321,7 +321,7 @@ def _purge_secrets(exe: Path, data_dir: Path, timeout: float) -> None:
 def test_installer(
     setup: Path, version: str, timeout: float, keep: bool = False
 ) -> dict:
-    root = Path(tempfile.mkdtemp(prefix="extdator-installer-test-"))
+    root = Path(tempfile.mkdtemp(prefix="unnexor-installer-test-"))
     install_dir = root / "app"
     data_dir = root / "data"
     result: dict = {}
@@ -329,7 +329,7 @@ def test_installer(
         _install(setup, install_dir, root / "install.log", timeout)
         result["installed"] = True
         result["self_check"] = _run_installed_check(
-            install_dir / "Extdator.exe", data_dir, timeout
+            install_dir / "UNnexor.exe", data_dir, timeout
         )
 
         # Datos de usuario que deben sobrevivir a una desinstalación normal.
@@ -381,7 +381,7 @@ def test_installer(
             encoding="utf-8",
         )
 
-        _purge_secrets(install_dir2 / "Extdator.exe", data_dir2, timeout)
+        _purge_secrets(install_dir2 / "UNnexor.exe", data_dir2, timeout)
         env_after = env_file2.read_text(encoding="utf-8")
         providers_after = json.loads(
             (data_dir2 / "providers.json").read_text(encoding="utf-8")
@@ -412,7 +412,7 @@ def test_installer(
             raise RuntimeError(
                 "La limpieza completa no eliminó el directorio de datos."
             )
-        result["install_dir_removed"] = not (install_dir2 / "Extdator.exe").exists()
+        result["install_dir_removed"] = not (install_dir2 / "UNnexor.exe").exists()
         return result
     finally:
         if keep:
@@ -455,7 +455,7 @@ def build(
         f"{setup_hash}  {setup.name}\n", encoding="utf-8"
     )
     report = {
-        "product": "Extdator installer",
+        "product": "UNnexor installer",
         "version": version,
         "inno_setup": compiler_version,
         "setup": setup.name,
@@ -464,7 +464,7 @@ def build(
         "signed": False,
         "unsigned_notice": ("Instalador sin Authenticode; SmartScreen puede advertir."),
         "install_scope": "per-user",
-        "default_install_dir": "%LOCALAPPDATA%\\Programs\\Extdator",
+        "default_install_dir": "%LOCALAPPDATA%\\Programs\\UNnexor",
         "data_dir": "%LOCALAPPDATA%\\Extdator",
         "desktop_version": desktop.get("version"),
         "test": test,

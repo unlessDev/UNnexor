@@ -2,7 +2,7 @@
 
 ## Modelo y alcance
 
-Extdator es una aplicación local para Windows. El puente escucha solo en
+UNnexor es una aplicación local para Windows. El puente escucha solo en
 `127.0.0.1`, exige token y valida el origen de la extensión. Las claves de
 proveedores se guardan en el Windows Credential Manager (keyring) y nunca
 en el repositorio, en `providers.json` ni en la extensión.
@@ -16,7 +16,7 @@ propietario por los canales privados de GitHub.
 
 Incluye, si es posible:
 
-- versión de Extdator, Windows y navegador;
+- versión de UNnexor, Windows y navegador;
 - pasos de reproducción;
 - impacto observado;
 - logs sin contenido sensible;
