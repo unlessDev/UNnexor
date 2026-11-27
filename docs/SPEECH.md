@@ -7,10 +7,10 @@ proveedor antes de depender de ellos.
 
 ## Modalidades (no son equivalentes)
 
-| Modalidad | Qué significa | Motores en Extdator |
+| Modalidad | Qué significa | Motores en UNnexor |
 |---|---|---|
 | Streaming real | El servicio recibe un flujo continuo y devuelve resultados parciales nativos | Ninguno integrado todavía (Deepgram y OpenAI Realtime lo ofrecen) |
-| Por fragmentos | Extdator detecta cada intervención (VAD) y envía el fragmento | Todos los integrados |
+| Por fragmentos | UNnexor detecta cada intervención (VAD) y envía el fragmento | Todos los integrados |
 | Lotes / archivos | Archivos completos, latencia alta | No se usa en el copiloto |
 
 El texto **provisional** que aparece mientras alguien habla se obtiene
@@ -46,7 +46,7 @@ ritmo de la conversación.
 | Groq | whisper-large-v3-turbo | Gratuito con límites | 0,04 $/h en plan de pago; mínimo facturado 10 s/petición; plan gratuito 20 RPM, 2.000/día, 7.200 s de audio/hora; 25 MB/archivo. No traduce. |
 | Groq | whisper-large-v3 | Gratuito con límites | 0,111 $/h; traduce solo a inglés. |
 | OpenAI | gpt-transcribe | Pago por consumo | Recomendado por OpenAI; `languages[]` en lugar de `language`. `whisper-1` y `gpt-4o-*-transcribe` se apagan el 2027-02-26. |
-| Deepgram | nova-3 | Créditos iniciales | 200 $ de crédito sin caducidad, luego 0,0043 $/min (0,0052 multilingüe); `es` y `es-419`; idioma por defecto `en` (Extdator siempre envía idioma o detección). |
+| Deepgram | nova-3 | Créditos iniciales | 200 $ de crédito sin caducidad, luego 0,0043 $/min (0,0052 multilingüe); `es` y `es-419`; idioma por defecto `en` (UNnexor siempre envía idioma o detección). |
 
 Con Groq, cada intervención corta se factura como 10 s: una conversación
 continua consume más cuota de la que dura. El catálogo lo advierte.
@@ -91,7 +91,7 @@ provisional).
 ## Errores y privacidad
 
 - Clave inválida, saldo insuficiente, motor no instalado o modelo ausente
-  detienen la transcripción con un mensaje claro: Extdator **no** cambia a
+  detienen la transcripción con un mensaje claro: UNnexor **no** cambia a
   otro motor (ni a uno remoto) por su cuenta.
 - Límite de uso (429) o fallo de red: un reintento respetando
   `retry-after`; si falla, se informa y se continúa con la siguiente

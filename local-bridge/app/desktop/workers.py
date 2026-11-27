@@ -107,10 +107,10 @@ class GenerationWorker(QThread):
         if self._state.consume_clear():
             self._do_clear()
 
-        self._conversation.add_user(request.text)
+        self._conversation.add_user(request.prompt())
         self._state.set_history(len(self._conversation))
         self._state.set_generating(True)
-        self.queryStarted.emit(request.text)
+        self.queryStarted.emit(request.display())
 
         def on_chunk(delta: str) -> None:
             self.chunkReceived.emit(delta)

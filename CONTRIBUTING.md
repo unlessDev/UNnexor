@@ -1,4 +1,4 @@
-# Contribuir a Extdator
+# Contribuir a UNnexor
 
 ## Requisitos
 
@@ -12,7 +12,7 @@
 
 ```powershell
 git clone https://github.com/unlessDev/Extdator.git
-cd Extdator
+cd UNnexor
 powershell -ExecutionPolicy Bypass -File scripts\install.ps1
 powershell -ExecutionPolicy Bypass -File scripts\start.ps1
 ```

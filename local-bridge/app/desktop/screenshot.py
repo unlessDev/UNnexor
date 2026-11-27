@@ -251,7 +251,7 @@ class ScreenshotPreviewDialog(QDialog):
         parent: Optional[QWidget] = None,
     ) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Vista previa de la captura — Extdator")
+        self.setWindowTitle("Vista previa de la captura — UNnexor")
         self.setMinimumSize(520, 560)
         self.setStyleSheet(
             f"QDialog {{ background: #12141a; color: {TEXT}; }}"

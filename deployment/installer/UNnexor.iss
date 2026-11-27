@@ -1,36 +1,41 @@
-; Instalador de Extdator para Windows (Inno Setup 6).
+; Instalador de UNnexor para Windows (Inno Setup 6).
 ;
 ; Compilar con:
 ;   "C:\Users\<usuario>\AppData\Local\Programs\Inno Setup 6\ISCC.exe" ^
-;       /DMyAppVersion=1.2.0 deployment\installer\Extdator.iss
+;       /DMyAppVersion=1.2.0 deployment\installer\UNnexor.iss
 ;
 ; O, preferiblemente, con deployment\installer\build.py, que valida el
 ; ejecutable, compila, prueba la instalación y genera SHA-256 e informe.
 ;
 ; Instalación POR USUARIO (sin administrador) en
-; %LOCALAPPDATA%\Programs\Extdator. Los datos viven en
-; %LOCALAPPDATA%\Extdator y se conservan al desinstalar salvo que el
+; %LOCALAPPDATA%\Programs\UNnexor. Los datos viven en
+; %LOCALAPPDATA%\Extdator (nombre histórico conservado a propósito: una
+; actualización desde Extdator mantiene ajustes, credenciales y modelos)
+; y se conservan al desinstalar salvo que el
 ; usuario elija la limpieza completa.
 
 #ifndef MyAppVersion
   #define MyAppVersion "1.2.0"
 #endif
-#define MyAppName "Extdator"
-#define MyAppExeName "Extdator.exe"
+#define MyAppName "UNnexor"
+#define MyAppExeName "UNnexor.exe"
 
 [Setup]
 AppId={{753e940c-269a-459a-9a09-1ff607161317}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppVerName={#MyAppName} {#MyAppVersion}
-AppPublisher=Extdator
-DefaultDirName={localappdata}\Programs\Extdator
+AppPublisher=UnlessDev
+DefaultDirName={localappdata}\Programs\UNnexor
 DefaultGroupName={#MyAppName}
+; Tras el cambio de nombre (Extdator -> UNnexor) el grupo del menú Inicio
+; debe llamarse UNnexor aunque una instalación previa usara "Extdator".
+UsePreviousGroup=no
 DisableProgramGroupPage=yes
 AllowNoIcons=yes
 OutputDir=..\..\release\installer
-OutputBaseFilename=Extdator-{#MyAppVersion}-win64-setup
-SetupIconFile=..\..\local-bridge\assets\extdator.ico
+OutputBaseFilename=UNnexor-{#MyAppVersion}-win64-setup
+SetupIconFile=..\..\local-bridge\assets\unnexor.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
 UninstallDisplayName={#MyAppName}
 Compression=lzma2/max
@@ -42,9 +47,9 @@ ArchitecturesInstallIn64BitMode=x64compatible
 CloseApplications=yes
 RestartApplications=no
 SetupLogging=yes
-VersionInfoCompany=Extdator
-VersionInfoDescription=Instalador de Extdator
-VersionInfoProductName=Extdator
+VersionInfoCompany=UnlessDev
+VersionInfoDescription=Instalador de UNnexor
+VersionInfoProductName=UNnexor
 VersionInfoProductVersion={#MyAppVersion}
 VersionInfoVersion={#MyAppVersion}
 
@@ -55,11 +60,16 @@ Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
 Name: "desktopicon"; Description: "Crear un acceso directo en el escritorio"; GroupDescription: "Accesos directos:"; Flags: unchecked
 
 [Files]
-Source: "..\..\release\windows\Extdator\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\..\release\windows\UNnexor\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "INSTALL_README.txt"; DestDir: "{app}"; DestName: "LEEME.txt"; Flags: ignoreversion isreadme
 
 [InstallDelete]
 Type: filesandordirs; Name: "{app}\_internal"
+; Actualización desde Extdator (mismo AppId): retirar el ejecutable y los
+; accesos directos con el nombre anterior. Los DATOS no se tocan.
+Type: files; Name: "{app}\Extdator.exe"
+Type: files; Name: "{autodesktop}\Extdator.lnk"
+Type: filesandordirs; Name: "{userprograms}\Extdator"
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
@@ -94,7 +104,7 @@ begin
     Exit;
   end;
   Answer := MsgBox(
-    '¿Quieres eliminar también tus ajustes, registros y credenciales de Extdator?'
+    '¿Quieres eliminar también tus ajustes, registros y credenciales de UNnexor?'
     + #13#10 + #13#10
     + 'Si eliges No, los datos se conservarán en %LOCALAPPDATA%\Extdator '
     + 'para una futura reinstalación.',
@@ -111,7 +121,7 @@ begin
     DataDir := GetEnv('EXTDATOR_DATA_DIR');
     if DataDir = '' then
       DataDir := ExpandConstant('{localappdata}\Extdator');
-    // Seguridad: solo borrar si parece un directorio de datos de Extdator.
+    // Seguridad: solo borrar si parece un directorio de datos de UNnexor.
     if DirExists(DataDir) and (
       FileExists(DataDir + '\.env') or
       FileExists(DataDir + '\user_settings.json') or

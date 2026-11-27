@@ -1,4 +1,4 @@
-"""Ventana flotante de Extdator (PySide6).
+"""Ventana flotante de UNnexor (PySide6).
 
 Características:
   * Estética terminal oscura, frameless, arrastrable y redimensionable.
@@ -103,7 +103,7 @@ class BridgeWindow(QMainWindow):
         if cfg.always_on_top:
             flags |= Qt.WindowType.WindowStaysOnTopHint
         super().__init__(None, flags)
-        self.setWindowTitle("Extdator")
+        self.setWindowTitle("UNnexor")
 
         self._cfg = cfg
         self._bus = bus
@@ -115,6 +115,7 @@ class BridgeWindow(QMainWindow):
         self._onboarding_scheduled = False
         self._onboarding_dialog: Optional[OnboardingDialog] = None
         self._diagnostics_worker: Optional[DiagnosticsWorker] = None
+        self._log_console = None  # LogConsoleWindow (opcional)
         self._on_top = cfg.always_on_top
         self._opacity = cfg.window_opacity
         self._settings = QSettings("Extdator", "Bridge")
@@ -126,7 +127,7 @@ class BridgeWindow(QMainWindow):
         # Estado del pie/spinner (debe existir antes de _build_ui).
         self._spinner_frame = 0
         self._footer_stable = (
-            "Extdator listo. Selecciona texto en el navegador y pulsa el botón ✦."
+            "UNnexor listo. Selecciona texto en el navegador y pulsa el botón ✦."
         )
         self._footer_transient_until = 0.0
         self._footer_transient_text = ""
@@ -265,6 +266,14 @@ class BridgeWindow(QMainWindow):
         self._uninstall_native_filter()
         log.info("Ventana cerrada.")
         super().closeEvent(event)
+
+    def set_log_console(self, console) -> None:
+        """Consola de registros opcional (se crea en ``main.run_bridge``)."""
+        self._log_console = console
+
+    def toggle_log_console(self) -> None:
+        if self._log_console is not None:
+            self._log_console.toggle()
 
     def stop_workers(self) -> None:
         """Detiene workers de forma ordenada (idempotente)."""
@@ -593,6 +602,14 @@ class BridgeWindow(QMainWindow):
         stop_action = menu.addAction("■  Detener generación")
         stop_action.triggered.connect(self._stop_generation)
 
+        console_action = menu.addAction("🖥  Consola del puente (registros)")
+        console_action.setCheckable(True)
+        console_action.setChecked(
+            self._log_console is not None and self._log_console.isVisible()
+        )
+        console_action.setEnabled(self._log_console is not None)
+        console_action.triggered.connect(self.toggle_log_console)
+
         menu.addSeparator()
 
         pin_action = menu.addAction("📌  Siempre visible")
@@ -690,7 +707,7 @@ class BridgeWindow(QMainWindow):
                     "Copiloto no disponible",
                     "Esta instalación no incluye los componentes del copiloto "
                     f"en tiempo real ({exc.name or exc}). Reinstala la versión "
-                    "completa de Extdator.",
+                    "completa de UNnexor.",
                 )
                 return
         self._copilot_window.bring_to_front()
@@ -717,7 +734,7 @@ class BridgeWindow(QMainWindow):
                 QMessageBox.information(
                     self,
                     "Ajustes restaurados",
-                    "Tus ajustes guardados se borraron. Reinicia Extdator "
+                    "Tus ajustes guardados se borraron. Reinicia UNnexor "
                     "para volver a los valores del archivo .env.",
                 )
             return
@@ -725,7 +742,7 @@ class BridgeWindow(QMainWindow):
             QMessageBox.warning(
                 self,
                 "Ajustes no disponibles",
-                "Extdator arrancó sin almacén de ajustes; edita local-bridge\\.env.",
+                "UNnexor arrancó sin almacén de ajustes; edita local-bridge\\.env.",
             )
             return
         try:
@@ -748,7 +765,7 @@ class BridgeWindow(QMainWindow):
             QMessageBox.information(
                 self,
                 "Reinicio necesario",
-                "Los siguientes ajustes requieren reiniciar Extdator para "
+                "Los siguientes ajustes requieren reiniciar UNnexor para "
                 f"aplicarse:\n· {chr(10).join(restart)}",
             )
         self._set_footer_transient(f"Ajustes guardados ({len(applied)}).", seconds=3)

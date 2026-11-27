@@ -6,6 +6,54 @@ usa [Semantic Versioning](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### UNnexor — nueva identidad
+- **Extdator pasa a llamarse UNnexor** (UN = UnlessDev; *nexor* = indexación).
+  Nombre visible actualizado en la aplicación, la extensión, ventanas,
+  menús, mensajes, scripts, instalador (`UNnexor.exe`,
+  `UNnexor-<versión>-win64-setup.exe`), SBOM y documentación.
+  Se conservan a propósito los identificadores técnicos que garantizan la
+  compatibilidad (ver `docs/BRANDING.md`): carpeta de datos
+  `%LOCALAPPDATA%\Extdator`, servicio del keyring, claves de `QSettings`,
+  variables `EXTDATOR_*`, el identificador `extdator-bridge` de `/health`
+  y los mensajes internos `extdator:*` de la extensión.
+- **Logotipo vectorial creado desde cero**: `branding/unnexor-x.svg`
+  reproduce la X de la imagen de referencia (rectas medidas sobre ella,
+  mismo cruce, proporciones y chaflanes; sin los destellos de las esquinas,
+  sin filtros ni imágenes incrustadas). `scripts/make_brand_assets.py`
+  genera desde esa única geometría el icono cuadrado, la insignia con
+  contenedor redondeado, PNG de 16 a 1024 px, el ICO multirresolución del
+  ejecutable y los iconos de la extensión. La imagen original de
+  `newDesign/` se conserva en `branding/source/`.
+- La X sustituye al icono de Python en ventanas y barra de tareas
+  (`AppUserModelID` propio) y aparece en la barra de título del panel.
+
+### Added
+- **Extensión: dos opciones al pulsar el botón** de la selección:
+  *Enviar directamente* (comportamiento de siempre) o *Consultar…*, un
+  panel pequeño para escribir una pregunta sobre el texto seleccionado
+  (Ctrl+Enter envía, Esc cancela; conserva la selección, informa del
+  progreso y de los errores sin cerrar el panel). El puente acepta el campo
+  opcional `question` en `POST /api/selection` y responde
+  `question_received` para detectar puentes antiguos.
+- **Presentación ASCII "UNnexor · AI BRIDGE · by UnlessDev"** con degradado
+  de color en `start.ps1` y en la terminal del puente (`app/banner.py`, una
+  sola implementación; sin colores si la consola no admite ANSI o con
+  `NO_COLOR`).
+- **Consola del puente opcional** (⚙ → *Consola del puente*): registros en
+  vivo —peticiones HTTP, estado de Ollama, errores— con filtro, copiar y
+  "Mostrar al iniciar". `start.ps1` arranca ahora el puente sin ventana de
+  terminal (sin icono en la barra de tareas); `-Console` recupera la
+  terminal visible.
+- **Arranque de Ollama con propiedad explícita** (`app/ollama_service.py`):
+  si Ollama no está en ejecución y `OLLAMA_AUTOSTART=1` (por defecto),
+  UNnexor lanza `ollama serve` sin ventana y al cerrarse detiene **solo ese
+  proceso**; un Ollama que ya estaba abierto nunca se reinicia ni se cierra.
+
+### Fixed
+- El diálogo de Ajustes mostraba todas las casillas desmarcadas: al
+  guardar se desactivaban opciones activas como "Siempre visible" o la
+  privacidad de los registros.
+
 ### Architecture
 - Documento canónico `ARCHITECTURE.md` en la raíz, con módulos, capas,
   contratos, flujos, seguridad y límites reales del proyecto.

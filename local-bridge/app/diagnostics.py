@@ -130,7 +130,7 @@ def redact_text(text: str, secrets: Iterable[str] = ()) -> str:
 def default_archive_name(now: Optional[datetime] = None) -> str:
     """Nombre de archivo por defecto para el ZIP de diagnóstico."""
     stamp = (now or datetime.now()).strftime("%Y%m%d-%H%M")
-    return f"Extdator-diagnostico-{stamp}.zip"
+    return f"UNnexor-diagnostico-{stamp}.zip"
 
 
 def ensure_zip_suffix(path: Path | str) -> Path:
@@ -461,7 +461,7 @@ def collect_snapshot(
         "archive_format": ARCHIVE_FORMAT,
         "generated_at": (now or datetime.now(timezone.utc)).isoformat(),
         "app": {
-            "name": "Extdator",
+            "name": "UNnexor",
             "version": __version__,
             "frozen": bool(paths.is_frozen()),
             "python": platform.python_version(),
@@ -617,7 +617,7 @@ def render_report(snapshot: Mapping[str, Any]) -> str:
     path_info = snapshot.get("paths", {})
 
     lines = [
-        "Extdator — Diagnóstico para soporte",
+        "UNnexor — Diagnóstico para soporte",
         "=" * 40,
         f"Generado: {snapshot.get('generated_at', '')}",
         f"Versión: {app.get('version', '')} "
@@ -705,10 +705,10 @@ def render_readme(snapshot: Mapping[str, Any]) -> str:
     privacy = snapshot.get("privacy", {})
     config = snapshot.get("config", {})
     lines = [
-        "LEEME — Diagnóstico de Extdator",
+        "LEEME — Diagnóstico de UNnexor",
         "================================",
         "",
-        "Este paquete ayuda a diagnosticar un problema de Extdator.",
+        "Este paquete ayuda a diagnosticar un problema de UNnexor.",
         "",
         "Contiene:",
         "- resumen.json: datos técnicos estructurados.",

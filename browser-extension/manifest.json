@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "Extdator",
+  "name": "UNnexor",
   "version": "1.2.0",
   "description": "Envía el texto seleccionado a tu asistente local y muestra la respuesta en un panel flotante de escritorio.",
-  "short_name": "Extdator",
+  "short_name": "UNnexor",
   "minimum_chrome_version": "110",
   "icons": {
     "16": "assets/icon16.png",
@@ -12,7 +12,7 @@
     "128": "assets/icon128.png"
   },
   "action": {
-    "default_title": "Extdator — abrir configuración",
+    "default_title": "UNnexor — abrir configuración",
     "default_icon": {
       "16": "assets/icon16.png",
       "32": "assets/icon32.png",

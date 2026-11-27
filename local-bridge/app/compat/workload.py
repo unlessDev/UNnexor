@@ -117,7 +117,7 @@ def assess_workload(
     others = [i for i in items if not i.ollama]
     ollama_total = sum(i.memory_mb or 0 for i in ollama_models)
     largest_ollama = max((i.memory_mb or 0 for i in ollama_models), default=0)
-    # Lo que no es de Ollama vive en RAM del proceso de Extdator.
+    # Lo que no es de Ollama vive en RAM del proceso de UNnexor.
     ram_needed = APP_OVERHEAD_MB + sum(i.memory_mb or 0 for i in others)
     vram_needed = 0.0
     swapping = False

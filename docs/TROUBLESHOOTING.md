@@ -1,4 +1,4 @@
-# Solución de problemas (Extdator)
+# Solución de problemas (UNnexor)
 
 ## La extensión no conecta con el puente
 
@@ -39,12 +39,12 @@ cuya suma no coincida.
 **Quiero borrar el token y las claves API sin desinstalar**
 
 ```powershell
-& "$env:LOCALAPPDATA\Programs\Extdator\Extdator.exe" --purge-secrets
+& "$env:LOCALAPPDATA\Programs\UNnexor\UNnexor.exe" --purge-secrets
 ```
 
 Elimina las claves de proveedores del Administrador de credenciales,
 vacía `BRIDGE_TOKEN` y retira `*_API_KEY` del `.env`; conserva el resto de
-ajustes. Al volver a abrir Extdator se genera un token nuevo y hay que
+ajustes. Al volver a abrir UNnexor se genera un token nuevo y hay que
 volver a emparejar la extensión.
 
 **Al desinstalar se conservan mis datos**
@@ -78,11 +78,11 @@ puedes borrar manualmente `%LOCALAPPDATA%\Extdator`.
   `Get-Process -Id <PID>`.
 * Si es otra aplicación, cámbialo en el `.env` (`BRIDGE_PORT=5001`) y
   actualiza la URL en las opciones de la extensión.
-* Si quedó un Extdator huérfano: `scripts\stop.ps1`.
+* Si quedó un UNnexor huérfano: `scripts\stop.ps1`.
 
 ## El Hover Scroll no funciona (rueda sobre el panel sin clic)
 
-Extdator usa tres capas; revisa cuál falta:
+UNnexor usa tres capas; revisa cuál falta:
 
 1. **Hook interno** (`HOVER_SCROLL_HOOK=1`, por defecto activo): es el
    mecanismo principal y funciona aunque el sistema esté configurado al
@@ -120,7 +120,7 @@ manifest: solo `http://` y `https://`).
 **4. Selección vacía o de solo espacios** — por diseño no hay botón.
 
 **5. La extensión no está activa en ese navegador** — verifica en
-`chrome://extensions` que la tarjeta de Extdator esté activada y que no haya
+`chrome://extensions` que la tarjeta de UNnexor esté activada y que no haya
 errores ("Errores" en rojo). Tras copiar/pegar archivos, usa el botón de
 recargar (⟳) de la tarjeta.
 
@@ -196,7 +196,7 @@ del botón derecho no está implementado).
 
 **No aparece la opción OCR**
 
-* Ningún motor OCR está instalado. Instala uno (ver abajo). Extdator
+* Ningún motor OCR está instalado. Instala uno (ver abajo). UNnexor
   nunca los instala por su cuenta.
 
 **Los archivos `extdator_capture_*.png` se quedan en %TEMP%**
@@ -279,7 +279,7 @@ $$\alpha \leq \beta \Rightarrow \pi$$    →   α ≤ β ⇒ π
 
 **¿Dónde está mi clave?**
 
-* En el Windows Credential Manager (servicio `Extdator`, cuenta
+* En el Windows Credential Manager (servicio `UNnexor`, cuenta
   `provider-key:<id>`). `data\providers.json` nunca contiene claves.
 
 ## Los ajustes de la UI no se aplican (v1.2.0)

@@ -55,7 +55,7 @@ class CopilotWindow(QMainWindow):
         register_hotkeys: bool = True,
     ) -> None:
         super().__init__()
-        self.setWindowTitle("Extdator · Copiloto en tiempo real")
+        self.setWindowTitle("UNnexor · Copiloto en tiempo real")
         self.resize(1080, 760)
         self.setStyleSheet(COPILOT_QSS)
         self.controller = controller or CopilotController(cfg)

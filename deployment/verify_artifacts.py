@@ -1,4 +1,4 @@
-"""Verifica checksums, informes y coherencia de los artefactos de Extdator.
+"""Verifica checksums, informes y coherencia de los artefactos de UNnexor.
 
 Uso:
     python deployment/verify_artifacts.py
@@ -186,9 +186,7 @@ def verify_extension(release: Path, version: str) -> dict:
                 )
     for item in checksums:
         _check(bool(item["ok"]), f"Checksum incorrecto: {item['file']}.", errors)
-    return _product_result(
-        "Extdator browser extension", base, checksums, errors, report
-    )
+    return _product_result("UNnexor browser extension", base, checksums, errors, report)
 
 
 def verify_windows(release: Path, version: str) -> dict:
@@ -227,7 +225,7 @@ def verify_windows(release: Path, version: str) -> dict:
             )
     for item in checksums:
         _check(bool(item["ok"]), f"Checksum incorrecto: {item['file']}.", errors)
-    return _product_result("Extdator desktop", base, checksums, errors, report)
+    return _product_result("UNnexor desktop", base, checksums, errors, report)
 
 
 def verify_installer(release: Path, version: str) -> dict:
@@ -284,14 +282,14 @@ def verify_installer(release: Path, version: str) -> dict:
             )
     for item in checksums:
         _check(bool(item["ok"]), f"Checksum incorrecto: {item['file']}.", errors)
-    return _product_result("Extdator installer", base, checksums, errors, report)
+    return _product_result("UNnexor installer", base, checksums, errors, report)
 
 
 def verify_sbom(release: Path, version: str) -> dict:
     base = release / "sbom"
     errors: List[str] = []
     checksums = _verify_checksums(base)
-    expected = f"extdator-{version}.cdx.json"
+    expected = f"unnexor-{version}.cdx.json"
     by_name = {item["file"]: item for item in checksums}
     _check(expected in by_name, f"Falta {expected} en SHA256SUMS.", errors)
     sbom_file = base / expected
@@ -304,8 +302,8 @@ def verify_sbom(release: Path, version: str) -> dict:
         )
         component = (sbom.get("metadata") or {}).get("component") or {}
         _check(
-            component.get("name") == "Extdator",
-            "El SBOM no identifica a Extdator.",
+            component.get("name") == "UNnexor",
+            "El SBOM no identifica a UNnexor.",
             errors,
         )
         _check(
@@ -319,24 +317,24 @@ def verify_sbom(release: Path, version: str) -> dict:
             if isinstance(item, dict)
         }
         _check(
-            properties.get("extdator:license-status") == "pending-owner-decision",
+            properties.get("unnexor:license-status") == "pending-owner-decision",
             "El SBOM no declara la licencia pendiente.",
             errors,
         )
         _check(bool(sbom.get("components")), "El SBOM no contiene componentes.", errors)
     for item in checksums:
         _check(bool(item["ok"]), f"Checksum incorrecto: {item['file']}.", errors)
-    return _product_result("Extdator SBOM", base, checksums, errors, sbom)
+    return _product_result("UNnexor SBOM", base, checksums, errors, sbom)
 
 
 def verify_release(release_dir: Path) -> dict:
     version = app_version()
     products: List[dict] = []
     verifiers = (
-        ("Extdator browser extension", verify_extension),
-        ("Extdator desktop", verify_windows),
-        ("Extdator installer", verify_installer),
-        ("Extdator SBOM", verify_sbom),
+        ("UNnexor browser extension", verify_extension),
+        ("UNnexor desktop", verify_windows),
+        ("UNnexor installer", verify_installer),
+        ("UNnexor SBOM", verify_sbom),
     )
     for name, verifier in verifiers:
         try:
@@ -352,7 +350,7 @@ def verify_release(release_dir: Path) -> dict:
             )
     ok = all(product["ok"] for product in products)
     report = {
-        "product": "Extdator artifact verification",
+        "product": "UNnexor artifact verification",
         "version": version,
         "ok": ok,
         "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds"),

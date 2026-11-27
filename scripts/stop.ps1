@@ -1,5 +1,5 @@
 ﻿# =====================================================================
-# Extdator — stop.ps1
+# UNnexor — stop.ps1
 # Detiene el puente de forma segura: SOLO procesos cuyo ejecutable es el
 # python.exe del venv de este proyecto y cuyo comando es run.py.
 # =====================================================================
@@ -30,7 +30,7 @@ if (Test-Path $pidFile) {
             ($proc.CommandLine -match "run\.py")) {
             $targets += [int]$savedPid
         } else {
-            Warn "El PID guardado ya no corresponde a Extdator; se ignora."
+            Warn "El PID guardado ya no corresponde a UNnexor; se ignora."
         }
     }
     Remove-Item $pidFile -ErrorAction SilentlyContinue
@@ -45,7 +45,7 @@ Get-CimInstance Win32_Process -Filter "Name='python.exe'" -ErrorAction SilentlyC
 $targets = $targets | Sort-Object -Unique
 
 if (-not $targets) {
-    Write-Host "[stop] No hay procesos de Extdator en ejecución." -ForegroundColor Cyan
+    Write-Host "[stop] No hay procesos de UNnexor en ejecución." -ForegroundColor Cyan
     exit 0
 }
 
@@ -57,4 +57,4 @@ foreach ($targetPid in $targets) {
         Warn "No se pudo detener el proceso $targetPid (¿ya terminó?)."
     }
 }
-Write-Host "[stop] Extdator detenido." -ForegroundColor Green
+Write-Host "[stop] UNnexor detenido. (Si UNnexor había iniciado Ollama, se detiene con él.)" -ForegroundColor Green

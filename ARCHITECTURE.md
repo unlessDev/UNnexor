@@ -1,11 +1,11 @@
-# Arquitectura de Extdator
+# Arquitectura de UNnexor
 
 > Documento canónico. Se actualiza en cada fase; `docs/adr/` recoge las
 > decisiones que no son evidentes a partir del código.
 
 ## 1. Objetivo y estado
 
-Extdator es un asistente local para el navegador. El usuario selecciona
+UNnexor es un asistente local para el navegador. El usuario selecciona
 texto, pulsa un botón contextual y la respuesta del modelo aparece en un
 panel flotante siempre visible, sin perder el foco de la página.
 
@@ -312,7 +312,7 @@ historial. Se implementará y documentará antes de declararlo disponible.
   `.env` es no destructiva; `--purge-secrets` retira también esas copias.
 - `LOG_PRIVACY=1` evita registrar contenido; los errores no incluyen claves.
 - Capturas en `%TEMP%` se eliminan tras procesar.
-- `Extdator.exe --purge-secrets` elimina las claves del keyring, vacía el
+- `UNnexor.exe --purge-secrets` elimina las claves del keyring, vacía el
   token del puente y retira `*_API_KEY` del `.env`; el instalador lo usa en
   la limpieza completa.
 - No hay código remoto ejecutable en la extensión ni en el escritorio.
@@ -346,15 +346,15 @@ El instalador no incluye modelos de Ollama, pesos OCR, claves ni historiales.
 La aplicación instalada escribe datos en `%LOCALAPPDATA%\Extdator`.
 
 El instalador de Inno Setup 6 se instala **por usuario** en
-`%LOCALAPPDATA%\Programs\Extdator`, no solicita administrador y crea
+`%LOCALAPPDATA%\Programs\UNnexor`, no solicita administrador y crea
 accesos directos opcionales. Al desinstalar conserva
 `%LOCALAPPDATA%\Extdator` por defecto; si el usuario elige la limpieza
-completa, ejecuta `Extdator.exe --purge-secrets` y borra el directorio de
+completa, ejecuta `UNnexor.exe --purge-secrets` y borra el directorio de
 datos. La purga de secretos también puede ejecutarse manualmente y no toca
 ajustes no sensibles.
 
-El ejecutable se construye en modo one-folder (`Extdator/Extdator.exe` +
-`_internal/`). El self-check (`Extdator.exe --check`) escribe
+El ejecutable se construye en modo one-folder (`UNnexor/UNnexor.exe` +
+`_internal/`). El self-check (`UNnexor.exe --check`) escribe
 `self-check.json` en el directorio de datos y permite validar rutas y
 servidor sin consola. El build poda módulos Qt no usados (Qml/Quick/PDF/
 OpenGL) y ejecuta una prueba GUI con `QT_QPA_PLATFORM=offscreen`. El OCR

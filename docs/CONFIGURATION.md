@@ -1,4 +1,4 @@
-# Configuración de Extdator
+# Configuración de UNnexor
 
 Toda la configuración vive en `local-bridge\.env` (creado desde
 `.env.example`) como valores **base**. Desde la v1.2.0 también se puede
@@ -153,7 +153,7 @@ remoto con un modelo de visión (y solo hacia ese proveedor).
 En el primer arranque real, el panel abre un asistente modal de tres pasos
 (se puede reabrir desde **⚙ → Asistente de inicio**):
 
-1. **Bienvenida y privacidad** — qué hace Extdator y qué datos salen del
+1. **Bienvenida y privacidad** — qué hace UNnexor y qué datos salen del
    equipo (por defecto, solo hacia Ollama en `127.0.0.1`).
 2. **Requisitos** — comprueba Ollama y el modelo activo en segundo plano,
    sin descargar nada. Permite reintentar, elegir otro modelo o abrir
@@ -168,7 +168,7 @@ el `.env`, no descarga modelos y no envía datos a terceros.
 ## Exportar diagnóstico (soporte)
 
 **⚙ → Exportar diagnóstico…** genera un ZIP (por ejemplo
-`Extdator-diagnostico-20261124-1030.zip`) con `LEEME.txt`,
+`UNnexor-diagnostico-20261124-1030.zip`) con `LEEME.txt`,
 `resumen.json`, `diagnostico.txt` y `logs/bridge.log*` si existen. La
 recogida de estado de Ollama y la lectura de logs ocurren en segundo plano;
 la interfaz sigue respondiendo.
@@ -188,7 +188,7 @@ la interfaz sigue respondiendo.
 
 La página de opciones es un asistente de 4 pasos:
 
-1. **Bienvenida** — cómo funciona Extdator.
+1. **Bienvenida** — cómo funciona UNnexor.
 2. **Conectar** — pega el código de 6 dígitos del panel (⚙ → Emparejar
    extensión). La extensión obtiene su token por `POST /api/pair/confirm`
    (el código vale 10 minutos y un solo uso). Abajo queda un panel

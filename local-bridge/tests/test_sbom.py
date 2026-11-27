@@ -24,15 +24,15 @@ def test_sbom_is_cyclonedx_and_discloses_pending_license(tmp_path: Path) -> None
     assert sbom["specVersion"] == "1.5"
     assert sbom["serialNumber"].startswith("urn:uuid:")
     root = sbom["metadata"]["component"]
-    assert root["name"] == "Extdator"
+    assert root["name"] == "UNnexor"
     assert root["version"] == sbom_build.app_version()
     properties = {item["name"]: item["value"] for item in root["properties"]}
-    assert properties["extdator:license-status"] == "pending-owner-decision"
+    assert properties["unnexor:license-status"] == "pending-owner-decision"
     assert "licenses" not in root
 
     names = {component["name"] for component in sbom["components"]}
-    assert "Extdator browser extension" in names
-    assert "Extdator local bridge" in names
+    assert "UNnexor browser extension" in names
+    assert "UNnexor local bridge" in names
     assert "fastapi" in names
     assert all(component.get("bom-ref") for component in sbom["components"])
 

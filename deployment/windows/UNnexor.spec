@@ -1,5 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
-"""Especificación PyInstaller one-folder de Extdator para Windows.
+"""Especificación PyInstaller one-folder de UNnexor para Windows.
 
 Uso normal (genera el informe y el ZIP):
     python deployment/windows/build.py
@@ -19,13 +19,15 @@ from PyInstaller.utils.hooks import (
 
 PROJECT_ROOT = Path(SPECPATH).resolve().parents[1]
 LOCAL_BRIDGE = PROJECT_ROOT / "local-bridge"
-ICON = LOCAL_BRIDGE / "assets" / "extdator.ico"
+ICON = LOCAL_BRIDGE / "assets" / "unnexor.ico"
 
 version_file = os.environ.get("EXTDATOR_VERSION_FILE") or None
 
 datas = [
     (str(LOCAL_BRIDGE / ".env.example"), "."),
     (str(ICON), "assets"),
+    (str(LOCAL_BRIDGE / "assets" / "unnexor.png"), "assets"),
+    (str(LOCAL_BRIDGE / "assets" / "unnexor-x.svg"), "assets"),
 ]
 datas += collect_data_files("certifi")
 # Copiloto en tiempo real (ADR-0005): modelo Silero VAD de faster-whisper y
@@ -130,7 +132,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name="Extdator",
+    name="UNnexor",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -152,5 +154,5 @@ coll = COLLECT(
     strip=False,
     upx=False,
     upx_exclude=[],
-    name="Extdator",
+    name="UNnexor",
 )

@@ -26,6 +26,7 @@ from PySide6.QtWidgets import (
 )
 
 from ..math_unicode import to_human_math
+from .brand import LogoLabel
 
 FONT_FAMILIES = ["Segoe UI Emoji", "Segoe UI Symbol", "Segoe UI", "Arial"]
 
@@ -89,13 +90,21 @@ class TitleBar(QWidget):
         self.dot.setObjectName("connDot")
         self.dot.setToolTip("Estado de conexión con Ollama")
 
-        self.title = QLabel("EXTDATOR")
+        self.logo = LogoLabel(13)
+        self.title = QLabel("UNnexor")
         self.title.setObjectName("titleLabel")
 
         self.model = QLabel(model_name)
         self.model.setObjectName("modelLabel")
+        # Con poco ancho cede espacio el modelo, nunca el nombre de la app.
+        self.model.setSizePolicy(
+            QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred
+        )
+        self.model.setMinimumWidth(0)
+        self.title.setMinimumWidth(self.title.sizeHint().width() + 4)
 
         layout.addWidget(self.dot)
+        layout.addWidget(self.logo)
         layout.addWidget(self.title)
         layout.addWidget(self.model)
         layout.addStretch(1)

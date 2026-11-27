@@ -1,5 +1,5 @@
 ﻿# =====================================================================
-# Extdator — install.ps1
+# UNnexor — install.ps1
 # Comprueba Python, crea el entorno virtual, instala dependencias,
 # genera la configuración inicial (.env + token) y verifica Ollama.
 # =====================================================================
@@ -22,7 +22,7 @@ function Warn($m) { Write-Host "[warn] $m" -ForegroundColor Yellow }
 function Fail($m) { Write-Host "[error] $m" -ForegroundColor Red; exit 1 }
 
 Write-Host ""
-Write-Host "=== Extdator: instalación del puente local ===" -ForegroundColor Magenta
+Write-Host "=== UNnexor: instalación del puente local ===" -ForegroundColor Magenta
 Write-Host ""
 
 # ---------------------------------------------------------------- Python

@@ -1,4 +1,4 @@
-"""Punto de entrada del puente local de Extdator.
+"""Punto de entrada del puente local de UNnexor.
 
 Modos:
   * Puente completo (por defecto): servidor HTTP (hilo uvicorn) + panel
@@ -27,6 +27,7 @@ from . import __version__, paths
 from .config import LOG_DIR, Config, ConfigError, load_config
 from .env_setup import clear_env_secrets, ensure_env_file
 from .ollama_client import OLLAMA_HEALTH_TIMEOUT, OllamaClient
+from .ollama_service import OllamaSupervisor
 from .pairing import PairingManager
 from .queue_manager import Bus, RuntimeState
 from .server import create_app
@@ -53,8 +54,64 @@ def setup_logging(cfg: Config) -> None:
     # sys.stderr=None fallaría al emitir.
     if not paths.is_frozen() and sys.stderr is not None:
         console = logging.StreamHandler()
-        console.setFormatter(fmt)
+        # Formato compacto en la terminal (el archivo conserva el completo).
+        console.setFormatter(
+            logging.Formatter("%(asctime)s  %(levelname)-7s %(message)s", "%H:%M:%S")
+        )
         root.addHandler(console)
+
+
+def start_ollama_supervisor(cfg: Config, wait: bool) -> OllamaSupervisor:
+    """Comprueba Ollama y, si hace falta y está permitido, lo inicia.
+
+    ``wait=False`` lo hace en segundo plano para no retrasar la interfaz; el
+    sondeo de estado del panel refleja el resultado en cuanto llega.
+    """
+    supervisor = OllamaSupervisor(cfg.ollama_host, cfg.ollama_autostart)
+
+    def _run() -> None:
+        result = supervisor.ensure_running()
+        if result.reachable:
+            log.info("Ollama %s disponible (%s).", result.version or "?", result.detail)
+        else:
+            log.warning("Ollama no disponible: %s.", result.detail)
+
+    if wait:
+        _run()
+    else:
+        threading.Thread(target=_run, name="ollama-startup", daemon=True).start()
+    return supervisor
+
+
+APP_USER_MODEL_ID = "UnlessDev.UNnexor"
+
+
+def set_app_user_model_id() -> None:
+    """Identidad propia en la barra de tareas de Windows.
+
+    Sin esto, al ejecutar desde el código fuente Windows agrupa la ventana
+    bajo ``python.exe`` y muestra el icono de Python en lugar del de UNnexor.
+    """
+    if sys.platform != "win32":
+        return
+    try:
+        import ctypes
+
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(APP_USER_MODEL_ID)
+    except Exception as exc:  # pragma: no cover - API ausente: solo cosmético
+        log.debug("No se pudo fijar el AppUserModelID: %s", exc)
+
+
+def app_icon():
+    """Icono de UNnexor (ICO multirresolución con respaldo PNG)."""
+    from PySide6.QtGui import QIcon
+
+    icon = QIcon()
+    for name in ("assets/unnexor.ico", "assets/unnexor.png"):
+        path = paths.resource_path(name)
+        if path.is_file():
+            icon.addFile(str(path))
+    return icon
 
 
 def report_error(message: str) -> None:
@@ -63,7 +120,7 @@ def report_error(message: str) -> None:
         try:
             import ctypes
 
-            ctypes.windll.user32.MessageBoxW(None, message, "Extdator", 0x10)
+            ctypes.windll.user32.MessageBoxW(None, message, "UNnexor", 0x10)
             return
         except Exception:  # pragma: no cover - fallback defensivo
             pass
@@ -183,7 +240,11 @@ def run_server_only(
     )
     # ``uvicorn.run`` espera una aplicación ASGI, no un ``Config``: pasarle
     # el ``Config`` arrancaba en 127.0.0.1:8000 con una "app" no invocable.
-    uvicorn.Server(uconfig).run()
+    supervisor = start_ollama_supervisor(cfg, wait=True)
+    try:
+        uvicorn.Server(uconfig).run()
+    finally:
+        supervisor.stop()
     return 0
 
 
@@ -281,24 +342,24 @@ def run_bridge(
 ) -> int:
     """Modo completo: servidor HTTP en hilo + GUI PySide6 en el hilo principal."""
     from PySide6.QtCore import Qt
-    from PySide6.QtGui import QFont, QIcon
+    from PySide6.QtGui import QFont
     from PySide6.QtWidgets import QApplication
 
     in_use, who = port_in_use(cfg)
     if in_use:
         if who == "extdator-bridge":
             if paths.is_frozen():
-                report_error("Extdator ya se está ejecutando.")
+                report_error("UNnexor ya se está ejecutando.")
             else:
                 report_error(
-                    f"Extdator ya se está ejecutando (puerto {cfg.port}). Usa "
+                    f"UNnexor ya se está ejecutando (puerto {cfg.port}). Usa "
                     "scripts\\stop.ps1 para detenerlo."
                 )
             return 3
         if paths.is_frozen():
             report_error(
                 f"El puerto {cfg.port} está ocupado por otra aplicación. "
-                "Ciérrala y vuelve a abrir Extdator."
+                "Ciérrala y vuelve a abrir UNnexor."
             )
         else:
             report_error(
@@ -314,7 +375,7 @@ def run_bridge(
     if body is None:
         if paths.is_frozen():
             report_error(
-                "No se pudo iniciar el servidor local de Extdator. "
+                "No se pudo iniciar el servidor local de UNnexor. "
                 "Revisa el registro en la carpeta de datos de la aplicación."
             )
         else:
@@ -327,13 +388,14 @@ def run_bridge(
         return 2
     log.info("Servidor HTTP activo en http://%s:%d", cfg.host, cfg.port)
 
+    set_app_user_model_id()
     app = QApplication(sys.argv)
-    app.setApplicationName("Extdator")
+    app.setApplicationName("UNnexor")
+    # La organización "Extdator" es la clave histórica de QSettings
+    # (geometría de ventanas, preferencias): se conserva por compatibilidad.
     app.setOrganizationName("Extdator")
     app.setStyle("Fusion")
-    icon_path = paths.resource_path("assets/extdator.ico")
-    if icon_path.is_file():
-        app.setWindowIcon(QIcon(str(icon_path)))
+    app.setWindowIcon(app_icon())
     font = QFont()
     font.setFamilies(["Cascadia Mono", "Consolas", "DejaVu Sans Mono", "Courier New"])
     font.setPointSize(10)
@@ -349,10 +411,24 @@ def run_bridge(
     )
     window.show()
 
+    from .desktop.log_console import LogConsoleWindow, install_log_buffer
+
+    console = LogConsoleWindow(install_log_buffer())
+    window.set_log_console(console)
+    if console.show_at_start():
+        console.show()
+
+    supervisor = start_ollama_supervisor(cfg, wait=False)
+
     def _shutdown() -> None:
+        # Cierre ordenado: capturas y workers, servidor HTTP (libera el
+        # puerto) y, solo si lo inició UNnexor, Ollama.
         window.stop_workers()
+        console.close()
         server.should_exit = True
         thread.join(timeout=5)
+        if supervisor.stop():
+            log.info("Ollama (iniciado por UNnexor) detenido.")
         log.info("Puente detenido correctamente.")
 
     app.aboutToQuit.connect(_shutdown)
@@ -362,7 +438,7 @@ def run_bridge(
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="extdator-bridge",
-        description="Puente local entre la extensión Extdator y Ollama.",
+        description="Puente local entre la extensión UNnexor y Ollama.",
     )
     parser.add_argument(
         "--server-only",
@@ -402,9 +478,18 @@ def main(argv: list[str] | None = None) -> int:
         report_error(f"Configuración inválida: {exc}")
         return 2
 
+    if not args.check and not paths.is_frozen():
+        from .banner import print_banner
+
+        print_banner()
+    if not args.check and not args.server_only:
+        # La consola integrada debe recibir también los primeros registros.
+        from .desktop.log_console import install_log_buffer
+
+        install_log_buffer()
     setup_logging(cfg)
     log.info(
-        "Extdator bridge %s (modo %s)",
+        "UNnexor bridge %s (modo %s)",
         __version__,
         "check" if args.check else "server-only" if args.server_only else "bridge",
     )

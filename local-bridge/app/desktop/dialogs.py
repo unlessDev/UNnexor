@@ -166,7 +166,7 @@ class ModelSelectorDialog(QDialog):
         self, ollama: OllamaClient, current_model: str, parent: Optional[QWidget] = None
     ) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Modelos de IA — Extdator")
+        self.setWindowTitle("Modelos de IA — UNnexor")
         self.setMinimumSize(560, 560)
         self.setStyleSheet(
             f"QDialog {{ background: #12141a; color: {TEXT}; }}"
@@ -493,7 +493,7 @@ class SettingsDialog(QDialog):
 
     def __init__(self, cfg: Config, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Ajustes — Extdator")
+        self.setWindowTitle("Ajustes — UNnexor")
         self.setMinimumSize(520, 500)
         self.setStyleSheet(
             f"QDialog {{ background: #12141a; color: {TEXT}; }}"
@@ -555,14 +555,17 @@ class SettingsDialog(QDialog):
             widget = integer
         widget.setSuffix(suffix)
         if spec.get("restart"):
-            widget.setToolTip("Requiere reiniciar Extdator para aplicarse.")
+            widget.setToolTip("Requiere reiniciar UNnexor para aplicarse.")
         self._widgets[key] = widget
         return widget
 
     def _check(self, key: str, label: str) -> QCheckBox:
         widget = QCheckBox(label)
+        # Sin esto las casillas se mostraban desmarcadas y al guardar se
+        # desactivaban opciones activas (p. ej. "Siempre visible").
+        widget.setChecked(bool(getattr(self._cfg, key, False)))
         if ALLOWED_KEYS.get(key, {}).get("restart"):
-            widget.setToolTip("Requiere reiniciar Extdator para aplicarse.")
+            widget.setToolTip("Requiere reiniciar UNnexor para aplicarse.")
         self._widgets[key] = widget
         return widget
 
@@ -637,6 +640,14 @@ class SettingsDialog(QDialog):
         keep = self._text("ollama_keep_alive", "5m / 1h / -1")
         keep.setText(self._cfg.ollama_keep_alive)
         form.addRow("Retención del modelo en memoria", keep)
+        autostart = self._check(
+            "ollama_autostart", "Iniciar Ollama al abrir UNnexor si no está abierto"
+        )
+        autostart.setToolTip(
+            "Si Ollama ya está abierto no se toca. Si lo inicia UNnexor, se "
+            "detiene al cerrar UNnexor. Requiere reiniciar UNnexor."
+        )
+        form.addRow("", autostart)
         return tab
 
     def _tab_avanzado(self) -> QWidget:
@@ -706,7 +717,7 @@ class SettingsDialog(QDialog):
             self,
             "Restaurar ajustes",
             "Se borrarán tus ajustes guardados y volverán los valores del "
-            "archivo .env.\n\n¿Continuar? (requiere reiniciar Extdator)",
+            "archivo .env.\n\n¿Continuar? (requiere reiniciar UNnexor)",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
         if answer == QMessageBox.StandardButton.Yes:
@@ -723,7 +734,7 @@ class PairingDialog(QDialog):
     def __init__(self, pairing, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self._pairing = pairing
-        self.setWindowTitle("Emparejar extensión — Extdator")
+        self.setWindowTitle("Emparejar extensión — UNnexor")
         self.setMinimumWidth(380)
         self.setStyleSheet(
             f"QDialog {{ background: #12141a; color: {TEXT}; }}"

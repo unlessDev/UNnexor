@@ -1,4 +1,4 @@
-/* Extdator — background service worker.
+/* UNnexor — background service worker.
  *
  * Única responsabilidad: recibir la selección del content script y hacer la
  * petición HTTP POST al puente local (FastAPI). Toda la lógica de UI vive en
@@ -78,12 +78,12 @@ async function handleSend(msg, sender) {
     if (name === "TimeoutError" || name === "AbortError") {
       return {
         ok: false,
-        error: "La aplicación Extdator tardó demasiado en responder. Comprueba que siga abierta.",
+        error: "La aplicación UNnexor tardó demasiado en responder. Comprueba que siga abierta.",
       };
     }
     return {
       ok: false,
-      error: "No se pudo conectar con la aplicación Extdator. Ábrela y vuelve a intentarlo.",
+      error: "No se pudo conectar con la aplicación UNnexor. Ábrela y vuelve a intentarlo.",
     };
   }
 
@@ -102,7 +102,7 @@ async function handleSend(msg, sender) {
     case 401:
       return {
         ok: false,
-        error: "La vinculación no es válida. Abre Extdator → ⚙ → Emparejar extensión y vuelve a conectar.",
+        error: "La vinculación no es válida. Abre UNnexor → ⚙ → Emparejar extensión y vuelve a conectar.",
       };
     case 403:
       return {

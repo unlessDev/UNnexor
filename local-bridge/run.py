@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Launcher de consola del puente Extdator.
+"""Launcher de consola del puente UNnexor.
 
 Uso:
     python run.py                → puente completo (servidor + panel flotante)

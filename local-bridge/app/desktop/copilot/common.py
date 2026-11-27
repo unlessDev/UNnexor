@@ -95,5 +95,5 @@ def export_pdf(markdown: str, path: str) -> None:
     document = QTextDocument()
     document.setMarkdown(markdown)
     writer = QPdfWriter(path)
-    writer.setTitle("Extdator")
+    writer.setTitle("UNnexor")
     document.print_(writer)

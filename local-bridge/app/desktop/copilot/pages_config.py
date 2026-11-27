@@ -1040,13 +1040,13 @@ class PrivacyPage(QWidget):
                 "Qué ocurre con tus datos:\n"
                 "• El audio se procesa en memoria y nunca se guarda en disco.\n"
                 "• Las transcripciones y sugerencias de la sesión viven en memoria "
-                "hasta que las borras o cierras Extdator; solo se guardan si las exportas.\n"
+                "hasta que las borras o cierras UNnexor; solo se guardan si las exportas.\n"
                 "• Las capturas de pantalla se envían al modelo y no quedan en disco "
                 "(las temporales del OCR se borran al terminar).\n"
                 "• Perfiles y documentos se guardan en tu carpeta de datos local.\n"
                 "• A un servicio externo solo se envía contenido si lo autorizaste "
                 "en 'Motores y modelos'.\n"
-                "• Extdator no oculta sus ventanas de las capturas ni de la "
+                "• UNnexor no oculta sus ventanas de las capturas ni de la "
                 "compartición de pantalla."
             )
         )

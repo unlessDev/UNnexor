@@ -44,7 +44,7 @@ log = logging.getLogger("extdator.onboarding")
 ONBOARDING_SEEN_KEY = "onboarding/seen"
 STEP_TITLES = ("Bienvenida", "Requisitos", "Conectar extensión")
 PAIRING_INTRO = (
-    "En Chrome, Brave o Edge abre las opciones de Extdator, pulsa "
+    "En Chrome, Brave o Edge abre las opciones de UNnexor, pulsa "
     "«Conectar con la aplicación de escritorio» e introduce este código:"
 )
 
@@ -216,7 +216,7 @@ class OnboardingDialog(QDialog):
         self._check_running = False
         self._task: Optional[RequirementsCheckTask] = None
 
-        self.setWindowTitle("Asistente de inicio — Extdator")
+        self.setWindowTitle("Asistente de inicio — UNnexor")
         self.setMinimumSize(580, 470)
         self.setStyleSheet(DIALOG_QSS)
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
@@ -230,7 +230,7 @@ class OnboardingDialog(QDialog):
         title.setObjectName("onboardingTitle")
         layout.addWidget(title)
         subtitle = QLabel(
-            "Tres pasos para dejar Extdator listo. Puedes volver a abrirlo "
+            "Tres pasos para dejar UNnexor listo. Puedes volver a abrirlo "
             "desde el menú ⚙."
         )
         subtitle.setObjectName("onboardingSubtitle")
@@ -278,7 +278,7 @@ class OnboardingDialog(QDialog):
         layout.addWidget(heading)
 
         intro = QLabel(
-            "Extdator muestra las respuestas en un panel flotante mientras "
+            "UNnexor muestra las respuestas en un panel flotante mientras "
             "sigues trabajando en el navegador. Selecciona texto, pulsa ✦ y "
             "el panel aparecerá sin robarte el foco."
         )
@@ -321,7 +321,7 @@ class OnboardingDialog(QDialog):
         layout.addWidget(heading)
 
         intro = QLabel(
-            "Extdator usa Ollama para responder en local. Esta comprobación "
+            "UNnexor usa Ollama para responder en local. Esta comprobación "
             "solo consulta tu equipo; no descarga ni cambia nada."
         )
         intro.setWordWrap(True)
@@ -373,7 +373,7 @@ class OnboardingDialog(QDialog):
         layout.addWidget(heading)
 
         intro = QLabel(
-            "En Chrome, Brave o Edge abre las opciones de Extdator, pulsa "
+            "En Chrome, Brave o Edge abre las opciones de UNnexor, pulsa "
             "«Conectar con la aplicación de escritorio» e introduce este "
             "código:"
         )

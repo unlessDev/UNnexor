@@ -1,4 +1,4 @@
-"""Genera el ejecutable one-folder de Extdator y lo valida en frío.
+"""Genera el ejecutable one-folder de UNnexor y lo valida en frío.
 
 Uso:
     python deployment/windows/build.py
@@ -6,8 +6,8 @@ Uso:
 
 Requiere PyInstaller instalado (ver local-bridge/requirements-build.txt).
 El resultado se escribe en `release/windows/` (ignorado por Git):
-  * Extdator/Extdator.exe y _internal/
-  * Extdator-<version>-win64-unsigned.zip
+  * UNnexor/UNnexor.exe y _internal/
+  * UNnexor-<version>-win64-unsigned.zip
   * SHA256SUMS.txt
   * build-report.json y build.log
 
@@ -37,7 +37,7 @@ from typing import Dict, Optional
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 LOCAL_BRIDGE = PROJECT_ROOT / "local-bridge"
-SPEC_FILE = PROJECT_ROOT / "deployment" / "windows" / "Extdator.spec"
+SPEC_FILE = PROJECT_ROOT / "deployment" / "windows" / "UNnexor.spec"
 DIST_ROOT = PROJECT_ROOT / "release" / "windows"
 WORK_ROOT = PROJECT_ROOT / "build" / "windows"
 APP_INIT = LOCAL_BRIDGE / "app" / "__init__.py"
@@ -93,15 +93,15 @@ def write_version_file(version: str, target: Path) -> Path:
                     StringTable(
                         "040904B0",
                         [
-                            StringStruct("CompanyName", "Extdator"),
+                            StringStruct("CompanyName", "UnlessDev"),
                             StringStruct(
                                 "FileDescription",
-                                "Extdator - asistente local para el navegador",
+                                "UNnexor AI Bridge - asistente local de IA",
                             ),
                             StringStruct("FileVersion", version),
-                            StringStruct("InternalName", "Extdator"),
-                            StringStruct("OriginalFilename", "Extdator.exe"),
-                            StringStruct("ProductName", "Extdator"),
+                            StringStruct("InternalName", "UNnexor"),
+                            StringStruct("OriginalFilename", "UNnexor.exe"),
+                            StringStruct("ProductName", "UNnexor"),
                             StringStruct("ProductVersion", version),
                         ],
                     )
@@ -160,7 +160,7 @@ def _with_log(message: str, data_dir: Path) -> str:
 
 def smoke_test(exe: Path, timeout: int = 180) -> Dict[str, object]:
     """Ejecuta el EXE con --check en un directorio de datos aislado."""
-    with tempfile.TemporaryDirectory(prefix="extdator-smoke-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="unnexor-smoke-") as tmp:
         data_dir = Path(tmp) / "data"
         env = os.environ.copy()
         env["EXTDATOR_DATA_DIR"] = str(data_dir)
@@ -234,7 +234,7 @@ def gui_smoke(exe: Path, timeout: int = 90) -> Dict[str, object]:
 
     Detecta DLL/plugins Qt eliminados por error en la poda del paquete.
     """
-    with tempfile.TemporaryDirectory(prefix="extdator-gui-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="unnexor-gui-") as tmp:
         data_dir = Path(tmp) / "data"
         env = os.environ.copy()
         env["EXTDATOR_DATA_DIR"] = str(data_dir)
@@ -373,8 +373,8 @@ def build(*, skip_smoke: bool = False) -> Dict[str, object]:
         tail = "\n".join((result.stderr or result.stdout or "").splitlines()[-40:])
         raise RuntimeError(f"PyInstaller falló (exit={result.returncode}):\n{tail}")
 
-    app_dir = DIST_ROOT / "Extdator"
-    exe = app_dir / "Extdator.exe"
+    app_dir = DIST_ROOT / "UNnexor"
+    exe = app_dir / "UNnexor.exe"
     if not exe.is_file():
         raise RuntimeError(f"PyInstaller no generó {exe}")
 
@@ -386,23 +386,23 @@ def build(*, skip_smoke: bool = False) -> Dict[str, object]:
         smoke = smoke_test(exe)
         gui = gui_smoke(exe)
 
-    archive = DIST_ROOT / f"Extdator-{version}-win64-unsigned.zip"
+    archive = DIST_ROOT / f"UNnexor-{version}-win64-unsigned.zip"
     _zip_folder(app_dir, archive)
     exe_hash = _sha256(exe)
     zip_hash = _sha256(archive)
     (DIST_ROOT / "SHA256SUMS.txt").write_text(
-        f"{zip_hash}  {archive.name}\n{exe_hash}  Extdator/Extdator.exe\n",
+        f"{zip_hash}  {archive.name}\n{exe_hash}  UNnexor/UNnexor.exe\n",
         encoding="utf-8",
     )
 
     report = {
-        "product": "Extdator desktop",
+        "product": "UNnexor desktop",
         "version": version,
         "pyinstaller": package_version("pyinstaller"),
         "mode": "one-folder",
         "signed": False,
         "unsigned_notice": "Build sin Authenticode; SmartScreen puede advertir.",
-        "exe": "Extdator/Extdator.exe",
+        "exe": "UNnexor/UNnexor.exe",
         "exe_sha256": exe_hash,
         "exe_bytes": exe.stat().st_size,
         "folder_bytes": _folder_size(app_dir),
@@ -440,7 +440,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         print(f"Build fallido: {exc}", file=sys.stderr)
         return 1
 
-    print(f"Extdator {report['version']} empaquetado en {DIST_ROOT}")
+    print(f"UNnexor {report['version']} empaquetado en {DIST_ROOT}")
     print(
         f"  EXE: {report['exe_bytes'] / 1024 / 1024:.1f} MB; "
         f"carpeta: {report['folder_bytes'] / 1024 / 1024:.1f} MB"

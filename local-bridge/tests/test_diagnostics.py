@@ -210,7 +210,7 @@ def test_write_archive_sanitizes_logs_and_omits_secrets(monkeypatch, tmp_path) -
         "2026-11-24 INFO extdator.server: "
         "Selección aceptada de https://privado.example: 'contenido privado'\n"
         "2026-11-24 INFO extdator.main: contacto support@example.com\n"
-        "2026-11-24 INFO extdator.main: ruta C:\\Users\\alice\\Extdator\n",
+        "2026-11-24 INFO extdator.main: ruta C:\\Users\\alice\\UNnexor\n",
         encoding="utf-8",
     )
     target = tmp_path / "diagnostico.zip"
@@ -298,8 +298,7 @@ def test_report_and_readme_are_presentable(monkeypatch, tmp_path) -> None:
 def test_default_archive_name_and_suffix() -> None:
     now = datetime(2026, 11, 24, 10, 5, tzinfo=timezone.utc)
     assert (
-        diagnostics.default_archive_name(now)
-        == "Extdator-diagnostico-20261124-1005.zip"
+        diagnostics.default_archive_name(now) == "UNnexor-diagnostico-20261124-1005.zip"
     )
     assert diagnostics.ensure_zip_suffix("diagnostico") == Path("diagnostico.zip")
     assert diagnostics.ensure_zip_suffix("diagnostico.ZIP") == Path("diagnostico.ZIP")

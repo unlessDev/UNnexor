@@ -1,6 +1,6 @@
 # Integración continua, SBOM y verificación
 
-Extdator se construye y verifica en GitHub Actions sobre `windows-latest`.
+UNnexor se construye y verifica en GitHub Actions sobre `windows-latest`.
 Este documento describe qué hace la cadena, cómo reproducirla en local y
 qué **no** cubre. No hay publicación automática de releases ni de tiendas.
 
@@ -63,7 +63,7 @@ y su `SHA256SUMS.txt` sin dependencias externas:
 
 - formato CycloneDX 1.5 con `serialNumber` determinista para el mismo
   conjunto de componentes;
-- componente raíz `Extdator` con versión, repositorio, estado de licencia
+- componente raíz `UNnexor` con versión, repositorio, estado de licencia
   (`pending-owner-decision`), estado de distribución (`not-published`) y
   firma (`unsigned`);
 - componentes de producto: extensión, puente local y entorno de build;
