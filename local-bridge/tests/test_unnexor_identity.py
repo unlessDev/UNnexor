@@ -84,6 +84,7 @@ def test_no_visible_old_name_in_user_interface():
                     continue
                 allowed = (
                     'QSettings("Extdator"',
+                    'SETTINGS_GROUP = ("Extdator"',
                     'APP_DIR_NAME = "Extdator"',
                     'SERVICE = "Extdator"',
                     'setOrganizationName("Extdator")',

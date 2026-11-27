@@ -49,7 +49,25 @@ usa [Semantic Versioning](https://semver.org/lang/es/).
   UNnexor lanza `ollama serve` sin ventana y al cerrarse detiene **solo ese
   proceso**; un Ollama que ya estaba abierto nunca se reinicia ni se cierra.
 
+- **Control del tiempo de escucha del copiloto**: además de la escucha
+  continua, modo *temporizado* (10 s–10 min, con valores rápidos) y *manual*
+  (el atajo inicia y termina). Lo escuchado en la ventana se envía junto al
+  modelo para que identifique la pregunta aunque el interlocutor hable mucho
+  tiempo. Fuera de la ventana la captura queda en pausa (sin acumular
+  audio), no se activa el micrófono por su cuenta, hay cancelación e
+  indicador visual con cuenta atrás. Atajos configurables con detección de
+  conflictos (repetidos o reservados por Windows). Validado con audio real:
+  `scripts/listen_window_e2e.py`.
+- **«Siempre visible» por ventana**: el 📌 del panel principal, el del panel
+  flotante y el interruptor de la ventana del copiloto aplican el estado
+  real del sistema (`SetWindowPos` sobre el mismo HWND) y se guardan por
+  separado.
+
 ### Fixed
+- El botón 📌 no funcionaba de forma fiable: arrancaba siempre marcado sin
+  mirar el estado real, su estilo de "activado" nunca se aplicaba y al
+  pulsarlo Qt recreaba la ventana (perdiendo los estilos de barra de
+  tareas y el destino del Hover Scroll).
 - El diálogo de Ajustes mostraba todas las casillas desmarcadas: al
   guardar se desactivaban opciones activas como "Siempre visible" o la
   privacidad de los registros.

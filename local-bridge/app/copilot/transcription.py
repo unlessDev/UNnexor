@@ -106,6 +106,7 @@ class TranscriptionService:
         self._thread: threading.Thread | None = None
         self._recognizer: SpeechRecognizer | None = None
         self._backlog_warned = False
+        self._busy = False  # hay un segmento final transcribiéndose
         self.state = TranscriberState.IDLE
         self.processed = 0
 
@@ -135,6 +136,11 @@ class TranscriptionService:
                 self._partials[segment.segment_id] = job
             self._cond.notify()
 
+    def drained(self) -> bool:
+        """¿No queda ningún segmento final pendiente ni en curso?"""
+        with self._cond:
+            return not self._finals and not self._busy
+
     def backlog_seconds(self) -> float:
         with self._cond:
             return sum(job.segment.duration for job in self._finals)
@@ -162,6 +168,7 @@ class TranscriptionService:
             while not self._finals and not self._partials and not self._stopping:
                 self._cond.wait(0.5)
             if self._finals:
+                self._busy = True
                 return self._finals.popleft()
             if self._partials and not self._stopping:
                 # El provisional más reciente (mayor id = intervención más nueva).
@@ -194,7 +201,11 @@ class TranscriptionService:
                 if job is None:
                     break
                 self._check_backlog()
-                self._process(job)
+                try:
+                    self._process(job)
+                finally:
+                    with self._cond:
+                        self._busy = False
                 if self._failed:
                     break
         finally:

@@ -58,6 +58,7 @@ from .onboarding import (
     should_show_onboarding,
 )
 from .styles import APP_QSS
+from .topmost import IS_WINDOWS, set_topmost
 from .widgets import (
     AssistantMessage,
     ChatScroller,
@@ -100,7 +101,10 @@ class BridgeWindow(QMainWindow):
             | Qt.WindowType.FramelessWindowHint
             | Qt.WindowType.WindowDoesNotAcceptFocus
         )
-        if cfg.always_on_top:
+        # En Windows «Siempre visible» se aplica sobre el HWND ya creado
+        # (topmost.set_topmost); con la bandera de Qt la ventana se recrearía
+        # al cambiarla. En otros sistemas se usa la bandera.
+        if cfg.always_on_top and not IS_WINDOWS:
             flags |= Qt.WindowType.WindowStaysOnTopHint
         super().__init__(None, flags)
         self.setWindowTitle("UNnexor")
@@ -254,6 +258,9 @@ class BridgeWindow(QMainWindow):
                 self._hook.install(hwnd)
             else:
                 self._hook.update_target(hwnd)
+        # Estado real del sistema → botón 📌 (nunca un valor supuesto).
+        self._on_top = set_topmost(self, self._on_top)
+        self._titlebar.set_pinned(self._on_top)
         if self._show_onboarding and not self._onboarding_scheduled:
             self._onboarding_scheduled = True
             # Dejar que la ventana se pinte antes de abrir el diálogo modal.
@@ -566,11 +573,23 @@ class BridgeWindow(QMainWindow):
         self._set_footer_transient("Deteniendo generación…", seconds=2.5)
 
     def set_on_top(self, enabled: bool) -> None:
-        self._on_top = enabled
-        self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, enabled)
-        if self.isVisible():
-            self.show()
+        """Activa/desactiva «Siempre visible» y lo persiste.
+
+        El estado que se guarda y se muestra es el que informa el sistema
+        tras aplicar el cambio, no el solicitado.
+        """
+        self._on_top = bool(enabled)  # antes de aplicar (showEvent puede reentrar)
+        actual = set_topmost(self, bool(enabled)) if self.isVisible() else enabled
+        self._on_top = actual
+        self._titlebar.set_pinned(actual)
         self._save_geometry()
+        if self._cfg.always_on_top != actual:
+            self._cfg.always_on_top = actual
+            if self._settings_store is not None:
+                try:
+                    self._settings_store.update({"always_on_top": actual})
+                except Exception as exc:  # pragma: no cover - disco lleno, etc.
+                    log.warning("No se pudo guardar «Siempre visible»: %s", exc)
         hwnd = self._hwnd()
         if hwnd:
             apply_noactivate(hwnd)
@@ -752,6 +771,11 @@ class BridgeWindow(QMainWindow):
             return
         for key, value in applied.items():
             setattr(self._cfg, key, value)
+        if (
+            "always_on_top" in applied
+            and bool(applied["always_on_top"]) != self._on_top
+        ):
+            self.set_on_top(bool(applied["always_on_top"]))
         live = {k: v for k, v in applied.items() if k in LIVE_KEYS}
         if live:
             # Cambios en caliente: el worker los aplica en la próxima petición

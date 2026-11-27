@@ -43,6 +43,30 @@ flotante con el botón **🧭** o desde **⚙ → Copiloto en tiempo real…**.
   automática y usa la **pregunta manual**.
 - En cada sugerencia: **Otra respuesta**, **Ampliar**, **Útil**, **Copiar**.
 
+#### Control del tiempo de escucha
+
+Cuando el interlocutor habla mucho tiempo seguido, la pregunta puede quedar
+enterrada entre explicaciones. Elige en **Escucha** cómo quieres trabajar:
+
+| Modo | Cómo funciona |
+|---|---|
+| **Continua** (por defecto) | Detecta preguntas turno a turno, como siempre. |
+| **Temporizada** | Pulsa **🎙 Escuchar** (o el atajo) y el copiloto escucha durante la duración elegida (10 s, 20 s, 30 s, 1 min, 2 min o la que indiques, de 5 s a 10 min). Al terminar, todo lo escuchado se envía junto al modelo, que identifica la pregunta dentro del fragmento. |
+| **Manual con atajo** | El atajo inicia la escucha y **el mismo atajo la termina**; entonces se responde. |
+
+- Fuera de la escucha la captura queda **en pausa**: no se guarda audio en
+  memoria ni se transcribe nada.
+- Se usan las mismas fuentes de la sesión: si solo capturas el audio del
+  sistema, el micrófono **no** se activa.
+- **■ Terminar y responder** cierra la escucha antes de tiempo; **✕ Cancelar
+  escucha** (o su atajo) la descarta sin enviar nada.
+- El estado se ve en la página y en el panel flotante: 🔴 escuchando (con
+  cuenta atrás), ⏳ terminando de transcribir, en espera.
+- Los atajos se cambian en la misma fila y se validan al aplicar: no se
+  aceptan combinaciones repetidas entre funciones de UNnexor ni reservadas
+  por Windows (Win+L, Alt+Tab, Ctrl+C…); si otra aplicación ya usa la
+  combinación, Windows la rechaza y se avisa.
+
 ### 🌐 Traducción en tiempo real
 
 - Elige idioma de origen (o detección automática) y de destino.
@@ -90,6 +114,8 @@ funciona igual.
 | Pausar / reanudar la captura | `Ctrl+Alt+Shift+C` |
 | Escribir una pregunta | `Ctrl+Alt+Shift+A` |
 | Capturar región y analizar | `Ctrl+Alt+Shift+S` |
+| Escuchar / terminar la escucha (modos temporizado y manual) | `Ctrl+Alt+Shift+L` |
+| Cancelar la escucha | `Ctrl+Alt+Shift+X` |
 
 Si otra aplicación ya usa una combinación, Windows la rechaza y UNnexor lo
 indica en el registro.

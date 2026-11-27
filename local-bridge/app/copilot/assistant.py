@@ -47,7 +47,7 @@ class QAStatus(str, Enum):
 class QAItem:
     id: int
     question: str
-    origin: str  # auto | manual
+    origin: str  # auto | manual | window
     created_at: float
     answer: str = ""
     status: QAStatus = QAStatus.PENDING
@@ -151,6 +151,18 @@ class ConversationAssistant:
         with self._lock:
             item = self._new_item(text, "manual", 1.0)
             self._jobs.appendleft(_Job(item.id, "answer"))  # prioridad al usuario
+            self._wake.notify_all()
+        self._emit(self._cb.on_question, item)
+        return item.id
+
+    def ask_window(self, text: str) -> int:
+        """Responde a lo escuchado en una ventana de escucha (siempre)."""
+        fragment = text.strip()
+        if not fragment:
+            raise ValueError("No se escuchó nada en la ventana.")
+        with self._lock:
+            item = self._new_item(fragment, "window", 1.0)
+            self._jobs.appendleft(_Job(item.id, "window"))
             self._wake.notify_all()
         self._emit(self._cb.on_question, item)
         return item.id
