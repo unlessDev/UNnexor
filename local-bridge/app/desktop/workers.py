@@ -416,8 +416,12 @@ class HardwareWorker(QThread):
             disk_free_gb = info.disk_free_gb
             catalog: List[Dict[str, Any]] = []
             installed_names = {row["name"].split(":")[0] for row in installed}
+            installed_full = {row["name"].lower() for row in installed}
             for item in recommended_catalog():
-                if item["name"].split(":")[0] in installed_names:
+                name = item["name"].lower()
+                if name in installed_full or (
+                    not item.get("estimated") and name.split(":")[0] in installed_names
+                ):
                     continue  # ya está instalado: aparece en la otra sección
                 assessment = assess_model(
                     model_name=item["name"],
@@ -429,17 +433,62 @@ class HardwareWorker(QThread):
                 )
                 catalog.append({**item, "assessment": assessment.to_dict()})
 
+            from ..ollama_library import default_catalog, version_status
+
+            snapshot = default_catalog().load_cached()
+            reachable, detail = self._ollama.is_reachable()
+            local_version = detail if reachable and detail != "?" else ""
+            state, version_message = version_status(
+                local_version, snapshot.latest_ollama
+            )
             self.ready.emit(
                 {
                     "hardware": hw,
                     "installed": installed,
                     "catalog": catalog,
                     "configured": self._configured,
+                    "library": {
+                        "status": snapshot.status,
+                        "fetched_at": snapshot.fetched_at,
+                        "new": len(snapshot.new_names),
+                        "models": len(snapshot.models),
+                        "version_state": state,
+                        "version_message": version_message,
+                    },
                 }
             )
         except Exception as exc:  # nunca tumbar la GUI
             log.exception("Fallo cargando modelos/hardware")
             self.failed.emit(f"Error al evaluar el equipo: {exc}")
+
+
+class CatalogRefreshWorker(QThread):
+    """Actualiza el catálogo de ollama.com en segundo plano (solo lectura)."""
+
+    finished_refresh = Signal(str)
+
+    def run(self) -> None:
+        from ..ollama_library import default_catalog
+
+        try:
+            snapshot = default_catalog().refresh()
+        except Exception as exc:  # nunca tumbar la GUI
+            log.exception("Fallo actualizando el catálogo")
+            self.finished_refresh.emit(f"No se pudo actualizar el catálogo: {exc}")
+            return
+        if snapshot.status == "online":
+            self.finished_refresh.emit(
+                f"Catálogo actualizado: {len(snapshot.models)} modelos."
+            )
+        elif snapshot.status == "cache":
+            self.finished_refresh.emit(
+                f"Sin conexión ({snapshot.error}); se mantiene la copia del "
+                f"{snapshot.fetched_at[:10]}."
+            )
+        else:
+            self.finished_refresh.emit(
+                f"No se pudo consultar ollama.com: {snapshot.error}"
+            )
 
 
 class OCRWorker(QThread):

@@ -49,7 +49,55 @@ usa [Semantic Versioning](https://semver.org/lang/es/).
   UNnexor lanza `ollama serve` sin ventana y al cerrarse detiene **solo ese
   proceso**; un Ollama que ya estaba abierto nunca se reinicia ni se cierra.
 
+- **Control del tiempo de escucha del copiloto**: además de la escucha
+  continua, modo *temporizado* (10 s–10 min, con valores rápidos) y *manual*
+  (el atajo inicia y termina). Lo escuchado en la ventana se envía junto al
+  modelo para que identifique la pregunta aunque el interlocutor hable mucho
+  tiempo. Fuera de la ventana la captura queda en pausa (sin acumular
+  audio), no se activa el micrófono por su cuenta, hay cancelación e
+  indicador visual con cuenta atrás. Atajos configurables con detección de
+  conflictos (repetidos o reservados por Windows). Validado con audio real:
+  `scripts/listen_window_e2e.py`.
+- **«Siempre visible» por ventana**: el 📌 del panel principal, el del panel
+  flotante y el interruptor de la ventana del copiloto aplican el estado
+  real del sistema (`SetWindowPos` sobre el mismo HWND) y se guardan por
+  separado.
+
+- **Documentos del perfil**: explicación visible de que los formatos
+  recomendados son Markdown (.md) y texto (.txt) y de cómo se usan (se
+  recuperan fragmentos como contexto en cada respuesta; el modelo no los
+  "aprende"). Los formatos no admitidos se rechazan con un mensaje; PDF y
+  Word siguen disponibles solo tras confirmar un aviso (extracción
+  experimental). Validación de vacíos, binarios y archivos de más de 5 MB.
+- **Catálogo en línea de Ollama** (`app/ollama_library.py`): al iniciar (y
+  con «🔄 Actualizar catálogo») se consulta `ollama.com/library` y la última
+  versión de Ollama en GitHub, solo lectura. *Modelos de IA* muestra una
+  sección «Biblioteca de Ollama» con modelos nuevos (🆕), capacidades y
+  tamaños **estimados** evaluados contra el equipo; sin conexión se usa la
+  última copia válida. Avisa si hay una versión más reciente de Ollama (no la
+  actualiza). Nunca descarga nada sin una acción explícita. Desactivable con
+  `ONLINE_CATALOG=0` o en Ajustes → Ollama.
+- **Recomendar configuración** (⚙ del panel y página Inicio del copiloto):
+  detecta CPU (modelo, arquitectura, núcleos/hilos, AVX), RAM
+  (total/disponible/usada/reservable), GPU (fabricante, VRAM, tecnología
+  compatible, controladores presentes, uso real en la inferencia), disco y
+  sistema, indicando lo que no se pudo detectar. Con tres perfiles (menor,
+  medio y alto consumo) propone por separado modelo/motor para texto y
+  navegador, conversación, traducción, visión, voz, OCR y documentos, con
+  requisitos, velocidad, calidad, compatibilidad (medida/estimada/
+  desconocida), alternativa más ligera, descarga necesaria y parámetros de
+  generación por función (temperature, top_p, top_k, repeat_penalty,
+  num_ctx, think). Nunca recomienda modelos EXIGENTES ni NO COMPATIBLES; en
+  alto consumo prefiere reducir el contexto antes que el modelo. Aplicar
+  muestra un resumen, solo aplica modelos instalados, guarda una copia y
+  permite restaurar la configuración anterior. El copiloto respeta la
+  temperatura por tarea.
+
 ### Fixed
+- El botón 📌 no funcionaba de forma fiable: arrancaba siempre marcado sin
+  mirar el estado real, su estilo de "activado" nunca se aplicaba y al
+  pulsarlo Qt recreaba la ventana (perdiendo los estilos de barra de
+  tareas y el destino del Hover Scroll).
 - El diálogo de Ajustes mostraba todas las casillas desmarcadas: al
   guardar se desactivaban opciones activas como "Siempre visible" o la
   privacidad de los registros.

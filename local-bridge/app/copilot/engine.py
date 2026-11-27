@@ -72,8 +72,10 @@ class RoutedEngine:
         ledger: UsageLedger | None = None,
         ttl_s: float = 60.0,
         client_factory: Callable[[Candidate], Any] | None = None,
+        task_temperature: Callable[[Task], float | None] | None = None,
     ) -> None:
         self._ollama = ollama
+        self._task_temperature = task_temperature
         self._policy = policy
         self._remote_models = remote_models
         self._has_key = has_key
@@ -139,6 +141,12 @@ class RoutedEngine:
     ) -> GenerationResult:
         decision = self.decide(task, sensitive, local_only)
         backends: dict[str, Any] = {}
+        # La temperatura elegida por el usuario para la tarea (Recomendar
+        # configuración) prevalece sobre el valor por defecto de cada flujo.
+        if self._task_temperature is not None:
+            configured = self._task_temperature(task)
+            if configured is not None:
+                temperature = configured
 
         def client_for(candidate: Candidate) -> Any:
             backend = self._client_for(candidate)

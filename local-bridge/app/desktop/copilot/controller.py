@@ -17,7 +17,7 @@ import time
 from collections.abc import Callable
 from typing import Any
 
-from PySide6.QtCore import QObject, Signal
+from PySide6.QtCore import QObject, QTimer, Signal
 
 from ...audio.capture import CaptureState, CaptureStatus, SoundCardBackend
 from ...audio.pipeline import AudioPipeline, SourceSelection
@@ -26,6 +26,12 @@ from ...config import Config
 from ...copilot.assistant import AssistantCallbacks, ConversationAssistant, QAItem
 from ...copilot.challenges import ChallengeResult, ChallengeSolver
 from ...copilot.engine import RoutedEngine
+from ...copilot.listening import (
+    ListeningWindow,
+    ListenMode,
+    WindowState,
+    format_seconds,
+)
 from ...copilot.settings import CopilotSettings, SettingsRepository
 from ...copilot.transcription import (
     TranscriberState,
@@ -93,6 +99,8 @@ class CopilotController(QObject):
     sessionChanged = Signal(str)  # idle | conversation | translation
     pausedChanged = Signal(bool)
     settingsChanged = Signal()
+    # Ventana de escucha: (estado idle|listening|processing, texto de estado)
+    listeningChanged = Signal(str, str)
 
     def __init__(
         self,
@@ -127,6 +135,9 @@ class CopilotController(QObject):
             has_key=_has_key,
             hardware=lambda: self._hardware,
             ledger=self.ledger,
+            task_temperature=lambda task: self.settings.task_temperature.get(
+                task.value
+            ),
         )
         self.assistant = ConversationAssistant(
             self.engine,
@@ -156,6 +167,11 @@ class CopilotController(QObject):
         self._pipeline: AudioPipeline | None = None
         self._stt: TranscriptionService | None = None
         self._lock = threading.Lock()
+        self.window = ListeningWindow()
+        self._window_timer = QTimer(self)
+        self._window_timer.setInterval(250)
+        self._window_timer.timeout.connect(self._window_tick)
+        self._drain_deadline = 0.0
         self.assistant.start()
         self.translator.start()
 
@@ -246,6 +262,11 @@ class CopilotController(QObject):
         self._stt.start()
         self._pipeline.start()
         self.sessionChanged.emit(mode)
+        if self.uses_listen_windows:
+            # Sin ventana abierta no se captura nada (ni se acumula audio).
+            self._pipeline.pause()
+            self.window.cancel()
+            self._emit_window_state()
         task = Task.ANSWER if mode == "conversation" else Task.TRANSLATION
         run_async(
             lambda: self.engine.warm_up(task),
@@ -253,7 +274,128 @@ class CopilotController(QObject):
             on_error=lambda msg: self.status.emit("llm", msg),
         )
 
+    @property
+    def listen_mode(self) -> ListenMode:
+        try:
+            return ListenMode(self.settings.listen_mode)
+        except ValueError:
+            return ListenMode.CONTINUOUS
+
+    @property
+    def uses_listen_windows(self) -> bool:
+        return (
+            self.mode == "conversation"
+            and self.listen_mode is not ListenMode.CONTINUOUS
+        )
+
+    # ------------------------------------------------- ventanas de escucha
+    def begin_listening(self) -> None:
+        """Abre una ventana de escucha (inicia la sesión si hace falta)."""
+        if self.listen_mode is ListenMode.CONTINUOUS:
+            raise ValueError(
+                "Elige el modo de escucha temporizada o manual para usar «Escuchar»."
+            )
+        if self.mode != "conversation":
+            self.start_session("conversation")
+        if self._pipeline is None or self.window.state is not WindowState.IDLE:
+            return
+        duration = (
+            float(self.settings.listen_seconds)
+            if self.listen_mode is ListenMode.TIMED
+            else None
+        )
+        self.window.begin(duration)
+        self._pipeline.resume()
+        self._window_timer.start()
+        self._emit_window_state()
+
+    def end_listening(self) -> None:
+        """Cierra la captura y, cuando termina de transcribir, responde."""
+        if self.window.state is not WindowState.LISTENING:
+            return
+        self.window.end()
+        if self._pipeline is not None:
+            self._pipeline.pause()  # cierra la intervención en curso
+        self._drain_deadline = time.monotonic() + 30.0
+        self._window_timer.start()
+        self._emit_window_state()
+
+    def cancel_listening(self) -> None:
+        if self.window.state is WindowState.IDLE:
+            return
+        self.window.cancel()
+        self._window_timer.stop()
+        if self._pipeline is not None:
+            self._pipeline.pause()
+        self.listeningChanged.emit("idle", "Escucha cancelada; no se envió nada.")
+
+    def toggle_listening(self) -> None:
+        """Atajo de escucha: inicia, o termina si ya se está escuchando."""
+        try:
+            if self.window.state is WindowState.LISTENING:
+                self.end_listening()
+            elif self.window.state is WindowState.IDLE:
+                self.begin_listening()
+        except ValueError as exc:
+            self.error.emit(str(exc))
+
+    def _window_tick(self) -> None:
+        state = self.window.state
+        if state is WindowState.LISTENING:
+            if self.window.expired():
+                self.end_listening()
+            else:
+                self._emit_window_state()
+            return
+        if state is WindowState.PROCESSING:
+            stt = self._stt
+            drained = stt is None or stt.drained()
+            if drained or time.monotonic() > self._drain_deadline:
+                self._window_timer.stop()
+                self._deliver_window()
+            return
+        self._window_timer.stop()
+
+    def _deliver_window(self) -> None:
+        seconds = self.window.elapsed()
+        text = self.window.finish()
+        if not text:
+            self.listeningChanged.emit(
+                "idle", "No se detectó voz durante la escucha; no se envió nada."
+            )
+            return
+        self.assistant.ask_window(text)
+        self.listeningChanged.emit(
+            "idle",
+            f"Escuchado {format_seconds(seconds)}: enviado al modelo.",
+        )
+
+    def _emit_window_state(self) -> None:
+        state = self.window.state
+        if state is WindowState.LISTENING:
+            left = self.window.remaining()
+            if left is None:
+                text = (
+                    f"🔴 Escuchando {format_seconds(self.window.elapsed())} — "
+                    f"{self.settings.hotkey_listen} para terminar"
+                )
+            else:
+                text = f"🔴 Escuchando — quedan {format_seconds(left)}"
+        elif state is WindowState.PROCESSING:
+            text = "⏳ Terminando de transcribir lo escuchado…"
+        else:
+            text = (
+                f"En espera: pulsa «Escuchar» o {self.settings.hotkey_listen} "
+                "cuando quieras que el copiloto escuche."
+            )
+        self.listeningChanged.emit(state.value, text)
+
     def pause(self) -> None:
+        if self.uses_listen_windows:
+            # En modos de ventana la captura ya está en pausa fuera de la
+            # ventana: «pausar» equivale a descartar la escucha en curso.
+            self.cancel_listening()
+            return
         if self.mode == "idle" or self.paused or self._pipeline is None:
             return
         self._pipeline.pause()
@@ -263,6 +405,8 @@ class CopilotController(QObject):
         self.pausedChanged.emit(True)
 
     def resume(self) -> None:
+        if self.uses_listen_windows:
+            return
         if self.mode == "idle" or not self.paused or self._pipeline is None:
             return
         self._pipeline.resume()
@@ -275,6 +419,10 @@ class CopilotController(QObject):
         self.resume() if self.paused else self.pause()
 
     def stop_session(self) -> None:
+        if self.window.state is not WindowState.IDLE:
+            self.window.cancel()
+            self._window_timer.stop()
+            self.listeningChanged.emit("idle", "")
         pipeline, stt = self._pipeline, self._stt
         self._pipeline = self._stt = None
         if pipeline is not None:
@@ -297,6 +445,11 @@ class CopilotController(QObject):
     # ---------------------------------------------------------- callbacks
     def _on_transcript(self, event: TranscriptEvent) -> None:
         self.transcript.emit(event)
+        if self.uses_listen_windows:
+            # Lo escuchado se acumula y se responde al cerrar la ventana.
+            if event.final and not event.retracted:
+                self.window.add(event.source.speaker_label, event.text)
+            return
         if self.mode == "conversation":
             self.assistant.handle_transcript(event)
         elif self.mode == "translation":

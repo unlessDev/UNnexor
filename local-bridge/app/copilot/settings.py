@@ -28,6 +28,9 @@ class CopilotSettings:
     answer_microphone_questions: bool = False
     sensitivity: str = "medium"  # low | medium | high
     use_knowledge: bool = True
+    # Ventanas de escucha (ver copilot/listening.py): continuous | timed | manual
+    listen_mode: str = "continuous"
+    listen_seconds: int = 30
     # Traducción
     translation_source: str = ""  # "" = automático
     translation_target: str = "en"
@@ -37,12 +40,16 @@ class CopilotSettings:
     strategy: str = Strategy.LOCAL_FIRST.value
     pinned: dict[str, str] = field(default_factory=dict)  # task → "prov:model"
     remote_models: dict[str, list[str]] = field(default_factory=dict)
+    # Temperatura por tarea (Recomendar configuración); vacío = la de cada flujo.
+    task_temperature: dict[str, float] = field(default_factory=dict)
     # Ventana flotante y atajos
     overlay_opacity: int = 92
     overlay_on_top: bool = True
     hotkey_toggle_capture: str = "Ctrl+Alt+Shift+C"
     hotkey_ask_manual: str = "Ctrl+Alt+Shift+A"
     hotkey_screen_challenge: str = "Ctrl+Alt+Shift+S"
+    hotkey_listen: str = "Ctrl+Alt+Shift+L"  # iniciar / terminar la escucha
+    hotkey_listen_cancel: str = "Ctrl+Alt+Shift+X"  # descartar la escucha
     # Mediciones de rendimiento consentidas: "stt:base", "llm:qwen3:8b"…
     benchmarks: dict[str, dict[str, Any]] = field(default_factory=dict)
 
@@ -62,6 +69,10 @@ class CopilotSettings:
             raise ValueError("El intervalo debe estar entre 5 y 600 s")
         if not 40 <= int(self.overlay_opacity) <= 100:
             raise ValueError("Opacidad fuera de rango")
+        if self.listen_mode not in ("continuous", "timed", "manual"):
+            raise ValueError("Modo de escucha no válido")
+        if not 5 <= int(self.listen_seconds) <= 600:
+            raise ValueError("La duración de la escucha debe estar entre 5 y 600 s")
         for task in self.pinned:
             Task(task)
 

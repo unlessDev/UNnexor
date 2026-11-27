@@ -27,6 +27,7 @@ from ...copilot.transcription import TranscriptEvent
 from ...copilot.translation import SegmentStatus, TranslationSegment
 from ..frameless import enable_frameless_resize
 from ..styles import ACCENT, AMBER, BORDER, GREEN, MUTED, PANEL, RED, TEXT
+from ..topmost import IS_WINDOWS, set_topmost
 from ..widgets import AssistantMessage, ChatScroller, UserMessage, make_chat_area
 from ..window_manager import apply_noactivate
 
@@ -51,6 +52,8 @@ class CopilotOverlay(QWidget):
     alternativeClicked = Signal(int)
     expandClicked = Signal(int)
     openMainClicked = Signal()
+    pinChanged = Signal(bool)  # el usuario cambió «Siempre visible»
+    listenClicked = Signal()  # 🎙 iniciar / terminar la escucha
 
     def __init__(self, on_top: bool = True, opacity: int = 92) -> None:
         flags = (
@@ -60,9 +63,12 @@ class CopilotOverlay(QWidget):
         )
         # Sin Qt.Tool: así tiene botón en la barra de tareas y al minimizarlo
         # no desaparece (WS_EX_APPWINDOW se refuerza en showEvent).
-        if on_top:
+        # En Windows «Siempre visible» se aplica sobre el HWND (ver
+        # desktop/topmost.py): la bandera de Qt recrearía la ventana.
+        if on_top and not IS_WINDOWS:
             flags |= Qt.WindowType.WindowStaysOnTopHint
         super().__init__(None, flags)
+        self._on_top = on_top
         self.setWindowTitle("UNnexor · Copiloto")
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
         self.setMinimumSize(320, 220)
@@ -93,6 +99,10 @@ class CopilotOverlay(QWidget):
         self._status.setObjectName("overlayStatus")
         bar_layout.addWidget(self._dot)
         bar_layout.addWidget(self._status, 1)
+        self._listen = QPushButton("🎙")
+        self._listen.setToolTip("Escuchar ahora / terminar la escucha")
+        self._listen.clicked.connect(self.listenClicked)
+        self._listen.setVisible(False)
         self._pause = QPushButton("⏸")
         self._pause.setToolTip("Pausar / reanudar la captura")
         self._pause.clicked.connect(self.pauseClicked)
@@ -108,15 +118,21 @@ class CopilotOverlay(QWidget):
         clear = QPushButton("🗑")
         clear.setToolTip("Vaciar el historial del panel")
         clear.clicked.connect(self.clear_history)
+        self._pin = QPushButton("📌")
+        self._pin.setCheckable(True)
+        self._pin.setObjectName("overlayPin")
+        self._pin.toggled.connect(self._on_pin_toggled)
         minimize = QPushButton("—")
         minimize.setToolTip("Minimizar a la barra de tareas")
         minimize.clicked.connect(self.showMinimized)
         for button in (
+            self._listen,
             self._pause,
             self._stop,
             clear,
             self._compact_btn,
             main,
+            self._pin,
             minimize,
         ):
             button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
@@ -172,6 +188,7 @@ class CopilotOverlay(QWidget):
             apply_noactivate(int(self.winId()))
         except Exception:  # pragma: no cover - solo Windows
             pass
+        self.set_on_top(self._on_top)
 
     def closeEvent(self, event) -> None:
         self._settings.setValue("geometry", self.saveGeometry())
@@ -200,9 +217,30 @@ class CopilotOverlay(QWidget):
         super().mouseReleaseEvent(event)
 
     def set_on_top(self, on_top: bool) -> None:
-        self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, on_top)
+        """Aplica «Siempre visible» y refleja el estado real en el 📌."""
+        # El valor pedido se guarda ANTES: sin HWND nativo, set_topmost
+        # vuelve a mostrar la ventana y showEvent lo reaplica.
+        self._on_top = on_top
         if self.isVisible():
-            self.show()
+            self._on_top = set_topmost(self, on_top)
+        self._sync_pin()
+
+    def is_on_top(self) -> bool:
+        return self._on_top
+
+    def _sync_pin(self) -> None:
+        self._pin.blockSignals(True)
+        self._pin.setChecked(self._on_top)
+        self._pin.blockSignals(False)
+        self._pin.setToolTip(
+            "Siempre visible: ACTIVADO (clic para desactivar)"
+            if self._on_top
+            else "Siempre visible: desactivado (clic para fijar encima)"
+        )
+
+    def _on_pin_toggled(self, checked: bool) -> None:
+        self.set_on_top(checked)
+        self.pinChanged.emit(self._on_top)
 
     def set_opacity(self, value: int) -> None:
         self.setWindowOpacity(max(0.4, min(1.0, value / 100)))
@@ -220,11 +258,26 @@ class CopilotOverlay(QWidget):
 
     # ------------------------------------------------------------- estado
     def set_status(self, text: str, kind: str = "info") -> None:
-        color = {"capture": GREEN, "busy": AMBER, "error": RED, "paused": MUTED}.get(
-            kind, ACCENT
-        )
+        color = {
+            "capture": GREEN,
+            "busy": AMBER,
+            "error": RED,
+            "listening": RED,
+            "paused": MUTED,
+        }.get(kind, ACCENT)
         self._dot.setStyleSheet(f"color: {color};")
         self._status.setText(text)
+
+    def set_listen_available(self, available: bool) -> None:
+        self._listen.setVisible(available)
+        self._pause.setVisible(not available)
+
+    def set_listening(self, state: str, text: str) -> None:
+        self._listen.setText("■" if state == "listening" else "🎙")
+        self._listen.setEnabled(state != "processing")
+        if text:
+            kind = {"listening": "listening", "processing": "busy"}.get(state, "paused")
+            self.set_status(text, kind)
 
     def set_paused(self, paused: bool) -> None:
         self._pause.setText("▶" if paused else "⏸")

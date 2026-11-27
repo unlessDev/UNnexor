@@ -85,6 +85,70 @@ class _Filter(QAbstractNativeEventFilter):
         return False, 0
 
 
+# Combinaciones del sistema o de uso universal que no deben capturarse.
+RESERVED = {
+    "Ctrl+Alt+Delete": "reservada por Windows",
+    "Ctrl+Shift+Escape": "Administrador de tareas",
+    "Alt+F4": "cerrar ventana",
+    "Alt+Tab": "cambiar de ventana",
+    "Win+L": "bloquear el equipo",
+    "Win+D": "mostrar el escritorio",
+    "Win+E": "Explorador de archivos",
+    "Win+R": "Ejecutar",
+    "Win+Tab": "vista de tareas",
+    "Ctrl+C": "copiar",
+    "Ctrl+V": "pegar",
+    "Ctrl+X": "cortar",
+    "Ctrl+Z": "deshacer",
+    "Ctrl+A": "seleccionar todo",
+    "Ctrl+S": "guardar",
+}
+
+
+def _reserved_keys() -> dict[tuple[int, int], str]:
+    out: dict[tuple[int, int], str] = {}
+    for combo, why in RESERVED.items():
+        parts = [p.strip().lower() for p in combo.split("+")]
+        mods = 0
+        for part in parts[:-1]:
+            mods |= _MODS[part]
+        key = parts[-1]
+        vk = {"delete": 0x2E, "escape": 0x1B, "tab": 0x09}.get(key)
+        if vk is None:
+            vk = _SPECIAL.get(key) or ord(key.upper())
+        out[(mods, vk)] = f"{combo} ({why})"
+    return out
+
+
+def find_conflicts(bindings: dict[str, str]) -> list[str]:
+    """Conflictos entre atajos de UNnexor y con combinaciones reservadas.
+
+    ``bindings``: {etiqueta: combinación}. Las vacías se ignoran. No detecta
+    los atajos de OTRAS aplicaciones: eso lo informa ``register`` cuando
+    Windows rechaza la combinación.
+    """
+    problems: list[str] = []
+    seen: dict[tuple[int, int], str] = {}
+    reserved = _reserved_keys()
+    for label, combo in bindings.items():
+        if not combo.strip():
+            continue
+        try:
+            key = parse_hotkey(combo)
+        except HotkeyError as exc:
+            problems.append(f"«{label}»: {exc}")
+            continue
+        if key in reserved:
+            problems.append(f"«{label}»: {combo} coincide con {reserved[key]}.")
+        if key in seen:
+            problems.append(
+                f"«{label}» y «{seen[key]}» usan la misma combinación ({combo})."
+            )
+        else:
+            seen[key] = label
+    return problems
+
+
 class HotkeyManager:
     def __init__(self) -> None:
         self._actions: dict[int, Callable[[], None]] = {}

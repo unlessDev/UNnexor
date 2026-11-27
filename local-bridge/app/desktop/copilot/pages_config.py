@@ -33,6 +33,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from ...knowledge.extract import EXPERIMENTAL_SUFFIXES, RECOMMENDED_SUFFIXES
 from ...knowledge.profiles import ContextProfile, Detail, Tone
 from ...providers.access import PLAN_DISCLAIMER, AccessTier
 from ...providers.catalog import provider_catalog
@@ -47,6 +48,9 @@ from .tasks import run_async
 # ===================================================================== Inicio
 class HomePage(QWidget):
     openMode = Signal(str)
+    # Abre la ventana completa «Recomendar configuración» (la conecta el
+    # panel principal); sin conectar, se usa la recomendación de voz local.
+    recommendRequested = Signal()
 
     def __init__(self, controller: CopilotController) -> None:
         super().__init__()
@@ -108,7 +112,14 @@ class HomePage(QWidget):
         setup_layout.addWidget(self.summary)
         layout.addWidget(setup)
         layout.addStretch(1)
-        self.auto.clicked.connect(self.recommend)
+        self.auto.clicked.connect(self._on_recommend)
+        self.full_recommendations = False
+
+    def _on_recommend(self) -> None:
+        if self.full_recommendations:
+            self.recommendRequested.emit()
+        else:
+            self.recommend()
 
     def recommend(self) -> None:
         self.auto.setEnabled(False)
@@ -180,6 +191,19 @@ def engine_has_key(provider_id: str) -> bool:
 
 
 # ============================================================ Perfiles + docs
+PROFILE_DOCS_HELP = (
+    "📄 <b>Formatos recomendados: Markdown (.md) o texto plano (.txt).</b> "
+    "Carga aquí tu currículum, información personal o documentos de "
+    "referencia en esos formatos: el modelo procesa su contenido de forma más "
+    "directa y eficiente. Los PDF, Word y otros formatos no están pensados "
+    "para este flujo y pueden causar problemas de lectura, demoras o fallos."
+    "<br><br><b>Cómo se usan:</b> el modelo <i>no aprende</i> tus documentos ni "
+    "los recuerda para siempre. UNnexor los divide en fragmentos y los guarda "
+    "en tu equipo; con cada pregunta busca los fragmentos más relevantes y "
+    "los añade como contexto a esa respuesta. Puedes quitarlos cuando quieras."
+)
+
+
 class ProfilesPage(QWidget):
     profilesChanged = Signal()
 
@@ -260,6 +284,7 @@ class ProfilesPage(QWidget):
 
         docs = QGroupBox("Documentos del perfil")
         docs_layout = QVBoxLayout(docs)
+        docs_layout.addWidget(hint(PROFILE_DOCS_HELP))
         self.docs = QListWidget()
         docs_layout.addWidget(self.docs, 1)
         doc_buttons = QHBoxLayout()
@@ -451,10 +476,14 @@ class ProfilesPage(QWidget):
             return
         files, _ = QFileDialog.getOpenFileNames(
             self,
-            "Añadir documentos",
+            "Añadir documentos (recomendado: .md o .txt)",
             "",
-            "Documentos (*.pdf *.docx *.txt *.md *.markdown)",
+            "Texto recomendado (*.md *.markdown *.txt);;"
+            "PDF y Word — extracción experimental (*.pdf *.docx)",
         )
+        if not files:
+            return
+        files = self._screen_files(files)
         if not files:
             return
         self.doc_status.setText("Procesando documentos…")
@@ -472,6 +501,42 @@ class ProfilesPage(QWidget):
             return messages
 
         run_async(work, on_done=self._docs_done, on_error=self.doc_status.setText)
+
+    def _screen_files(self, files: list[str]) -> list[str]:
+        """Rechaza formatos no admitidos y pide confirmar los experimentales."""
+        accepted: list[str] = []
+        rejected: list[str] = []
+        experimental: list[str] = []
+        for name in files:
+            suffix = Path(name).suffix.lower()
+            if suffix in RECOMMENDED_SUFFIXES:
+                accepted.append(name)
+            elif suffix in EXPERIMENTAL_SUFFIXES:
+                experimental.append(name)
+            else:
+                rejected.append(Path(name).name)
+        if rejected:
+            QMessageBox.warning(
+                self,
+                "Formato no admitido",
+                "Estos archivos no se pueden usar como contexto del perfil:\n· "
+                + "\n· ".join(rejected)
+                + "\n\nGuarda el contenido como Markdown (.md) o texto (.txt).",
+            )
+        if experimental:
+            answer = QMessageBox.question(
+                self,
+                "Formato no recomendado",
+                "Los PDF y documentos de Word se convierten a texto de forma "
+                "experimental: tablas, columnas o PDF escaneados pueden dar texto "
+                "incompleto o desordenado, y el proceso es más lento.\n\n"
+                "Para obtener mejores resultados, guárdalos como .md o .txt.\n\n"
+                "¿Añadirlos igualmente?\n· "
+                + "\n· ".join(Path(n).name for n in experimental),
+            )
+            if answer == QMessageBox.StandardButton.Yes:
+                accepted.extend(experimental)
+        return accepted
 
     def _docs_done(self, messages: Any) -> None:
         self.doc_status.setText("\n".join(messages))

@@ -61,6 +61,40 @@ def setup_logging(cfg: Config) -> None:
         root.addHandler(console)
 
 
+def start_catalog_refresh(supervisor: OllamaSupervisor) -> None:
+    """Actualiza (en segundo plano) el catálogo y comprueba la versión."""
+    from .ollama_library import default_catalog, version_status
+
+    def _run() -> None:
+        snapshot = default_catalog().refresh()
+        if snapshot.status == "online":
+            extra = (
+                f"; nuevos desde la última consulta: {', '.join(snapshot.new_names[:8])}"
+                if snapshot.new_names
+                else ""
+            )
+            log.info(
+                "Catálogo de Ollama actualizado: %d modelos%s.",
+                len(snapshot.models),
+                extra,
+            )
+        elif snapshot.status == "cache":
+            log.info(
+                "Catálogo de Ollama sin conexión; se usa la copia del %s.",
+                snapshot.fetched_at[:10],
+            )
+        # Esperar a que el supervisor sepa la versión local (≤ 25 s).
+        for _ in range(50):
+            if supervisor.startup is not None:
+                break
+            time.sleep(0.5)
+        installed = supervisor.startup.version if supervisor.startup else ""
+        state, message = version_status(installed, snapshot.latest_ollama)
+        (log.warning if state == "update" else log.info)(message)
+
+    threading.Thread(target=_run, name="catalog-refresh", daemon=True).start()
+
+
 def start_ollama_supervisor(cfg: Config, wait: bool) -> OllamaSupervisor:
     """Comprueba Ollama y, si hace falta y está permitido, lo inicia.
 
@@ -419,6 +453,8 @@ def run_bridge(
         console.show()
 
     supervisor = start_ollama_supervisor(cfg, wait=False)
+    if cfg.online_catalog:
+        start_catalog_refresh(supervisor)
 
     def _shutdown() -> None:
         # Cierre ordenado: capturas y workers, servidor HTTP (libera el

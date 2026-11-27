@@ -224,6 +224,19 @@ class ModelSelectorDialog(QDialog):
         self._status = QLabel("Detectando hardware y catálogo de Ollama…")
         self._status.setStyleSheet(f"color: {MUTED}; font-size: 10px;")
         layout.addWidget(self._status)
+        library_row = QHBoxLayout()
+        self._library = QLabel("")
+        self._library.setWordWrap(True)
+        self._library.setStyleSheet(f"color: {MUTED}; font-size: 10px;")
+        self._refresh_btn = QPushButton("🔄 Actualizar catálogo")
+        self._refresh_btn.setToolTip(
+            "Consulta ollama.com/library y la última versión de Ollama. "
+            "No descarga ningún modelo."
+        )
+        self._refresh_btn.clicked.connect(self._refresh_library)
+        library_row.addWidget(self._library, 1)
+        library_row.addWidget(self._refresh_btn)
+        layout.addLayout(library_row)
 
         self._scroll = QScrollArea()
         self._scroll.setWidgetResizable(True)
@@ -250,7 +263,44 @@ class ModelSelectorDialog(QDialog):
         self._catalog_data = data.get("catalog", [])
         hw = data.get("hardware", {})
         self._status.setText(self._hw_summary(hw))
+        self._library.setText(self._library_summary(data.get("library") or {}))
         self._build_rows()
+
+    @staticmethod
+    def _library_summary(info: dict) -> str:
+        status = info.get("status", "unavailable")
+        date = (info.get("fetched_at") or "")[:16].replace("T", " ")
+        if status == "online":
+            text = f"Catálogo de ollama.com actualizado ({date}, {info.get('models')} modelos"
+            text += f", {info['new']} nuevos)." if info.get("new") else ")."
+        elif status == "cache":
+            text = f"Catálogo sin conexión: se muestra la copia del {date}."
+        else:
+            text = "Catálogo en línea no disponible: solo se muestran los recomendados."
+        message = info.get("version_message", "")
+        if info.get("version_state") == "update":
+            message = "⬆ " + message
+        return f"{text} {message}".strip()
+
+    def _refresh_library(self) -> None:
+        from .workers import CatalogRefreshWorker
+
+        self._refresh_btn.setEnabled(False)
+        self._library.setText("Consultando ollama.com…")
+        worker = CatalogRefreshWorker(self)
+        worker.finished_refresh.connect(self._after_refresh)
+        self._catalog_worker = worker
+        worker.start()
+
+    def _after_refresh(self, message: str) -> None:
+        self._refresh_btn.setEnabled(True)
+        self._library.setText(message)
+        self._hardware_worker = HardwareWorker(
+            self._ollama, configured_model=self._current
+        )
+        self._hardware_worker.ready.connect(self._populate)
+        self._hardware_worker.failed.connect(self._on_load_failed)
+        self._hardware_worker.start()
 
     def _on_load_failed(self, message: str) -> None:
         self._status.setText(f"⚠ {message}")
@@ -291,15 +341,29 @@ class ModelSelectorDialog(QDialog):
             key=lambda e: TIER_ORDER.get(e["assessment"]["tier"], 9),
         ):
             self._add_installed_row(entry)
+        curated = [e for e in self._catalog_data if not e.get("estimated")]
+        online = [e for e in self._catalog_data if e.get("estimated")]
         self._add_section("Recomendados para descargar")
-        if not self._catalog_data:
+        if not curated:
             empty = QLabel("Todo el catálogo recomendado ya está instalado.")
             empty.setStyleSheet(f"color: {MUTED}; font-size: 10px;")
             self._vbox.insertWidget(self._vbox.count() - 1, empty)
         else:
             for entry in sorted(
-                self._catalog_data,
+                curated,
                 key=lambda e: TIER_ORDER.get(e["assessment"]["tier"], 9),
+            ):
+                self._add_catalog_row(entry)
+        if online:
+            self._add_section(
+                "Biblioteca de Ollama (en línea · tamaños estimados · 🆕 nuevos)"
+            )
+            for entry in sorted(
+                online,
+                key=lambda e: (
+                    not e.get("new"),
+                    TIER_ORDER.get(e["assessment"]["tier"], 9),
+                ),
             ):
                 self._add_catalog_row(entry)
         self._apply_filters()
@@ -360,10 +424,13 @@ class ModelSelectorDialog(QDialog):
             extras.append("visión")
         if entry.get("thinking"):
             extras.append("razonamiento")
+        estimated = " (estimado)" if entry.get("estimated") else ""
         meta = (
-            f"~{entry['size_gb']:.1f} GB · {entry['params_b']}B"
+            ("🆕 " if entry.get("new") else "")
+            + f"~{entry['size_gb']:.1f} GB{estimated} · {entry['params_b']:g}B"
             + (f" · {' · '.join(extras)}" if extras else "")
             + f" · {entry['family']}"
+            + (f" · {entry['pulls']} descargas" if entry.get("pulls") else "")
         )
         impossible = assessment["tier"] == "imposible"
         explanation = f"{entry['description']} — " + (
@@ -648,6 +715,15 @@ class SettingsDialog(QDialog):
             "detiene al cerrar UNnexor. Requiere reiniciar UNnexor."
         )
         form.addRow("", autostart)
+        online = self._check(
+            "online_catalog",
+            "Consultar el catálogo de ollama.com y la versión de Ollama al iniciar",
+        )
+        online.setToolTip(
+            "Solo lectura: lista modelos nuevos y avisa si hay una versión más "
+            "reciente de Ollama. Nunca descarga ni instala nada por sí solo."
+        )
+        form.addRow("", online)
         return tab
 
     def _tab_avanzado(self) -> QWidget:

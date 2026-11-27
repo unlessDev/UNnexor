@@ -118,9 +118,10 @@ QToolButton#closeBtn:hover {
     background: #a33a3a;
     color: #ffffff;
 }
-QToolButton#pinBtn[toggled="true"] {
-    color: #8b7cff;
-    background: #23203a;
+QToolButton#pinBtn:checked {
+    color: #00e5ff;
+    background: #1f2147;
+    border: 1px solid #3a2bff;
 }
 QMenu {
     background: #171a21;

@@ -104,6 +104,14 @@ def answer_messages(
             f"«{previous_answer.strip()}»\nAmplíala con más detalle, ejemplos y "
             "explicación, manteniendo los mismos hechos."
         )
+    elif mode == "window":
+        task = (
+            "Fragmento de la conversación escuchado a petición de la persona "
+            f"(puede ser largo y mezclar explicaciones):\n«{question.strip()}»\n"
+            "Identifica la pregunta o petición principal que el interlocutor "
+            "le hace (suele estar al final) y sugiere la respuesta. Si hay "
+            "varias preguntas, responde a todas en orden, brevemente."
+        )
     else:
         task = f"Pregunta o intervención del interlocutor: «{question.strip()}»\nSugiere la respuesta."
     sections.append(task)

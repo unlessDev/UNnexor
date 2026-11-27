@@ -113,7 +113,6 @@ class TitleBar(QWidget):
             "📌", "Siempre visible (encima de las demás ventanas)", "pinBtn"
         )
         self._pin.setCheckable(True)
-        self._pin.setChecked(True)
         self._pin.toggled.connect(self.pinToggled)
         self._copy = IconButton("⧉", "Copiar última respuesta")
         self._copy.clicked.connect(self.copyClicked)
@@ -164,6 +163,17 @@ class TitleBar(QWidget):
 
     def set_model(self, name: str) -> None:
         self.model.setText(name)
+
+    def set_pinned(self, pinned: bool) -> None:
+        """Refleja el estado real de «Siempre visible» sin reemitir la señal."""
+        self._pin.blockSignals(True)
+        self._pin.setChecked(pinned)
+        self._pin.blockSignals(False)
+        self._pin.setToolTip(
+            "Siempre visible: ACTIVADO (clic para desactivar)"
+            if pinned
+            else "Siempre visible: desactivado (clic para fijar encima)"
+        )
 
     def set_generating(self, generating: bool) -> None:
         self._stop.setVisible(generating)

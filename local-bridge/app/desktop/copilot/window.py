@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QStackedWidget,
+    QToolButton,
     QWidget,
 )
 
@@ -25,9 +26,10 @@ from ...copilot.assistant import QAItem
 from ...copilot.challenges import ChallengeResult
 from ...copilot.transcription import TranscriptEvent
 from ...copilot.translation import TranslationSegment
+from ..topmost import PinPreference, set_topmost
 from .common import COPILOT_QSS
 from .controller import CopilotController
-from .hotkeys import HotkeyManager
+from .hotkeys import HotkeyManager, find_conflicts
 from .overlay import CopilotOverlay
 from .pages_challenge import ChallengesPage
 from .pages_config import EnginesPage, HomePage, PrivacyPage, ProfilesPage
@@ -105,6 +107,7 @@ class CopilotWindow(QMainWindow):
 
         self.home.openMode.connect(self.open_page)
         self.profiles.profilesChanged.connect(self.conversation.reload)
+        self.conversation.hotkeysChanged.connect(self._reregister_hotkeys)
         self.privacy.dataCleared.connect(self._after_clear)
         self.challenges.hideWindowsRequested.connect(self._hide_for_capture)
         self.challenges.restoreWindowsRequested.connect(self._restore_after_capture)
@@ -115,6 +118,9 @@ class CopilotWindow(QMainWindow):
         self.overlay.alternativeClicked.connect(c.assistant.regenerate)
         self.overlay.expandClicked.connect(c.assistant.expand)
         self.overlay.openMainClicked.connect(self.bring_to_front)
+        self.overlay.pinChanged.connect(self._save_overlay_pin)
+        self.overlay.listenClicked.connect(c.toggle_listening)
+        c.listeningChanged.connect(self.overlay.set_listening)
         c.sessionChanged.connect(self._on_session)
         c.pausedChanged.connect(self.overlay.set_paused)
         c.status.connect(self._on_status)
@@ -134,12 +140,47 @@ class CopilotWindow(QMainWindow):
         if register_hotkeys:
             QTimer.singleShot(0, self.register_hotkeys)
 
+        # «Siempre visible» propio de esta ventana (independiente del panel
+        # principal y del flotante), persistente entre sesiones.
+        self._pin_pref = PinPreference("copilotWindow", False)
+        self._on_top = self._pin_pref.load()
+        self.pin_button = QToolButton()
+        self.pin_button.setText("📌 Siempre visible")
+        self.pin_button.setCheckable(True)
+        self.pin_button.setToolTip("Mantener esta ventana encima de las demás")
+        self.pin_button.toggled.connect(self.set_on_top)
+        self.statusBar().addPermanentWidget(self.pin_button)
+        self.statusBar().setSizeGripEnabled(True)
+
     # ---------------------------------------------------------- navegación
     def open_page(self, key: str) -> None:
         keys = [k for k, _ in PAGES]
         if key in keys:
             self.nav.setCurrentRow(keys.index(key))
         self.bring_to_front()
+
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        self._apply_pin(self._on_top)
+
+    def _apply_pin(self, wanted: bool) -> None:
+        self._on_top = wanted  # antes de aplicar (showEvent puede reentrar)
+        actual = set_topmost(self, wanted)
+        self._on_top = actual
+        self.pin_button.blockSignals(True)
+        self.pin_button.setChecked(actual)
+        self.pin_button.blockSignals(False)
+
+    def set_on_top(self, enabled: bool) -> None:
+        self._apply_pin(bool(enabled))
+        self._pin_pref.save(self._on_top)
+
+    def _save_overlay_pin(self, on_top: bool) -> None:
+        """El 📌 del panel flotante persiste en los ajustes del copiloto."""
+        settings = self.controller.settings
+        if settings.overlay_on_top != on_top:
+            settings.overlay_on_top = on_top
+            self.controller.save_settings(settings)
 
     def bring_to_front(self) -> None:
         self.show()
@@ -158,8 +199,7 @@ class CopilotWindow(QMainWindow):
     def register_hotkeys(self) -> None:
         s = self.controller.settings
         self.hotkeys.unregister_all()
-        problems = []
-        for combo, action, label in (
+        bindings = (
             (s.hotkey_toggle_capture, self.controller.toggle_pause, "pausar/reanudar"),
             (s.hotkey_ask_manual, self._hotkey_ask, "preguntar"),
             (
@@ -167,7 +207,18 @@ class CopilotWindow(QMainWindow):
                 self.challenges.capture_and_solve,
                 "desafío en pantalla",
             ),
-        ):
+            (s.hotkey_listen, self.controller.toggle_listening, "escuchar"),
+            (
+                s.hotkey_listen_cancel,
+                self.controller.cancel_listening,
+                "cancelar escucha",
+            ),
+        )
+        problems = find_conflicts({label: combo for combo, _a, label in bindings})
+        duplicated = {p.split("»")[0].lstrip("«") for p in problems}
+        for combo, action, label in bindings:
+            if label in duplicated:
+                continue  # no registrar una combinación en conflicto
             problem = self.hotkeys.register(combo, action)
             if problem:
                 problems.append(f"Atajo '{label}': {problem}")
@@ -175,12 +226,18 @@ class CopilotWindow(QMainWindow):
         if problems:
             log.warning("Atajos no registrados: %s", "; ".join(problems))
 
+    def _reregister_hotkeys(self) -> None:
+        self.register_hotkeys()
+        if self.hotkey_problems:
+            QMessageBox.warning(self, "Atajos", "\n".join(self.hotkey_problems))
+
     def _hotkey_ask(self) -> None:
         self.open_page("conversation")
         self.conversation.focus_question()
 
     # -------------------------------------------------------------- sesión
     def _on_session(self, mode: str) -> None:
+        self.overlay.set_listen_available(self.controller.uses_listen_windows)
         if mode == "idle":
             self.overlay.set_status("Finalizado", "paused")
             return

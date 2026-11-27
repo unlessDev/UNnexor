@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QProgressBar,
     QPushButton,
+    QSpinBox,
     QSplitter,
     QTextBrowser,
     QVBoxLayout,
@@ -26,9 +27,15 @@ from PySide6.QtWidgets import (
 from ...audio.capture import SoundCardBackend
 from ...audio.types import AudioDevice, SourceKind
 from ...copilot.assistant import QAItem, QAStatus
+from ...copilot.listening import (
+    MAX_SECONDS,
+    MIN_SECONDS,
+    PRESET_SECONDS,
+    format_seconds,
+)
 from ...copilot.transcription import TranscriptEvent
 from ...copilot.translation import SegmentStatus, TranslationSegment
-from ..styles import MUTED
+from ..styles import AMBER, MUTED, RED
 from ..widgets import AssistantMessage
 from .common import escape, export_pdf, hint, language_combo, select_data, title
 from .controller import CopilotController
@@ -168,6 +175,8 @@ class SessionControls(QGroupBox):
 
 
 class ConversationPage(QWidget):
+    hotkeysChanged = Signal()  # el usuario cambió los atajos de escucha
+
     def __init__(self, controller: CopilotController) -> None:
         super().__init__()
         self._c = controller
@@ -202,6 +211,72 @@ class ConversationPage(QWidget):
         options.addWidget(self.auto)
         options.addWidget(self.sensitivity)
         layout.addLayout(options)
+
+        # --- Control del tiempo de escucha (ventanas de escucha) ---------
+        listen = QHBoxLayout()
+        self.listen_mode = QComboBox()
+        for key, label in (
+            ("continuous", "Escucha continua (detección automática)"),
+            ("timed", "Escucha temporizada"),
+            ("manual", "Escucha manual con atajo"),
+        ):
+            self.listen_mode.addItem(label, key)
+        self.listen_mode.setToolTip(
+            "Continua: detecta preguntas turno a turno.\n"
+            "Temporizada: al pulsar «Escuchar» captura N segundos y responde a "
+            "todo lo escuchado.\n"
+            "Manual: el atajo inicia la escucha y el mismo atajo la termina."
+        )
+        self.listen_seconds = QSpinBox()
+        self.listen_seconds.setRange(MIN_SECONDS, MAX_SECONDS)
+        self.listen_seconds.setSuffix(" s")
+        self.listen_seconds.setToolTip("Duración de la escucha temporizada")
+        self.listen_presets = QComboBox()
+        self.listen_presets.addItem("Duración…", 0)
+        for seconds in PRESET_SECONDS:
+            self.listen_presets.addItem(format_seconds(seconds), seconds)
+        self.listen_presets.activated.connect(self._apply_preset)
+        self.listen_hotkey = QLineEdit()
+        self.listen_hotkey.setPlaceholderText("Ctrl+Alt+Shift+L")
+        self.listen_hotkey.setToolTip(
+            "Atajo global para iniciar/terminar la escucha (p. ej. Ctrl+Alt+Shift+L)"
+        )
+        self.listen_hotkey.setMaximumWidth(150)
+        self.listen_cancel_hotkey = QLineEdit()
+        self.listen_cancel_hotkey.setPlaceholderText("Ctrl+Alt+Shift+X")
+        self.listen_cancel_hotkey.setToolTip("Atajo global para descartar la escucha")
+        self.listen_cancel_hotkey.setMaximumWidth(150)
+        apply_keys = QPushButton("Aplicar atajos")
+        apply_keys.clicked.connect(self._apply_listen_hotkeys)
+        listen.addWidget(QLabel("Escucha:"))
+        listen.addWidget(self.listen_mode, 1)
+        listen.addWidget(self.listen_seconds)
+        listen.addWidget(self.listen_presets)
+        listen.addWidget(QLabel("Atajo:"))
+        listen.addWidget(self.listen_hotkey)
+        listen.addWidget(QLabel("Cancelar:"))
+        listen.addWidget(self.listen_cancel_hotkey)
+        listen.addWidget(apply_keys)
+        layout.addLayout(listen)
+
+        window_row = QHBoxLayout()
+        self.listen_button = QPushButton("🎙 Escuchar")
+        self.listen_button.setObjectName("primary")
+        self.listen_end = QPushButton("■ Terminar y responder")
+        self.listen_cancel = QPushButton("✕ Cancelar escucha")
+        self.listen_state = QLabel("")
+        self.listen_state.setWordWrap(True)
+        window_row.addWidget(self.listen_button)
+        window_row.addWidget(self.listen_end)
+        window_row.addWidget(self.listen_cancel)
+        window_row.addWidget(self.listen_state, 1)
+        self.listen_panel = QWidget()
+        self.listen_panel.setLayout(window_row)
+        layout.addWidget(self.listen_panel)
+        self.listen_button.clicked.connect(self._begin_listening)
+        self.listen_end.clicked.connect(controller.end_listening)
+        self.listen_cancel.clicked.connect(controller.cancel_listening)
+        controller.listeningChanged.connect(self._on_listening)
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
         left = QWidget()
@@ -258,6 +333,8 @@ class ConversationPage(QWidget):
         self.auto.toggled.connect(self._save_options)
         self.sensitivity.currentIndexChanged.connect(self._save_options)
         self.profile.currentIndexChanged.connect(self._save_options)
+        self.listen_mode.currentIndexChanged.connect(self._save_options)
+        self.listen_seconds.valueChanged.connect(self._save_options)
         controller.transcript.connect(self._on_transcript)
         controller.question.connect(self._on_item)
         controller.answerStarted.connect(self._on_item)
@@ -273,6 +350,15 @@ class ConversationPage(QWidget):
         self.auto.blockSignals(True)
         self.sensitivity.blockSignals(True)
         self.profile.blockSignals(True)
+        self.listen_mode.blockSignals(True)
+        self.listen_seconds.blockSignals(True)
+        select_data(self.listen_mode, s.listen_mode)
+        self.listen_seconds.setValue(int(s.listen_seconds))
+        self.listen_hotkey.setText(s.hotkey_listen)
+        self.listen_cancel_hotkey.setText(s.hotkey_listen_cancel)
+        self.listen_mode.blockSignals(False)
+        self.listen_seconds.blockSignals(False)
+        self._update_listen_widgets()
         self.auto.setChecked(s.auto_answer)
         select_data(self.sensitivity, s.sensitivity)
         self.profile.clear()
@@ -290,7 +376,89 @@ class ConversationPage(QWidget):
         s.auto_answer = self.auto.isChecked()
         s.sensitivity = str(self.sensitivity.currentData())
         s.active_profile = str(self.profile.currentData() or "")
+        new_mode = str(self.listen_mode.currentData() or "continuous")
+        mode_changed = new_mode != s.listen_mode
+        s.listen_mode = new_mode
+        s.listen_seconds = int(self.listen_seconds.value())
         self._c.save_settings(s)
+        self._update_listen_widgets()
+        if mode_changed and self._c.mode == "conversation":
+            QMessageBox.information(
+                self,
+                "Modo de escucha",
+                "El nuevo modo se aplica al iniciar la próxima sesión.",
+            )
+
+    def _apply_preset(self, index: int) -> None:
+        seconds = int(self.listen_presets.itemData(index) or 0)
+        if seconds:
+            self.listen_seconds.setValue(seconds)
+        self.listen_presets.setCurrentIndex(0)
+
+    def _apply_listen_hotkeys(self) -> None:
+        from .hotkeys import HotkeyError, find_conflicts, parse_hotkey
+
+        s = self._c.settings
+        listen = self.listen_hotkey.text().strip()
+        cancel = self.listen_cancel_hotkey.text().strip()
+        try:
+            for combo in (listen, cancel):
+                if combo:
+                    parse_hotkey(combo)
+        except HotkeyError as exc:
+            QMessageBox.warning(self, "Atajo no válido", str(exc))
+            return
+        problems = find_conflicts(
+            {
+                "pausar/reanudar": s.hotkey_toggle_capture,
+                "preguntar": s.hotkey_ask_manual,
+                "desafío en pantalla": s.hotkey_screen_challenge,
+                "escuchar": listen,
+                "cancelar escucha": cancel,
+            }
+        )
+        if problems:
+            QMessageBox.warning(self, "Conflicto de atajos", "\n".join(problems))
+            return
+        s.hotkey_listen = listen
+        s.hotkey_listen_cancel = cancel
+        self._c.save_settings(s)
+        self.hotkeysChanged.emit()
+
+    def _update_listen_widgets(self) -> None:
+        mode = str(self.listen_mode.currentData() or "continuous")
+        windowed = mode != "continuous"
+        self.listen_seconds.setEnabled(mode == "timed")
+        self.listen_presets.setEnabled(mode == "timed")
+        self.listen_panel.setVisible(windowed)
+        self.auto.setEnabled(not windowed)
+        self.sensitivity.setEnabled(not windowed)
+        if windowed and not self.listen_state.text():
+            self.listen_state.setText(
+                f"Pulsa «Escuchar» o {self._c.settings.hotkey_listen} cuando "
+                "quieras que el copiloto escuche."
+            )
+        self._refresh_listen_buttons(self._c.window.state.value)
+
+    def _begin_listening(self) -> None:
+        self.controls.apply_to_settings()
+        self._save_options()
+        try:
+            self._c.begin_listening()
+        except ValueError as exc:
+            QMessageBox.warning(self, "No se puede escuchar", str(exc))
+
+    def _refresh_listen_buttons(self, state: str) -> None:
+        self.listen_button.setEnabled(state == "idle")
+        self.listen_end.setEnabled(state == "listening")
+        self.listen_cancel.setEnabled(state in ("listening", "processing"))
+
+    def _on_listening(self, state: str, text: str) -> None:
+        self._refresh_listen_buttons(state)
+        if text:
+            self.listen_state.setText(text)
+        color = {"listening": RED, "processing": AMBER}.get(state, MUTED)
+        self.listen_state.setStyleSheet(f"color: {color};")
 
     def start(self) -> None:
         self.controls.apply_to_settings()
