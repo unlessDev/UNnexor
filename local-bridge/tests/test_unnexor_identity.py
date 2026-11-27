@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import logging
+import struct
 import subprocess
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -47,17 +48,30 @@ def test_bridge_svg_is_the_master():
     assert master == bundled
 
 
-def test_icon_files_exist_and_ico_is_multiresolution():
-    from PIL import Image
+def _png_size(path: Path) -> tuple[int, int, int]:
+    """(ancho, alto, tipo de color) leídos de la cabecera IHDR (sin Pillow)."""
+    data = path.read_bytes()[:33]
+    assert data[:8] == b"PNG
+
+"
+    width, height = struct.unpack(">II", data[16:24])
+    return width, height, data[25]
 
+
+def test_icon_files_exist_and_ico_is_multiresolution():
     for size in (16, 32, 48, 128):
-        with Image.open(
+        width, height, color = _png_size(
             ROOT / "browser-extension" / "assets" / f"icon{size}.png"
-        ) as im:
-            assert im.size == (size, size) and im.mode == "RGBA"
-    with Image.open(ROOT / "local-bridge" / "assets" / "unnexor.ico") as ico:
-        sizes = ico.info.get("sizes") or set()
-        assert {(16, 16), (32, 32), (48, 48), (256, 256)} <= set(sizes)
+        )
+        assert (width, height) == (size, size) and color == 6  # RGBA
+    data = (ROOT / "local-bridge" / "assets" / "unnexor.ico").read_bytes()
+    reserved, kind, count = struct.unpack("<HHH", data[:6])
+    assert reserved == 0 and kind == 1
+    sizes = set()
+    for i in range(count):
+        width, height = data[6 + 16 * i], data[7 + 16 * i]
+        sizes.add((width or 256, height or 256))  # 0 significa 256
+    assert {(16, 16), (32, 32), (48, 48), (256, 256)} <= sizes
 
 
 def test_extension_uses_brand_and_keeps_protocol():
