@@ -36,7 +36,7 @@ import numpy as np
 from .dsp import StreamingResampler, to_mono
 from .types import SAMPLE_RATE, AudioChunk, AudioDevice, FloatArray, SourceKind
 
-log = logging.getLogger("extdator.audio.capture")
+log = logging.getLogger("unnexor.audio.capture")
 
 CAPTURE_RATE = 48_000
 CAPTURE_CHANNELS = 2

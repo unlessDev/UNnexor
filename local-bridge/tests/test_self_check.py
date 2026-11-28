@@ -16,7 +16,7 @@ def test_self_check_report_contains_paths_and_result(monkeypatch, tmp_path) -> N
 
     assert target == tmp_path / "self-check.json"
     report = json.loads(target.read_text(encoding="utf-8"))
-    assert report["app"] == "extdator-bridge"
+    assert report["app"] == "unnexor-bridge"
     assert report["version"] == __version__
     assert report["frozen"] is True
     assert report["data_dir"] == str(tmp_path)

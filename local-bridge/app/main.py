@@ -23,7 +23,7 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import __version__, paths
+from . import APP_ID, KNOWN_APP_IDS, __version__, paths
 from .config import LOG_DIR, Config, ConfigError, load_config
 from .env_setup import clear_env_secrets, ensure_env_file
 from .ollama_client import OLLAMA_HEALTH_TIMEOUT, OllamaClient
@@ -33,7 +33,7 @@ from .queue_manager import Bus, RuntimeState
 from .server import create_app
 from .settings_store import SettingsStore
 
-log = logging.getLogger("extdator.main")
+log = logging.getLogger("unnexor.main")
 
 # /health consulta Ollama de forma síncrona. El cliente debe esperar más
 # que ese sondeo para no descartar una respuesta 200 válida y lenta.
@@ -255,8 +255,8 @@ def port_in_use(cfg: Config) -> tuple[bool, str]:
             f"http://{cfg.host}:{cfg.port}/health", timeout=HEALTH_REQUEST_TIMEOUT
         )
         body = response.json() if response.status_code == 200 else {}
-        if body.get("app") == "extdator-bridge":
-            return True, "extdator-bridge"
+        if body.get("app") in KNOWN_APP_IDS:
+            return True, APP_ID
         return True, "otra-aplicacion"
     except httpx.HTTPError:
         return False, ""
@@ -289,7 +289,7 @@ def write_self_check_report(results: dict, ok: bool) -> Path | None:
     permite validar rutas de instalación desde el proceso empaquetado.
     """
     report = {
-        "app": "extdator-bridge",
+        "app": APP_ID,
         "version": __version__,
         "frozen": paths.is_frozen(),
         "data_dir": str(paths.data_dir()),
@@ -353,6 +353,10 @@ def run_check(cfg: Config, bus: Bus, state: RuntimeState, ollama: OllamaClient) 
     from .copilot.components import check_components
 
     results["copilot_components"] = check_components()
+    # Renderizado de respuestas: fórmulas (ziamath) y código (Pygments).
+    from .desktop.rich_text import self_check as rendering_check
+
+    results["rendering"] = rendering_check()
     ok = bool(
         results.get("health")
         and results["selection"]
@@ -381,7 +385,7 @@ def run_bridge(
 
     in_use, who = port_in_use(cfg)
     if in_use:
-        if who == "extdator-bridge":
+        if who == APP_ID:
             if paths.is_frozen():
                 report_error("UNnexor ya se está ejecutando.")
             else:
@@ -425,9 +429,13 @@ def run_bridge(
     set_app_user_model_id()
     app = QApplication(sys.argv)
     app.setApplicationName("UNnexor")
-    # La organización "Extdator" es la clave histórica de QSettings
-    # (geometría de ventanas, preferencias): se conserva por compatibilidad.
-    app.setOrganizationName("Extdator")
+    app.setOrganizationName("UNnexor")
+    # Preferencias de ventana de versiones anteriores (QSettings "Extdator").
+    from .migration import migrate_qsettings
+
+    migrated_groups = migrate_qsettings()
+    if migrated_groups:
+        log.info("Preferencias migradas desde Extdator: %s", ", ".join(migrated_groups))
     app.setStyle("Fusion")
     app.setWindowIcon(app_icon())
     font = QFont()
@@ -483,7 +491,7 @@ def run_bridge(
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        prog="extdator-bridge",
+        prog="unnexor-bridge",
         description="Puente local entre la extensión UNnexor y Ollama.",
     )
     parser.add_argument(
@@ -502,6 +510,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--port", type=int, default=None, help="Puerto del servidor.")
     parser.add_argument("--host", type=str, default=None, help="Host del servidor.")
     args = parser.parse_args(argv)
+
+    # Antes de leer o crear nada en la carpeta de datos: copia segura de
+    # %LOCALAPPDATA%/Extdator a %LOCALAPPDATA%/UNnexor (versiones < 2.1).
+    from .migration import migrate_legacy_data
+
+    migration = migrate_legacy_data()
 
     if args.purge_secrets:
         return purge_secrets()
@@ -534,6 +548,10 @@ def main(argv: list[str] | None = None) -> int:
 
         install_log_buffer()
     setup_logging(cfg)
+    if migration.status in ("completed", "partial"):
+        (log.info if migration.ok else log.warning)(migration.summary())
+        for problem in migration.errors[:10]:
+            log.warning("Migración: %s", problem)
     log.info(
         "UNnexor bridge %s (modo %s)",
         __version__,

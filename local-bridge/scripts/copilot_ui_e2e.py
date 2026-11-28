@@ -59,7 +59,7 @@ def main() -> int:
     args.out.mkdir(parents=True, exist_ok=True)
 
     app = QApplication(sys.argv)
-    tmp = Path(tempfile.mkdtemp(prefix="extdator_ui_e2e_"))
+    tmp = Path(tempfile.mkdtemp(prefix="unnexor_ui_e2e_"))
     repo = SettingsRepository(tmp / "settings.json")
     settings = repo.load()
     settings.stt_engine = "faster-whisper:base"

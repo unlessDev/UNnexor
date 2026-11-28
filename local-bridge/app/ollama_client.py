@@ -336,12 +336,16 @@ class OllamaClient:
             Callable[[str, Optional[int], Optional[int]], None]
         ] = None,
         should_abort: Optional[Callable[[], bool]] = None,
+        on_line: Optional[Callable[[Dict[str, Any]], None]] = None,
     ) -> str:
         """Descarga un modelo (``POST /api/pull``) con progreso en streaming.
 
         ``on_progress(status, total, completed)`` recibe bytes totales y
-        completados (None cuando no se conocen). Devuelve el estado final.
-        Lanza ``OllamaError`` si Ollama reporta un error (p. ej. 404).
+        completados **de la capa en curso** (None cuando no se conocen);
+        ``on_line(obj)`` recibe cada línea completa, con su ``digest``, para
+        agregar el progreso de todas las capas (``ollama_pull.PullTracker``).
+        Devuelve el estado final. Lanza ``OllamaError`` si Ollama reporta un
+        error (p. ej. 404) o si el flujo termina sin confirmar ``success``.
         """
         payload: Dict[str, Any] = {"model": model, "stream": True}
         last_status = ""
@@ -372,10 +376,19 @@ class OllamaClient:
                     completed = obj.get("completed")
                     if on_progress is not None:
                         on_progress(last_status, total, completed)
+                    if on_line is not None:
+                        on_line(obj)
         except httpx.HTTPError as exc:
             raise OllamaConnectionError(
                 _friendly_http_error(exc, self._base_url)
             ) from exc
+        if last_status != "success":
+            # Conexión cerrada antes de terminar: nunca se informa éxito.
+            raise OllamaResponseError(
+                "La descarga se interrumpió antes de completarse"
+                + (f" (último estado: {last_status})." if last_status else ".")
+                + " Puedes reintentarla: Ollama reanuda las capas ya descargadas."
+            )
         return last_status
 
     # ------------------------------------------------------------------

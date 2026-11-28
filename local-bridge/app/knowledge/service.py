@@ -40,7 +40,7 @@ from .extract import (
     extract,
 )
 
-log = logging.getLogger("extdator.knowledge")
+log = logging.getLogger("unnexor.knowledge")
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS documents (

@@ -6,7 +6,7 @@
 
 1. ¿Arrancaste el puente? `powershell -File scripts\start.ps1`
 2. Verifica: `curl http://127.0.0.1:5000/health` → debe responder JSON con
-   `"app":"extdator-bridge"`.
+   `"app":"unnexor-bridge"` (`"extdator-bridge"` en versiones anteriores a 2.1).
 3. ¿Cambiaste `BRIDGE_PORT`? Actualiza también la URL en las opciones de la
    extensión.
 
@@ -51,7 +51,7 @@ volver a emparejar la extensión.
 
 Es el comportamiento por defecto. Si querías borrarlos, desinstala de nuevo
 (o usa Configuración > Aplicaciones) y elige la limpieza completa. También
-puedes borrar manualmente `%LOCALAPPDATA%\Extdator`.
+puedes borrar manualmente `%LOCALAPPDATA%\UNnexor` (y la copia antigua `%LOCALAPPDATA%\Extdator`, si existe).
 
 ## Ollama
 
@@ -145,7 +145,7 @@ del botón derecho no está implementado).
 ## La ventana flotante no aparece
 
 * ¿Arrancaste con `-ServerOnly`? Ese modo no abre panel.
-* ¿Opacidad muy baja? Menú ⚙ del panel o `WINDOW_OPACITY` en el `.env`.
+* ¿Opacidad muy baja? Menú ☰ del panel o `WINDOW_OPACITY` en el `.env`.
 * Revisa `local-bridge\logs\bridge.log` por errores de PySide6.
 
 ## Emparejamiento de la extensión (v1.2.0)
@@ -153,7 +153,7 @@ del botón derecho no está implementado).
 **"Código inválido o caducado" (403)**
 
 * Cada código vale **10 minutos y un solo uso**. Genera uno nuevo:
-  panel → ⚙ → Emparejar extensión → "Generar código nuevo".
+  panel → ☰ → Emparejar extensión → "Generar código nuevo".
 * Verifica que el código sea el actual (el diálogo lo refresca).
 
 **"Demasiados intentos" (429)**
@@ -182,7 +182,7 @@ del botón derecho no está implementado).
 
 * El modelo configurado no tiene visión (p. ej. `qwen3:8b`). Instala un
   modelo multimodal, p. ej. `ollama pull qwen2.5vl:7b` (~6 GB; se pide
-  confirmación antes de descargar nada) y elígelo en ⚙ → Modelos. En una
+  confirmación antes de descargar nada) y elígelo en ☰ → Centro de control → Modelos de IA. En una
   RX 590 de 8 GB qwen2.5vl se clasifica 🟠 ALTO CONSUMO (cabe justo).
 
 **"Ollama devolvió HTTP 400: ... does not support thinking" (corregido)**
@@ -199,7 +199,7 @@ del botón derecho no está implementado).
 * Ningún motor OCR está instalado. Instala uno (ver abajo). UNnexor
   nunca los instala por su cuenta.
 
-**Los archivos `extdator_capture_*.png` se quedan en %TEMP%**
+**Los archivos `unnexor_capture_*.png` se quedan en %TEMP%**
 
 * Solo debería quedar alguno si el proceso se cerró a mitad de flujo;
   se borran tras procesar. Puedes borrarlos sin riesgo.
@@ -220,33 +220,28 @@ del botón derecho no está implementado).
   genera una imagen con fórmulas, la transcribe y muestra el Markdown
   resultante.
 
-## Las fórmulas se ven como matemática Unicode, no como fórmulas dibujadas
+## Fórmulas y código en las respuestas
 
-**Ejemplo de lo que muestra el panel** (antes se veía el LaTeX crudo):
+Desde 2.1.0 las fórmulas se **componen** (fracciones apiladas, raíces,
+sumatorias, integrales, matrices, sistemas) con ziamath y el código se
+resalta con Pygments, sin motor web ni JavaScript (ADR-0006).
 
-```text
-$$\frac{-b \pm \sqrt{b^2 - 4ac}}{2a}$$   →   (-b ± √(b² - 4ac))/(2a)
-$$x_1 = \frac{5+1}{2}$$                  →   x₁ = (5+1)/2
-$$\alpha \leq \beta \Rightarrow \pi$$    →   α ≤ β ⇒ π
-```
-
-* **Es intencionado.** El panel usa `QTextBrowser`, que no ejecuta
-  JavaScript; para dibujar fórmulas con KaTeX haría falta un WebView
-  (QtWebEngine, cientos de MB) o depender de Internet. La conversión a
-  Unicode no añade dependencias y el resultado se puede leer y copiar a
-  mano tal cual.
-* **Solo se convierten los tramos matemáticos**: los bloques de código
-  (```` ``` ```` y `` `…` ``) y la prosa normal no se tocan. Un comando
-  LaTeX desconocido se deja tal cual (nunca se inventa el símbolo); si
-  ves uno raro, es candidato a añadir a
-  `local-bridge\app\math_unicode.py`.
-* **Lo que se copia es la versión legible.** El botón de copiar de la
-  cabecera (⧉) devuelve el texto Unicode, no el LaTeX. Seleccionar y
-  copiar dentro de la burbuja también da Unicode. El historial que se
-  envía al modelo conserva el LaTeX original, así que el contexto
-  matemático no se degrada.
-* `$…$` solo se abre cuando el contenido parece matemática: frases como
-  "cuesta $5 y $10" se quedan igual.
+* **Una fórmula aparece en Unicode (`(-b ± √(b² - 4ac))/(2a)`) en lugar de
+  compuesta**: la expresión estaba mal formada o usa un comando que
+  ziamath no soporta. Es el respaldo legible; el resto de la respuesta se
+  muestra igual. Pasa el ratón por encima para ver el LaTeX original.
+* **Se detectan como fórmula**: `$…$`, `$$…$$`, `\(…\)`, `\[…\]` y entornos
+  `\begin{cases|pmatrix|bmatrix|aligned|…}`. Lo que está dentro de bloques
+  de código (```` ``` ````) o de código en línea (`` `…` ``) nunca se toma
+  como fórmula, y "cuesta $5 y $10" se queda igual.
+* **El código no se colorea**: sin etiqueta de lenguaje (```` ```python ````)
+  se intenta adivinar; si la confianza es baja se muestra sin colores pero
+  con fondo, fuente monoespaciada y «Copiar código».
+* **Qué se copia**: «Copiar código» copia el código original exacto; el
+  botón ⧉ de la cabecera copia la respuesta en texto legible (fórmulas en
+  Unicode). El historial que se envía al modelo conserva el LaTeX original.
+* **Comprobar el renderizado en un EXE**: `UNnexor.exe --check` escribe en
+  `self-check.json` la sección `rendering` (`math`, `code`, `sql`).
 
 **El texto de una respuesta se corta al redimensionar la ventana (corregido)**
 
@@ -274,8 +269,8 @@ $$\alpha \leq \beta \Rightarrow \pi$$    →   α ≤ β ⇒ π
 
 **Quiero volver a Ollama**
 
-* ⚙ → Modelos y elige un modelo local; o borra el proveedor en
-  ⚙ → Proveedores (la clave se elimina del keyring).
+* ☰ → Centro de control → Modelos de IA y elige un modelo local; o borra el proveedor en
+  ☰ → Proveedores (la clave se elimina del keyring).
 
 **¿Dónde está mi clave?**
 
@@ -287,7 +282,7 @@ $$\alpha \leq \beta \Rightarrow \pi$$    →   α ≤ β ⇒ π
 * Ajustes marcados "requiere reiniciar" (timeout, host, hooks, logs...)
   solo aplican tras `scripts\stop.ps1` + `scripts\start.ps1`. El diálogo
   te lo avisa.
-* Para volver a los valores del `.env`: ⚙ → Ajustes → Restaurar, o
+* Para volver a los valores del `.env`: ☰ → Ajustes → Restaurar, o
   `POST /api/settings/reset`. El archivo `data\user_settings.json` se
   vacía (el `.env` nunca se modifica).
 
@@ -310,7 +305,7 @@ $$\alpha \leq \beta \Rightarrow \pi$$    →   α ≤ β ⇒ π
 
 ## Paquete de diagnóstico para soporte (v1.2.0)
 
-1. Abre el menú **⚙ → Exportar diagnóstico…**.
+1. Abre el menú **☰ → Exportar diagnóstico…**.
 2. Elige dónde guardar el ZIP y espera el aviso de confirmación.
 3. Revisa `diagnostico.txt` y adjunta el ZIP a tu informe junto con una
    descripción de lo que ocurrió.

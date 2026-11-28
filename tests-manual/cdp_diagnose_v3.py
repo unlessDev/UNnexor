@@ -209,7 +209,7 @@ def main() -> int:
             "  const t0 = Date.now();"
             "  try {"
             "    chrome.runtime.sendMessage("
-            "      {type:'extdator:send-selection', text:'diagnostico v3 TEST A',"
+            "      {type:'unnexor:send-selection', text:'diagnostico v3 TEST A',"
             "       sourceUrl: location.href},"
             "      resp => {"
             "        const err = chrome.runtime.lastError;"

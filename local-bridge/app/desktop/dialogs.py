@@ -1,18 +1,21 @@
-"""Diálogos modales del panel: selector de modelos, ajustes y emparejamiento.
+"""Diálogos y paneles de configuración del panel principal.
 
-* ``ModelSelectorDialog`` — catálogo inteligente: detecta hardware, clasifica
-  los modelos (🟢🟡🟠🔴) y permite seleccionar o descargar con confirmación.
+* ``ModelsPanel`` / ``ModelSelectorDialog`` — catálogo de modelos: modelo en
+  uso, instalados, recomendados y biblioteca en línea, con clasificación de
+  consumo (🟢🟡🟠🔴), rendimiento esperado y acciones siempre visibles.
+  Las descargas van al ``DownloadManager`` común: continúan aunque se
+  cierre la ventana y muestran progreso real.
 * ``SettingsDialog`` — configuración centralizada sin editar archivos.
 * ``PairingDialog`` — código efímero para vincular la extensión.
 
-Estética: se reutilizan los colores y tipografía de ``styles.py``.
+Estética: ``ui_kit.DIALOG_QSS`` (común a todas las ventanas).
 """
 
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtCore import QSize, Qt, QTimer, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -21,11 +24,12 @@ from PySide6.QtWidgets import (
     QDoubleSpinBox,
     QFormLayout,
     QFrame,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QMessageBox,
     QPlainTextEdit,
-    QProgressBar,
     QPushButton,
     QScrollArea,
     QSpinBox,
@@ -36,11 +40,34 @@ from PySide6.QtWidgets import (
 
 from ..config import Config
 from ..ollama_client import OllamaClient
+from ..ollama_pull import CANCELLED, COMPLETED, FAILED, PullSnapshot
 from ..settings_store import ALLOWED_KEYS
+from .downloads import KIND_OLLAMA, DownloadJob, DownloadManager
 from .styles import ACCENT, BORDER, MUTED, PANEL, TEXT
-from .workers import HardwareWorker, PullWorker
+from .ui_kit import (
+    DIALOG_QSS,
+    DownloadProgress,
+    TierChip,
+    card,
+    fit_to_screen,
+    section,
+    wrap_label,
+)
+from .workers import HardwareWorker
 
 TIER_ORDER = {"perfecto": 0, "regular": 1, "alto": 2, "imposible": 3}
+ACTION_COLUMN_WIDTH = 200
+
+FILTERS = [
+    ("Todos los modelos", None),
+    ("Solo instalados", "installed"),
+    ("Solo para descargar", "download"),
+    ("🟢 Óptimos para tu equipo", "perfecto"),
+    ("🟡 Compatibles", "regular"),
+    ("🟠 Exigentes", "alto"),
+    ("🔴 No compatibles", "imposible"),
+    ("Con visión (imágenes)", "vision"),
+]
 
 
 def _fmt_gb(size_bytes: Optional[int]) -> str:
@@ -49,14 +76,35 @@ def _fmt_gb(size_bytes: Optional[int]) -> str:
     return f"{size_bytes / (1024 ** 3):.1f} GB"
 
 
+def performance_hint(assessment: dict) -> str:
+    """Rendimiento esperado a partir de la evaluación del catálogo."""
+    metrics = assessment.get("metrics") or {}
+    tps = metrics.get("expected_tokens_per_s") or metrics.get("tokens_per_s")
+    tier = assessment.get("tier")
+    base = {
+        "perfecto": "Rendimiento esperado: fluido",
+        "regular": "Rendimiento esperado: aceptable",
+        "alto": "Rendimiento esperado: lento, exige mucha memoria",
+        "imposible": "No se ejecutaría de forma estable en este equipo",
+    }.get(str(tier), "Rendimiento sin evaluar")
+    if tps:
+        base += f" (~{float(tps):.0f} tokens/s)"
+    return base
+
+
 # --------------------------------------------------------------------- #
 # Fila de modelo
 # --------------------------------------------------------------------- #
 class ModelRow(QFrame):
-    """Una fila del catálogo: insignia, metadatos, explicación y acción."""
+    """Tarjeta de un modelo: clasificación, datos, explicación y acción.
+
+    La columna de acciones tiene ancho fijo: el botón Descargar/Seleccionar
+    nunca queda fuera de la vista aunque la descripción sea larga.
+    """
 
     selectRequested = Signal(str)
     pullRequested = Signal(str)
+    cancelRequested = Signal(str)
 
     def __init__(
         self,
@@ -64,193 +112,241 @@ class ModelRow(QFrame):
         meta: str,
         explanation: str,
         tier: str,
-        color: str,
-        emoji: str,
-        action: str,
-        enabled: bool,
+        color: str = "",
+        emoji: str = "",
+        action: str = "Seleccionar",
+        enabled: bool = True,
         parent: Optional[QWidget] = None,
         tooltip: str = "",
+        *,
+        performance: str = "",
+        active: bool = False,
+        installed: bool = False,
     ) -> None:
         super().__init__(parent)
         self.setObjectName("modelRow")
         self.name = name
         self.tier = tier
+        self.installed = installed
+        border = ACCENT if active else BORDER
         self.setStyleSheet(
-            f"#modelRow {{ background: {PANEL}; border: 1px solid {BORDER};"
-            " border-radius: 8px; }"
+            f"QFrame#modelRow {{ background: {PANEL}; border: 1px solid {border};"
+            " border-radius: 10px; }"
         )
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(10, 8, 10, 8)
-        layout.setSpacing(10)
+        grid = QGridLayout(self)
+        grid.setContentsMargins(14, 12, 14, 12)
+        grid.setHorizontalSpacing(14)
+        grid.setVerticalSpacing(4)
 
-        badge = QLabel(emoji)
-        badge.setStyleSheet(f"color: {color}; font-size: 18px; border: none;")
-        badge.setToolTip(tier.upper())
-        layout.addWidget(badge)
-
-        middle = QVBoxLayout()
-        middle.setSpacing(2)
+        title_row = QHBoxLayout()
+        title_row.setSpacing(8)
         title = QLabel(name)
-        title.setStyleSheet(f"color: {TEXT}; font-weight: 700; border: none;")
-        meta_label = QLabel(meta)
-        meta_label.setStyleSheet(f"color: {MUTED}; font-size: 10px; border: none;")
-        explanation_label = QLabel(explanation)
-        explanation_label.setWordWrap(True)
-        explanation_label.setStyleSheet(
-            f"color: {MUTED}; font-size: 10px; border: none;"
-        )
-        middle.addWidget(title)
-        middle.addWidget(meta_label)
-        middle.addWidget(explanation_label)
-        layout.addLayout(middle, 1)
+        title.setStyleSheet(f"color: {TEXT}; font-weight: 700; font-size: 14px;")
+        title.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        title_row.addWidget(title)
+        self.chip = TierChip(tier)
+        title_row.addWidget(self.chip)
+        if active:
+            in_use = QLabel("● EN USO")
+            in_use.setStyleSheet(f"color: {ACCENT}; font-weight: 800; font-size: 11px;")
+            title_row.addWidget(in_use)
+        title_row.addStretch(1)
+        grid.addLayout(title_row, 0, 0)
 
+        meta_label = wrap_label(meta, "muted")
+        grid.addWidget(meta_label, 1, 0)
+        if performance:
+            grid.addWidget(wrap_label(performance, "muted"), 2, 0)
+        explanation_label = wrap_label(explanation)
+        explanation_label.setStyleSheet("color: #b9bfcc; font-size: 12px;")
+        grid.addWidget(explanation_label, 3, 0)
+        grid.setColumnStretch(0, 1)
+
+        actions = QVBoxLayout()
+        actions.setSpacing(6)
         self.button = QPushButton(action)
         self.button.setEnabled(enabled)
         self.button.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.button.setStyleSheet(
-            f"QPushButton {{ background: #20242e; color: {TEXT};"
-            f" border: 1px solid {BORDER}; border-radius: 6px; padding: 5px 10px; }}"
-            f"QPushButton:enabled:hover {{ border-color: {ACCENT}; }}"
-            "QPushButton:disabled { color: #5b6374; }"
-        )
+        if action in ("Descargar", "Seleccionar"):
+            self.button.setProperty("kind", "primary")
         if tooltip:
             self.button.setToolTip(tooltip)
-        if action == "Seleccionar":
-            self.button.clicked.connect(lambda: self.selectRequested.emit(name))
+        self.button.clicked.connect(self._on_button)
+        self._action = action
+        self.cancel_button = QPushButton("Cancelar descarga")
+        self.cancel_button.setProperty("kind", "danger")
+        self.cancel_button.setVisible(False)
+        self.cancel_button.clicked.connect(lambda: self.cancelRequested.emit(self.name))
+        self.progress_view = DownloadProgress()
+        self.progress_view.setVisible(False)
+        # Compatibilidad con código existente (row.progress.setVisible…).
+        self.progress = self.progress_view.bar
+        self.status = wrap_label("", "muted")
+        for widget in (
+            self.button,
+            self.cancel_button,
+            self.progress_view,
+            self.status,
+        ):
+            actions.addWidget(widget)
+        actions.addStretch(1)
+        holder = QWidget()
+        holder.setLayout(actions)
+        holder.setFixedWidth(ACTION_COLUMN_WIDTH)
+        grid.addWidget(holder, 0, 1, 4, 1, Qt.AlignmentFlag.AlignTop)
+
+    def _on_button(self) -> None:
+        if self._action == "Seleccionar":
+            self.selectRequested.emit(self.name)
         else:
-            self.button.clicked.connect(lambda: self.pullRequested.emit(name))
-        layout.addWidget(self.button)
-
-        self.progress = QProgressBar()
-        self.progress.setRange(0, 100)
-        self.progress.setValue(0)
-        self.progress.setVisible(False)
-        self.progress.setFixedWidth(140)
-        layout.addWidget(self.progress)
-
-        self.status = QLabel("")
-        self.status.setStyleSheet(f"color: {MUTED}; font-size: 10px; border: none;")
-        layout.addWidget(self.status)
+            self.pullRequested.emit(self.name)
 
     def start_progress(self) -> None:
         self.button.setVisible(False)
-        self.progress.setVisible(True)
-        self.status.setText("descargando…")
+        self.cancel_button.setVisible(True)
+        self.progress_view.setVisible(True)
+        self.status.setText("")
+
+    def apply_snapshot(self, snapshot: PullSnapshot) -> None:
+        if snapshot.phase in (COMPLETED,):
+            self.mark_installed()
+            return
+        if snapshot.phase in (FAILED, CANCELLED):
+            self.progress_view.setVisible(False)
+            self.cancel_button.setVisible(False)
+            self.button.setVisible(True)
+            self.button.setText("Reintentar descarga")
+            self.status.setText(snapshot.describe())
+            self.status.setProperty(
+                "role", "error" if snapshot.phase == FAILED else "muted"
+            )
+            return
+        if not self.progress_view.isVisible():
+            self.start_progress()
+        self.progress_view.apply(snapshot)
 
     def set_progress(self, status: str, fraction: float) -> None:
+        """API anterior (estado + fracción); se conserva por compatibilidad."""
+        self.progress.setRange(0, 100)
         self.progress.setValue(int(fraction * 100))
-        self.status.setText(status[:40])
+        self.status.setText(status[:60])
 
     def mark_installed(self) -> None:
-        self.progress.setVisible(False)
+        self.installed = True
+        self.progress_view.setVisible(False)
+        self.cancel_button.setVisible(False)
         self.button.setVisible(True)
         self.button.setText("Seleccionar")
         self.button.setEnabled(True)
-        self.status.setText("instalado ✓")
-        try:
-            self.button.clicked.disconnect()
-        except (RuntimeError, TypeError):
-            pass
-        self.button.clicked.connect(lambda: self.selectRequested.emit(self.name))
+        self._action = "Seleccionar"
+        self.status.setText("Instalado y verificado ✓")
 
 
 # --------------------------------------------------------------------- #
-# Selector de modelos
+# Panel de modelos
 # --------------------------------------------------------------------- #
-class ModelSelectorDialog(QDialog):
-    """Ventana modal de selección de modelos locales (Ollama)."""
+class ModelsPanel(QWidget):
+    """Catálogo de modelos reutilizable (diálogo o página del centro de control)."""
 
     modelSelected = Signal(str)
 
     def __init__(
-        self, ollama: OllamaClient, current_model: str, parent: Optional[QWidget] = None
+        self,
+        ollama: OllamaClient,
+        current_model: str,
+        parent: Optional[QWidget] = None,
+        *,
+        downloads: Optional[DownloadManager] = None,
     ) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Modelos de IA — UNnexor")
-        self.setMinimumSize(560, 560)
-        self.setStyleSheet(
-            f"QDialog {{ background: #12141a; color: {TEXT}; }}"
-            f"QLabel {{ background: transparent; }}"
-            f"QLineEdit {{ background: #0e1016; color: {TEXT};"
-            f" border: 1px solid {BORDER}; border-radius: 6px; padding: 5px 8px; }}"
-            f"QComboBox {{ background: #20242e; color: {TEXT};"
-            f" border: 1px solid {BORDER}; border-radius: 6px; padding: 4px; }}"
-            f"QScrollBar:vertical {{ width: 10px; }}"
-            f"QScrollBar::handle:vertical {{ background: #2a3140; border-radius: 5px; }}"
-        )
+        self.setObjectName("pageRoot")
         self._ollama = ollama
         self._current = current_model
         self._rows: Dict[str, ModelRow] = {}
         self._installed_data: List[dict] = []
         self._catalog_data: List[dict] = []
-        self._pull_workers: List[PullWorker] = []
+        self._downloads = downloads
+        if self._downloads is None and ollama is not None:
+            self._downloads = DownloadManager.instance(ollama)
+        if self._downloads is not None:
+            self._downloads.jobProgress.connect(self._on_job_snapshot)
+            self._downloads.jobFinished.connect(self._on_job_finished)
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(14, 12, 14, 12)
-        layout.setSpacing(8)
+        layout.setContentsMargins(20, 16, 20, 14)
+        layout.setSpacing(10)
 
-        header = QLabel("Elige el modelo que responderá tus consultas")
-        header.setStyleSheet(f"color: {TEXT}; font-size: 13px; font-weight: 700;")
-        sub = QLabel(
-            "La clasificación compara los requisitos estimados del modelo con "
-            "la memoria disponible de tu equipo. Los modelos 🔴 están "
-            "deshabilitados por seguridad."
-        )
-        sub.setWordWrap(True)
-        sub.setStyleSheet(f"color: {MUTED}; font-size: 10px;")
-        layout.addWidget(header)
-        layout.addWidget(sub)
+        # Fijos arriba: título y filtros. Todo lo demás se desplaza, así en
+        # ventanas pequeñas la lista conserva el espacio útil.
+        title = QLabel("Modelos de IA")
+        title.setProperty("role", "title")
+        layout.addWidget(title)
 
         filters = QHBoxLayout()
         self._search = QLineEdit()
         self._search.setPlaceholderText("Buscar modelo por nombre…")
+        self._search.setClearButtonEnabled(True)
         self._search.textChanged.connect(self._apply_filters)
         self._filter_combo = QComboBox()
-        self._filter_combo.addItems(
-            [
-                "Todos",
-                "🟢 PERFECTO",
-                "🟡 REGULAR",
-                "🟠 ALTO CONSUMO",
-                "🔴 IMPOSIBLE",
-                "Con visión",
-            ]
-        )
+        for label, _key in FILTERS:
+            self._filter_combo.addItem(label)
         self._filter_combo.currentIndexChanged.connect(self._apply_filters)
-        filters.addWidget(self._search, 1)
-        filters.addWidget(self._filter_combo)
-        layout.addLayout(filters)
-
-        self._status = QLabel("Detectando hardware y catálogo de Ollama…")
-        self._status.setStyleSheet(f"color: {MUTED}; font-size: 10px;")
-        layout.addWidget(self._status)
-        library_row = QHBoxLayout()
-        self._library = QLabel("")
-        self._library.setWordWrap(True)
-        self._library.setStyleSheet(f"color: {MUTED}; font-size: 10px;")
-        self._refresh_btn = QPushButton("🔄 Actualizar catálogo")
+        self._refresh_btn = QPushButton("Actualizar catálogo")
         self._refresh_btn.setToolTip(
             "Consulta ollama.com/library y la última versión de Ollama. "
             "No descarga ningún modelo."
         )
         self._refresh_btn.clicked.connect(self._refresh_library)
-        library_row.addWidget(self._library, 1)
-        library_row.addWidget(self._refresh_btn)
-        layout.addLayout(library_row)
+        filters.addWidget(self._search, 1)
+        filters.addWidget(self._filter_combo)
+        filters.addWidget(self._refresh_btn)
+        layout.addLayout(filters)
 
         self._scroll = QScrollArea()
         self._scroll.setWidgetResizable(True)
         self._scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self._scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self._container = QWidget()
-        self._vbox = QVBoxLayout(self._container)
-        self._vbox.setSpacing(6)
+        content = QVBoxLayout(self._container)
+        content.setContentsMargins(0, 0, 6, 0)
+        content.setSpacing(8)
+        content.addWidget(
+            wrap_label(
+                "Elige el modelo que responde tus consultas o descarga uno nuevo. "
+                "La clasificación compara lo que pide cada modelo con la memoria "
+                "real de tu equipo. No se descarga nada sin tu confirmación.",
+                "muted",
+            )
+        )
+        current = card()
+        current_layout = QHBoxLayout(current)
+        current_layout.setContentsMargins(14, 10, 14, 10)
+        self._current_label = wrap_label("")
+        self._current_label.setStyleSheet("font-size: 14px;")
+        current_layout.addWidget(self._current_label, 1)
+        self._current_chip = TierChip("sin_evaluar")
+        current_layout.addWidget(self._current_chip)
+        content.addWidget(current)
+        self._set_current_label(current_model, None)
+        self._status = wrap_label("Detectando hardware y catálogo de Ollama…", "muted")
+        content.addWidget(self._status)
+        self._library = wrap_label("", "muted")
+        content.addWidget(self._library)
+        rows = QWidget()
+        self._vbox = QVBoxLayout(rows)
+        self._vbox.setContentsMargins(0, 0, 0, 0)
+        self._vbox.setSpacing(8)
         self._vbox.addStretch(1)
+        content.addWidget(rows, 1)
+        self._legend = wrap_label(
+            "🟢 ÓPTIMO: cabe con margen · 🟡 COMPATIBLE: funciona con margen justo · "
+            "🟠 EXIGENTE: lento o al límite de memoria · 🔴 NO COMPATIBLE: "
+            "descarga deshabilitada. Las descargas continúan aunque cierres esta ventana.",
+            "muted",
+        )
+        content.addWidget(self._legend)
         self._scroll.setWidget(self._container)
         layout.addWidget(self._scroll, 1)
-
-        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
-        buttons.rejected.connect(self.reject)
-        layout.addWidget(buttons)
 
         self._hardware_worker = HardwareWorker(ollama, configured_model=current_model)
         self._hardware_worker.ready.connect(self._populate)
@@ -258,12 +354,27 @@ class ModelSelectorDialog(QDialog):
         self._hardware_worker.start()
 
     # ------------------------------------------------------------------ #
+    def _set_current_label(self, name: str, entry: Optional[dict]) -> None:
+        self._current_label.setText(
+            f"<b>Modelo en uso:</b> {name or 'ninguno'}"
+            + (" · instalado en Ollama" if entry else "")
+        )
+        if entry:
+            self._current_chip.set_tier(entry["assessment"]["tier"])
+            self._current_chip.setVisible(True)
+        else:
+            self._current_chip.setVisible(False)
+
     def _populate(self, data: dict) -> None:
         self._installed_data = data.get("installed", [])
         self._catalog_data = data.get("catalog", [])
         hw = data.get("hardware", {})
         self._status.setText(self._hw_summary(hw))
         self._library.setText(self._library_summary(data.get("library") or {}))
+        current = next(
+            (e for e in self._installed_data if e["name"] == self._current), None
+        )
+        self._set_current_label(self._current, current)
         self._build_rows()
 
     @staticmethod
@@ -295,6 +406,11 @@ class ModelSelectorDialog(QDialog):
     def _after_refresh(self, message: str) -> None:
         self._refresh_btn.setEnabled(True)
         self._library.setText(message)
+        self.reload()
+
+    def reload(self) -> None:
+        if self._hardware_worker.isRunning():
+            return
         self._hardware_worker = HardwareWorker(
             self._ollama, configured_model=self._current
         )
@@ -302,13 +418,17 @@ class ModelSelectorDialog(QDialog):
         self._hardware_worker.failed.connect(self._on_load_failed)
         self._hardware_worker.start()
 
+    def set_current_model(self, name: str) -> None:
+        self._current = name
+        self.reload()
+
     def _on_load_failed(self, message: str) -> None:
         self._status.setText(f"⚠ {message}")
 
     @staticmethod
     def _hw_summary(hw: dict) -> str:
         parts = [
-            f"CPU: {hw.get('cpu_name', '?')} · "
+            f"Tu equipo — CPU: {' '.join(str(hw.get('cpu_name', '?')).split())} · "
             f"RAM: {hw.get('ram_total_mb', 0) // 1024} GB "
             f"({hw.get('ram_available_mb', 0) // 1024} GB libres)"
         ]
@@ -321,12 +441,12 @@ class ModelSelectorDialog(QDialog):
         else:
             parts.append("GPU: no detectada (modo CPU)")
         if hw.get("ollama_gpu_active") is False:
-            parts.append("· Ollama está usando CPU")
+            parts.append("Ollama está usando la CPU")
         elif hw.get("ollama_gpu_active") is True:
-            parts.append("· aceleración GPU activa ✓")
+            parts.append("aceleración por GPU activa ✓")
         for note in (hw.get("notes") or [])[:2]:
-            parts.append(f"· {note}")
-        return "  |  ".join(parts)
+            parts.append(note)
+        return " · ".join(parts)
 
     # ------------------------------------------------------------------ #
     def _build_rows(self) -> None:
@@ -335,19 +455,25 @@ class ModelSelectorDialog(QDialog):
         self._rows.clear()
         self._clear_layout()
 
-        self._add_section("Instalados en Ollama")
+        self._add_section(f"Instalados en tu equipo ({len(self._installed_data)})")
+        if not self._installed_data:
+            self._add_note(
+                "Todavía no hay modelos instalados en Ollama. Descarga uno de los "
+                "recomendados o usa «Recomendar configuración»."
+            )
         for entry in sorted(
             self._installed_data,
-            key=lambda e: TIER_ORDER.get(e["assessment"]["tier"], 9),
+            key=lambda e: (
+                e["name"] != self._current,
+                TIER_ORDER.get(e["assessment"]["tier"], 9),
+            ),
         ):
             self._add_installed_row(entry)
         curated = [e for e in self._catalog_data if not e.get("estimated")]
         online = [e for e in self._catalog_data if e.get("estimated")]
         self._add_section("Recomendados para descargar")
         if not curated:
-            empty = QLabel("Todo el catálogo recomendado ya está instalado.")
-            empty.setStyleSheet(f"color: {MUTED}; font-size: 10px;")
-            self._vbox.insertWidget(self._vbox.count() - 1, empty)
+            self._add_note("Todo el catálogo recomendado ya está instalado.")
         else:
             for entry in sorted(
                 curated,
@@ -355,9 +481,7 @@ class ModelSelectorDialog(QDialog):
             ):
                 self._add_catalog_row(entry)
         if online:
-            self._add_section(
-                "Biblioteca de Ollama (en línea · tamaños estimados · 🆕 nuevos)"
-            )
+            self._add_section("Biblioteca de Ollama (en línea · tamaños estimados)")
             for entry in sorted(
                 online,
                 key=lambda e: (
@@ -367,6 +491,7 @@ class ModelSelectorDialog(QDialog):
             ):
                 self._add_catalog_row(entry)
         self._apply_filters()
+        self._restore_download_states()
 
     def _clear_layout(self) -> None:
         while self._vbox.count() > 1:
@@ -376,12 +501,10 @@ class ModelSelectorDialog(QDialog):
                 widget.deleteLater()
 
     def _add_section(self, title: str) -> None:
-        label = QLabel(title)
-        label.setStyleSheet(
-            f"color: {ACCENT}; font-size: 11px; font-weight: 700;"
-            "letter-spacing: 1px; border: none; padding-top: 4px;"
-        )
-        self._vbox.insertWidget(self._vbox.count() - 1, label)
+        self._vbox.insertWidget(self._vbox.count() - 1, section(title))
+
+    def _add_note(self, text: str) -> None:
+        self._vbox.insertWidget(self._vbox.count() - 1, wrap_label(text, "muted"))
 
     def _add_installed_row(self, entry: dict) -> None:
         assessment = entry["assessment"]
@@ -389,6 +512,8 @@ class ModelSelectorDialog(QDialog):
         extras = []
         if "vision" in caps:
             extras.append("visión")
+        if "thinking" in caps:
+            extras.append("razonamiento")
         if entry.get("quantization"):
             extras.append(entry["quantization"])
         meta = (
@@ -398,6 +523,11 @@ class ModelSelectorDialog(QDialog):
         )
         explanation = " — ".join(assessment["reasons"][:2]) or assessment["explanation"]
         active = entry["name"] == self._current
+        impossible = assessment["tier"] == "imposible"
+        embedding_only = "embedding" in caps and "completion" not in caps
+        action = "En uso" if active else "Seleccionar"
+        if embedding_only and not active:
+            action = "Solo búsqueda"
         row = ModelRow(
             name=entry["name"],
             meta=meta,
@@ -405,13 +535,21 @@ class ModelSelectorDialog(QDialog):
             tier=assessment["tier"],
             color=assessment["color"],
             emoji=assessment["emoji"],
-            action="En uso" if active else "Seleccionar",
-            enabled=assessment["tier"] != "imposible" and not active,
+            action=action,
+            enabled=not impossible and not active and not embedding_only,
             tooltip=(
-                "Este modelo no puede ejecutarse en tu equipo por " "seguridad."
-                if assessment["tier"] == "imposible"
-                else ""
+                "Este modelo no puede ejecutarse en tu equipo por seguridad."
+                if impossible
+                else (
+                    "Modelo de embeddings: lo usa la búsqueda en los documentos "
+                    "del perfil, no puede responder consultas."
+                    if embedding_only
+                    else ""
+                )
             ),
+            performance=performance_hint(assessment),
+            active=active,
+            installed=True,
         )
         row.selectRequested.connect(self._select)
         self._rows[entry["name"]] = row
@@ -426,8 +564,8 @@ class ModelSelectorDialog(QDialog):
             extras.append("razonamiento")
         estimated = " (estimado)" if entry.get("estimated") else ""
         meta = (
-            ("🆕 " if entry.get("new") else "")
-            + f"~{entry['size_gb']:.1f} GB{estimated} · {entry['params_b']:g}B"
+            ("🆕 nuevo · " if entry.get("new") else "")
+            + f"descarga ~{entry['size_gb']:.1f} GB{estimated} · {entry['params_b']:g}B"
             + (f" · {' · '.join(extras)}" if extras else "")
             + f" · {entry['family']}"
             + (f" · {entry['pulls']} descargas" if entry.get("pulls") else "")
@@ -452,34 +590,31 @@ class ModelSelectorDialog(QDialog):
                 else "Este modelo no cabe razonablemente en tu equipo; la "
                 "descarga está deshabilitada."
             ),
+            performance=performance_hint(assessment),
         )
         row.pullRequested.connect(self._pull)
         row.selectRequested.connect(self._select)
+        row.cancelRequested.connect(self._cancel)
         self._rows[entry["name"]] = row
         self._vbox.insertWidget(self._vbox.count() - 1, row)
 
     # ------------------------------------------------------------------ #
     def _apply_filters(self) -> None:
         text = self._search.text().strip().lower()
-        index = self._filter_combo.currentIndex()
-        tier_filter = {1: "perfecto", 2: "regular", 3: "alto", 4: "imposible"}.get(
-            index
-        )
-        vision_only = index == 5
+        key = FILTERS[self._filter_combo.currentIndex()][1]
         for name, row in self._rows.items():
-            entry = self._find_entry(name)
-            visible = True
-            if text and text not in name.lower():
-                visible = False
-            if tier_filter and entry and entry["assessment"]["tier"] != tier_filter:
-                visible = False
-            if vision_only:
-                caps = (entry or {}).get("capabilities") or (entry or {}).get(
-                    "vision", False
-                )
+            entry = self._find_entry(name) or {}
+            visible = not text or text in name.lower()
+            if key == "installed":
+                visible = visible and row.installed
+            elif key == "download":
+                visible = visible and not row.installed
+            elif key == "vision":
+                caps = entry.get("capabilities") or entry.get("vision", False)
                 ok = ("vision" in caps) if isinstance(caps, list) else bool(caps)
-                if not ok:
-                    visible = False
+                visible = visible and ok
+            elif key and entry:
+                visible = visible and entry["assessment"]["tier"] == key
             row.setVisible(visible)
 
     def _find_entry(self, name: str) -> Optional[dict]:
@@ -493,60 +628,141 @@ class ModelSelectorDialog(QDialog):
 
     # ------------------------------------------------------------------ #
     def _select(self, name: str) -> None:
+        self._current = name
         self.modelSelected.emit(name)
-        self.accept()
 
     def _pull(self, name: str) -> None:
-        from PySide6.QtWidgets import QMessageBox
-
         row = self._rows.get(name)
-        if row is None:
+        if row is None or self._downloads is None:
             return
         entry = self._find_entry(name) or {}
-        size_gb = entry.get("size_gb") or entry.get("size_bytes", 0) / (1024**3)
-        confirm_label = (
-            f"Descargar {name} (~{size_gb:.1f} GB)?"
-            if size_gb
-            else f"Descargar {name}?"
+        size_gb = entry.get("size_gb") or (entry.get("size_bytes") or 0) / (1024**3)
+        disk = (entry.get("assessment") or {}).get("metrics", {}).get("disk_needed_gb")
+        text = (
+            f"¿Descargar «{name}»"
+            + (f" (~{size_gb:.1f} GB)" if size_gb else "")
+            + "?\n\nSe descargará desde el repositorio oficial de Ollama"
+            + (f" y ocupará unos {disk} GB de disco" if disk else "")
+            + ". Puedes seguir usando UNnexor mientras tanto; la descarga continúa "
+            "aunque cierres esta ventana."
         )
         answer = QMessageBox.question(
             self,
             "Descargar modelo",
-            confirm_label + "\n\nNo se descarga nada sin tu confirmación.",
+            text,
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
         if answer != QMessageBox.StandardButton.Yes:
             return
-        worker = PullWorker(self._ollama, name, parent=self)
-        worker.progress.connect(row.set_progress)
-        worker.succeeded.connect(lambda _n: self._on_pull_done(name))
-        worker.failed.connect(self._on_pull_failed)
-        self._pull_workers.append(worker)
-        # start_progress() oculta el botón: no hay doble descarga posible.
-        row.start_progress()
-        worker.start()
+        job = DownloadJob(KIND_OLLAMA, name, expected_bytes=int(size_gb * 1024**3))
+        if self._downloads.enqueue(job):
+            row.start_progress()
+            active = self._downloads.active_job()
+            if active is not None and active.key != job.key:
+                row.status.setText(f"En cola: espera a que termine {active.name}.")
 
-    def _on_pull_done(self, name: str) -> None:
-        row = self._rows.get(name)
+    def _cancel(self, name: str) -> None:
+        if self._downloads is not None:
+            self._downloads.cancel(KIND_OLLAMA, name)
+
+    def _restore_download_states(self) -> None:
+        if self._downloads is None:
+            return
+        for name, row in self._rows.items():
+            if self._downloads.is_busy(KIND_OLLAMA, name):
+                row.start_progress()
+                snapshot = self._downloads.last_snapshot(KIND_OLLAMA, name)
+                if snapshot is not None:
+                    row.apply_snapshot(snapshot)
+
+    def _row_for(self, snapshot: PullSnapshot) -> Optional[ModelRow]:
+        kind, _, name = snapshot.model.partition(":")
+        if kind != KIND_OLLAMA:
+            return None
+        return self._rows.get(name)
+
+    def _on_job_snapshot(self, snapshot: PullSnapshot) -> None:
+        row = self._row_for(snapshot)
         if row is not None:
-            row.mark_installed()
-        self._status.setText(f"'{name}' instalado. Ya puedes seleccionarlo.")
+            row.apply_snapshot(snapshot)
 
-    def _on_pull_failed(self, name: str, message: str) -> None:
-        row = self._rows.get(name)
+    def _on_job_finished(self, snapshot: PullSnapshot) -> None:
+        row = self._row_for(snapshot)
+        name = snapshot.model.partition(":")[2]
         if row is not None:
-            row.progress.setVisible(False)
-            row.button.setVisible(True)
-            row.status.setText("error")
-        self._status.setText(f"⚠ {name}: {message}")
+            row.apply_snapshot(snapshot)
+        if snapshot.phase == COMPLETED:
+            self._status.setText(
+                f"«{name}» instalado y verificado. Ya puedes seleccionarlo."
+            )
+        elif snapshot.phase == FAILED:
+            self._status.setText(f"⚠ {name}: {snapshot.error}")
 
-    def closeEvent(self, event) -> None:
-        for worker in self._pull_workers:
-            if worker.isRunning():
-                worker.stop()
-                worker.wait(2000)
+    def shutdown(self) -> None:
+        if getattr(self, "_shut", False):
+            return
+        self._shut = True
         if self._hardware_worker.isRunning():
             self._hardware_worker.wait(3000)
+        if self._downloads is not None:
+            for signal, slot in (
+                (self._downloads.jobProgress, self._on_job_snapshot),
+                (self._downloads.jobFinished, self._on_job_finished),
+            ):
+                try:
+                    signal.disconnect(slot)
+                except (RuntimeError, TypeError):
+                    pass
+
+
+class ModelSelectorDialog(QDialog):
+    """Ventana «Modelos de IA» (envoltorio de ``ModelsPanel``)."""
+
+    modelSelected = Signal(str)
+
+    def __init__(
+        self,
+        ollama: OllamaClient,
+        current_model: str,
+        parent: Optional[QWidget] = None,
+        *,
+        downloads: Optional[DownloadManager] = None,
+    ) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Modelos de IA — UNnexor")
+        self.setStyleSheet(DIALOG_QSS)
+        fit_to_screen(self, QSize(1000, 760), QSize(720, 520), anchor=parent)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 10)
+        self.panel = ModelsPanel(ollama, current_model, self, downloads=downloads)
+        self.panel.modelSelected.connect(self._select)
+        layout.addWidget(self.panel, 1)
+        close_row = QHBoxLayout()
+        close_row.setContentsMargins(20, 0, 20, 0)
+        close_row.addStretch(1)
+        close = QPushButton("Cerrar")
+        close.clicked.connect(self.reject)
+        close_row.addWidget(close)
+        layout.addLayout(close_row)
+
+    # Atajos usados por pruebas y scripts existentes.
+    @property
+    def _rows(self) -> Dict[str, ModelRow]:
+        return self.panel._rows
+
+    def _populate(self, data: dict) -> None:
+        self.panel._populate(data)
+
+    def _select(self, name: str) -> None:
+        self.modelSelected.emit(name)
+        self.accept()
+
+    def done(self, result: int) -> None:
+        self.panel.shutdown()
+        super().done(result)
+
+    def closeEvent(self, event) -> None:
+        self.panel.shutdown()
         super().closeEvent(event)
 
 
@@ -561,7 +777,7 @@ class SettingsDialog(QDialog):
     def __init__(self, cfg: Config, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self.setWindowTitle("Ajustes — UNnexor")
-        self.setMinimumSize(520, 500)
+        fit_to_screen(self, QSize(760, 720), QSize(520, 480), anchor=parent)
         self.setStyleSheet(
             f"QDialog {{ background: #12141a; color: {TEXT}; }}"
             f"QLabel {{ color: {TEXT}; background: transparent; }}"

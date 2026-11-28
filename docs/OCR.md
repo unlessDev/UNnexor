@@ -59,13 +59,15 @@ fórmulas con RapidOCR/Tesseract quedarán como texto plano (sin LaTeX).
    duración, si es Markdown).
 4. El texto entra al pipeline normal (como una selección del navegador)
    con un prefijo de contexto; la imagen temporal
-   (`%TEMP%\extdator_capture_*.png`) se **borra** tras procesar.
-5. La respuesta llega al panel como siempre (streaming, Markdown). El
-   LaTeX que devuelve el OCR (`$$…$$`) y el de la consulta se muestran
-   como **matemática Unicode** legible en las burbujas (no como LaTeX
-   crudo); al copiar se obtiene esa misma versión legible. Ver
-   "Las fórmulas se ven como matemática Unicode" en
-   [TROUBLESHOOTING](TROUBLESHOOTING.md).
+   (`%TEMP%\unnexor_capture_*.png`) se **borra** tras procesar.
+5. La respuesta llega al panel como siempre (streaming, Markdown). Desde
+   2.1.0 las fórmulas de la respuesta (`$…$`, `$$…$$`, `\(…\)`, `\[…\]`,
+   `\begin{cases}`, `pmatrix`, `aligned`…) se **componen** como en un
+   editor matemático (ziamath; ver ADR-0006) y el desarrollo paso a paso
+   conserva su orden. Una expresión mal formada se muestra en matemática
+   Unicode legible sin romper el resto. El código se resalta por lenguaje.
+   El texto de la consulta (lo que envías) se muestra en Unicode legible y
+   el botón de copiar entrega también la versión legible.
 
 ## Estado actual (verificado en el equipo de desarrollo, 2026-11-16)
 

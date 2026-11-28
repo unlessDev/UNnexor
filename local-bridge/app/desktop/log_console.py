@@ -14,7 +14,7 @@ import os
 import threading
 from collections import deque
 
-from PySide6.QtCore import QObject, QSettings, Qt, QUrl, Signal
+from PySide6.QtCore import QObject, QSettings, QSize, Qt, QUrl, Signal
 from PySide6.QtGui import QDesktopServices, QFont, QGuiApplication, QTextCursor
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -30,6 +30,7 @@ from PySide6.QtWidgets import (
 from .. import paths
 from ..banner import render as render_banner
 from .brand import LogoLabel
+from .ui_kit import fit_to_screen
 
 MAX_LINES = 3000
 _FORMAT = "%(asctime)s %(levelname)-7s %(name)s: %(message)s"
@@ -86,7 +87,7 @@ class LogConsoleWindow(QWidget):
     def __init__(self, buffer: LogBuffer, parent: QWidget | None = None) -> None:
         super().__init__(parent, Qt.WindowType.Window)
         self.setWindowTitle("UNnexor · Consola del puente")
-        self.resize(820, 460)
+        fit_to_screen(self, QSize(940, 580), QSize(560, 320))
         self.setObjectName("logConsole")
         self.setStyleSheet(
             "#logConsole { background: #0d0f16; }"
@@ -102,7 +103,7 @@ class LogConsoleWindow(QWidget):
             "QCheckBox { color: #c9cde0; }"
         )
         self._buffer = buffer
-        self._settings = QSettings("Extdator", "Bridge")
+        self._settings = QSettings("UNnexor", "Bridge")
         self._filter = ""
 
         header = QHBoxLayout()

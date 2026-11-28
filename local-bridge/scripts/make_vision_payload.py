@@ -16,7 +16,7 @@ _mod = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_mod)
 render_math = _mod.render_math
 
-path = os.path.join(tempfile.gettempdir(), "extdator_vision_math.png")
+path = os.path.join(tempfile.gettempdir(), "unnexor_vision_math.png")
 render_math(["x^2 + y^2 = 25", "x + y = 7"], path)
 with open(path, "rb") as handle:
     b64 = base64.b64encode(handle.read()).decode()
@@ -28,7 +28,7 @@ payload = {
     ),
     "source_url": "screenshot://e2e-vision",
 }
-out = os.path.join(tempfile.gettempdir(), "extdator_vision_payload.json")
+out = os.path.join(tempfile.gettempdir(), "unnexor_vision_payload.json")
 with open(out, "w", encoding="utf-8") as fh:
     json.dump(payload, fh)
 print("imagen bytes:", os.path.getsize(path))

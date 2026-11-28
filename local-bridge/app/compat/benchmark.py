@@ -126,7 +126,7 @@ def speech_sample() -> tuple[Any, str]:
                 "Add-Type -AssemblyName System.Speech;"
                 "$s = New-Object System.Speech.Synthesis.SpeechSynthesizer;"
                 f"$s.SetOutputToWaveFile('{target}');"
-                "$s.Speak($env:EXTDATOR_TTS_TEXT); $s.Dispose()"
+                "$s.Speak($env:UNNEXOR_TTS_TEXT); $s.Dispose()"
             )
             try:
                 subprocess.run(
@@ -134,7 +134,7 @@ def speech_sample() -> tuple[Any, str]:
                     check=True,
                     capture_output=True,
                     timeout=60,
-                    env=dict(os.environ, EXTDATOR_TTS_TEXT=SPEECH_TEXT),
+                    env=dict(os.environ, UNNEXOR_TTS_TEXT=SPEECH_TEXT),
                     creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
                 )
                 samples, rate = decode_wav(target.read_bytes())

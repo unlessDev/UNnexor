@@ -49,22 +49,23 @@ calco ni una imagen incrustada:
 brillos, ni filtros, ni efectos). La comparación lado a lado con la
 referencia se hizo al generar los recursos.
 
-## Nombres técnicos que se conservan (compatibilidad)
+## Identificadores técnicos (2.1.0: todos con el nombre UNnexor)
 
-El cambio de nombre es visible en toda la interfaz, pero estos
-identificadores mantienen el valor histórico "Extdator" a propósito. Cambiarlos
-perdería datos del usuario o rompería la comunicación entre versiones:
+Hasta 2.0.0 varios identificadores internos conservaban el nombre histórico
+"Extdator" para no perder datos. En 2.1.0 se renombraron **con migración**,
+de modo que una actualización no pierde nada:
 
-| Identificador | Dónde | Motivo |
+| Identificador actual | Antes | Compatibilidad / migración |
 |---|---|---|
-| `%LOCALAPPDATA%\Extdator` (`paths.APP_DIR_NAME`) | Datos: `.env`, ajustes, registros, perfiles, modelos de voz | Una actualización conserva configuración, perfiles y cientos de MB de modelos ya descargados. |
-| Servicio `Extdator` del keyring (`providers/manager.py`) | Claves API de proveedores | Las credenciales guardadas siguen funcionando. |
-| `QSettings("Extdator", …)` y organización Qt | Geometría de ventanas, preferencias de UI | Las ventanas vuelven a su posición. |
-| Variables `EXTDATOR_*` | Overrides para pruebas y modo portable | Scripts y CI existentes. |
-| `"app": "extdator-bridge"` en `/health` | Contrato extensión ↔ puente | Una extensión nueva sigue reconociendo un puente antiguo y viceversa. |
-| Mensaje `extdator:send-selection`, `__extdatorInjected` | Interno de la extensión | Sin efecto visible. |
-| Loggers `extdator.*` | Nombres internos de registro | Sin efecto visible. |
-| `AppId` del instalador | Inno Setup | La nueva versión actualiza la instalación previa en lugar de duplicarla. |
+| `%LOCALAPPDATA%\UNnexor` (`paths.APP_DIR_NAME`) | `%LOCALAPPDATA%\Extdator` | `app/migration.py` copia los datos en el primer arranque (verificado, sin sobrescribir ni borrar el origen; registro en `migration.json`). |
+| Servicio `UNnexor` del keyring | Servicio `Extdator` | La primera lectura de una clave la copia al servicio nuevo (`providers/manager.py`); la purga borra ambos. |
+| `QSettings("UNnexor", …)` | `QSettings("Extdator", …)` | `migrate_qsettings()` copia geometría y preferencias si el destino está vacío. |
+| Variables `UNNEXOR_*` | `EXTDATOR_*` | Los nombres antiguos se aceptan como alias (`paths.env_override`). |
+| `"app": "unnexor-bridge"` en `/health` | `"extdator-bridge"` | La extensión y `start.ps1` aceptan ambos valores. |
+| Mensaje `unnexor:send-selection`, `__unnexorInjected`, `data-unnexor` | `extdator:*` | Internos de la extensión (content script ↔ service worker del mismo paquete). |
+| Loggers `unnexor.*` | `extdator.*` | Sin efecto visible. |
+| `AppId` del instalador | sin cambios | Se conserva a propósito: la nueva versión actualiza la instalación previa en lugar de duplicarla. |
 
 El instalador, al actualizar desde Extdator, retira `Extdator.exe` y los
-accesos directos con el nombre anterior; los datos no se tocan.
+accesos directos con el nombre anterior. El nombre antiguo solo aparece en
+el código de migración y en notas históricas.

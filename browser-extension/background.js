@@ -29,7 +29,7 @@ chrome.action.onClicked.addListener(() => {
 });
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-  if (!msg || msg.type !== "extdator:send-selection") return false;
+  if (!msg || msg.type !== "unnexor:send-selection") return false;
   handleSend(msg, sender)
     .then(sendResponse)
     .catch((err) => {
@@ -56,8 +56,15 @@ async function handleSend(msg, sender) {
     return { ok: false, error: "La selección está vacía." };
   }
 
+  // «Consultar…» adjunta una pregunta; «Enviar directamente» no. La pregunta
+  // DEBE viajar al puente: sin ella el modelo recibe solo la selección y la
+  // consulta se comporta como un envío directo (error corregido en 2.1.0).
+  const question = typeof msg.question === "string" ? msg.question.trim() : "";
+  const mode = question ? "ask" : "direct";
   const payload = {
     text,
+    question,
+    mode,
     source_url: (sender && sender.tab && sender.tab.url) || msg.sourceUrl || "",
     timestamp: new Date().toISOString(),
   };
@@ -95,6 +102,13 @@ async function handleSend(msg, sender) {
   }
 
   if (resp.ok) {
+    if (mode === "ask" && !(body && body.question_received)) {
+      // Un puente anterior aceptaría el texto e ignoraría la pregunta.
+      return {
+        ok: false,
+        error: "La aplicación UNnexor instalada no admite consultas. Actualízala a la versión 2.1 o posterior.",
+      };
+    }
     return { ok: true, message: (body && body.message) || "Texto enviado a la aplicación." };
   }
 

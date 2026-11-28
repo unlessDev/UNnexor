@@ -144,7 +144,7 @@ def main() -> int:
         cdp.drain(0.4)
 
     report["before_install_injected"] = bool(
-        cdp.evaluate("!!document.querySelector('div[data-extdator=\"host\"]')")
+        cdp.evaluate("!!document.querySelector('div[data-unnexor=\"host\"]')")
     )
 
     # ---- fase 2: instalar la extensión (onInstalled) -----------------------
@@ -155,7 +155,7 @@ def main() -> int:
     time.sleep(3.5)  # margen para onInstalled + re-inyección en la pestaña abierta
 
     report["after_install_injected_without_reload"] = bool(
-        cdp.evaluate("!!document.querySelector('div[data-extdator=\"host\"]')")
+        cdp.evaluate("!!document.querySelector('div[data-unnexor=\"host\"]')")
     )
 
     # ---- fase 3: token en storage (simula la página de opciones) -----------

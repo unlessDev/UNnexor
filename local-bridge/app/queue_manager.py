@@ -27,16 +27,33 @@ class SelectionRequest:
     # extensión). Vacía = envío directo (comportamiento histórico).
     question: str = ""
 
+    @property
+    def mode(self) -> str:
+        """``"ask"`` (Consultar) si hay pregunta; ``"direct"`` si no."""
+        return "ask" if self.question.strip() else "direct"
+
     def prompt(self) -> str:
-        """Mensaje que recibe el modelo: el texto solo, o pregunta + texto."""
+        """Mensaje que recibe el modelo.
+
+        * Enviar directamente: el texto seleccionado tal cual (histórico).
+        * Consultar: la consulta del usuario es la tarea y la selección es
+          su contexto; el modelo debe atender la consulta, no comentar el
+          texto.
+        """
         question = self.question.strip()
         if not question:
             return self.text
         return (
+            "CONSULTA DEL USUARIO (pregunta, orden o instrucción):\n"
             f"{question}\n\n"
-            "Responde a la pregunta anterior basándote en este texto "
-            "seleccionado:\n"
-            f'"""\n{self.text}\n"""'
+            "TEXTO SELECCIONADO EN LA PÁGINA (contexto de la consulta):\n"
+            f'"""\n{self.text}\n"""\n\n'
+            "Atiende la consulta del usuario usando el texto seleccionado como "
+            "contexto. Si es una orden (resumir, traducir, corregir, explicar…), "
+            "ejecútala sobre ese texto; si es una pregunta, respóndela. Si pide "
+            "otro idioma o formato, respétalo aunque el texto esté en otro. Si la "
+            "consulta se refiere a algo dicho antes en esta conversación, usa "
+            "ese contexto también."
         )
 
     def display(self) -> str:

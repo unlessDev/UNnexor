@@ -81,7 +81,7 @@ def test_extension_uses_brand_and_keeps_protocol():
         assert (ROOT / "browser-extension" / rel).is_file()
     content = (ROOT / "browser-extension" / "content.js").read_text(encoding="utf-8")
     assert 'data-part=\\"slash\\"' in content  # la X generada, en línea
-    assert "extdator:send-selection" in content  # protocolo interno intacto
+    assert "unnexor:send-selection" in content and "extdator" not in content.lower()
     assert "Enviar directamente" in content and "Consultar" in content
 
 
@@ -94,16 +94,18 @@ def test_no_visible_old_name_in_user_interface():
             for line in path.read_text(encoding="utf-8").splitlines():
                 if "Extdator" not in line:
                     continue
+                # Solo se admite el nombre antiguo en el código de migración
+                # (nunca como ruta, organización o servicio activos).
+                if path.name == "migration.py":
+                    continue  # módulo dedicado a migrar desde Extdator
                 allowed = (
-                    'QSettings("Extdator"',
-                    'SETTINGS_GROUP = ("Extdator"',
-                    'APP_DIR_NAME = "Extdator"',
-                    'SERVICE = "Extdator"',
-                    'setOrganizationName("Extdator")',
-                    "La organización",
-                    "Extdator ->",
-                    "%LOCALAPPDATA%",
+                    'LEGACY_APP_DIR_NAME = "Extdator"',
+                    'LEGACY_SERVICE = "Extdator"',
                     "desde Extdator",
+                    "Extdator: datos de versiones anteriores",
+                    "LOCALAPPDATA%\\\\Extdator",
+                    "LOCALAPPDATA%/Extdator",
+                    'QSettings "Extdator"',
                 )
                 if not any(token in line for token in allowed):
                     offenders.append(f"{path.name}: {line.strip()}")
@@ -116,7 +118,11 @@ def test_selection_request_prompt_and_display():
     assert plain.prompt() == "Texto" and plain.display() == "Texto"
     asked = SelectionRequest(text="El aprendizaje automático…", question="¿Ejemplo?")
     prompt = asked.prompt()
-    assert prompt.startswith("¿Ejemplo?") and "El aprendizaje automático…" in prompt
+    assert plain.mode == "direct" and asked.mode == "ask"
+    assert "¿Ejemplo?" in prompt and "El aprendizaje automático…" in prompt
+    # La consulta es la tarea; la selección, su contexto (no al revés).
+    assert prompt.index("¿Ejemplo?") < prompt.index("El aprendizaje automático…")
+    assert "CONSULTA DEL USUARIO" in prompt
     assert asked.display().startswith("¿Ejemplo?\n\n› El aprendizaje")
 
 

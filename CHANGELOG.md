@@ -6,6 +6,114 @@ usa [Semantic Versioning](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-11-28
+
+Evolución de experiencia de uso, corrección de «Consultar», formato de
+respuestas y nueva carpeta de datos. Generado y probado localmente; **sin
+publicar** y sin firma Authenticode.
+
+### Nuevas funcionalidades
+- **Centro de control** (menú ☰ e icono de la bandeja): estado real de
+  Ollama, modelo activo y descargas en curso, guía de uso en tres pasos,
+  acciones frecuentes y el catálogo de modelos integrado.
+- **Fórmulas compuestas** en las respuestas (ziamath: LaTeX → MathML → SVG):
+  fracciones, potencias, raíces, sumatorias, integrales, límites, matrices,
+  sistemas (`cases`), `aligned`, griegas; en línea y en bloque. Las
+  expresiones mal formadas caen a Unicode legible sin romper la respuesta.
+- **Resaltado de sintaxis** (Pygments) con fondo diferenciado, etiqueta de
+  lenguaje, scroll horizontal, sangría intacta y «Copiar código».
+- **Recomendar configuración → Aplicar** descarga e instala
+  automáticamente lo que falte tras un consentimiento explícito (tamaño,
+  disco, recursos), con progreso real por componente, verificación final,
+  activación por partes y «Reintentar» solo para lo fallido.
+- **Gestor de descargas único**: cola en serie, sin duplicados, continúa
+  aunque se cierren las ventanas, cancelable.
+- **Migración automática** de `%LOCALAPPDATA%\Extdator` a
+  `%LOCALAPPDATA%\UNnexor` (copia verificada, sin sobrescribir ni borrar el
+  origen; registro en `migration.json`), más preferencias QSettings y
+  credenciales del keyring.
+- Auto-chequeo del EXE (`--check`) ampliado: compone una fórmula y resalta
+  Python/SQL para detectar recursos no empaquetados.
+- Scripts de verificación real: `scripts/selection_e2e.py` (Enviar /
+  Consultar de punta a punta con Ollama), `scripts/pull_progress_e2e.py`
+  (descarga real y progreso) y `scripts/ui_snapshots.py` (capturas de las
+  ventanas con datos reales).
+
+### Correcciones
+- **Consultar se comportaba como Enviar directamente**: el service worker
+  de la extensión no reenviaba la pregunta al puente. Ahora envía
+  `question` y `mode` (`direct`/`ask`), el servidor valida la coherencia
+  (422 si no cuadra) y la extensión exige `question_received`. La consulta
+  se presenta al modelo como tarea con la selección como contexto, respeta
+  el idioma pedido y conserva el contexto para consultas de seguimiento.
+- **Barra de descarga que no avanzaba con la realidad**: la fracción se
+  calculaba con el total de la capa en curso (saltos 0 %↔100 %). Ahora se
+  agregan todas las capas, hay estados (Preparando, Descargando,
+  Verificando, Finalizando, Completado, Cancelado, Error), MB y velocidad,
+  barra indeterminada sin total fiable y nunca 100 % antes de verificar el
+  modelo en `/api/tags`. Un flujo cortado sin `success` es un error.
+- **Panel flotante del copiloto sin botón de cierre**: añadido ✕; cerrar
+  detiene de forma segura la escucha, libera el audio y no cierra la
+  aplicación; el panel vuelve con la siguiente sesión.
+- El panel flotante no recibía los estilos de los mensajes (salían sin
+  formato).
+- Un modelo solo de embeddings (`nomic-embed-text`) podía elegirse como
+  modelo de chat; ahora se muestra como «Solo búsqueda».
+- Las pruebas podían ejecutar la migración sobre el `%LOCALAPPDATA%` real;
+  ahora usan uno temporal.
+
+### Mejoras visuales y de experiencia
+- **Modelos de IA**: tamaño inicial adaptado a la pantalla, modelo en uso
+  destacado, columna de acciones de ancho fijo (Descargar/Seleccionar
+  siempre visibles), clasificación y rendimiento esperado por modelo,
+  filtros (instalados, para descargar, por clasificación, visión), la
+  cabecera se desplaza con la lista en ventanas pequeñas, «Cerrar» en
+  español.
+- **Recomendar configuración**: rediseño con scroll y textos que se ajustan
+  (sin tablas que corten el contenido); nivel de consumo en **tarjetas
+  seleccionables** (fondo, borde y ✓) con la misma escala de colores y
+  textos del catálogo (🟢 ÓPTIMO/fluido, 🟡 COMPATIBLE/aceptable,
+  🟠 EXIGENTE, 🔴 NO COMPATIBLE); recomendaciones en tarjetas legibles.
+- **Copiloto**: respuestas **en primera persona** listas para decir en voz
+  alta (prompt reescrito; se retiran introducciones tipo «Podrías
+  responder…» y comillas envolventes, sin inventar datos personales);
+  transcripción con hablante en color, texto provisional en cursiva,
+  autoscroll que respeta la lectura y área limitada en el panel; respuesta
+  destacada «TU RESPUESTA · para decir en voz alta».
+- Tamaños de todas las ventanas (ajustes, proveedores, asistente de
+  inicio, captura, consola, copiloto) adaptados al área útil de la pantalla.
+- Fuente de los mensajes más legible (13–14 px).
+
+### Arquitectura
+- Nuevos módulos: `app/migration.py`, `app/ollama_pull.py`,
+  `app/desktop/{rich_text,downloads,ui_kit,control_center}.py`.
+- `ModelsPanel` reutilizable (diálogo y centro de control).
+- ADR-0006: renderizado nativo de fórmulas y código, sin QtWebEngine.
+
+### Instalación
+- Datos en `%LOCALAPPDATA%\UNnexor`; variables `UNNEXOR_*` (alias
+  `EXTDATOR_*`); identificadores internos renombrados (`unnexor-bridge`,
+  `unnexor:send-selection`, QSettings y keyring `UNnexor`) con
+  compatibilidad (ver `docs/BRANDING.md`).
+- El desinstalador con limpieza completa borra también la copia antigua
+  `%LOCALAPPDATA%\Extdator`.
+- La validación del instalador prueba la actualización desde Extdator en un
+  `LOCALAPPDATA` aislado.
+- Dependencias nuevas: `ziamath` (con `ziafont`, `latex2mathml`, STIX Two
+  Math) y `Pygments` declarado explícitamente.
+
+### Documentación
+- Auditoría de todos los Markdown contra el código: rutas, identificadores,
+  licencia (Apache-2.0, no «pendiente»), deuda técnica, flujos y
+  dependencias actualizados.
+
+### Limitaciones conocidas
+- Sin prueba en un equipo limpio, sin firma Authenticode y sin
+  actualización automática de la aplicación.
+- La calidad de la «primera persona» depende del modelo; los muy pequeños
+  pueden desviarse.
+- El OCR local pesado no se incluye en el ejecutable.
+
 ## [2.0.0] - 2026-11-27
 
 Primera versión publicada como **UNnexor** (antes Extdator). Licencia

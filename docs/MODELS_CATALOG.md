@@ -1,6 +1,6 @@
 # Catálogo de modelos y evaluador de compatibilidad
 
-El selector de modelos del panel (⚙ → **Modelos**) clasifica cada modelo
+El selector de modelos del panel (☰ → **Centro de control → Modelos de IA**) clasifica cada modelo
 de Ollama con un semáforo. Este documento explica **cómo se calcula** y
 cuáles son los límites de la estimación.
 
@@ -78,9 +78,34 @@ Además, modelos **no instalados** se evalúan contra el espacio en disco
   `ollama_gpu_active` (auth por token).
 * `GET /api/models/eval` — modelos instalados con su `Assessment`
   completo (tier, razones, métricas) + hardware usado.
-* Panel: ⚙ → **Modelos** lista instalados y catálogo sugerido; los 🔴
-  están deshabilitados; descargar un modelo nuevo **siempre pide
-  confirmación** con el tamaño estimado.
+* Interfaz: **Centro de control → Modelos de IA** (o menú ☰ → Modelos de
+  IA). Muestra el modelo en uso, los instalados (los solo de embeddings se
+  marcan «Solo búsqueda»), los recomendados y la biblioteca en línea, con
+  la clasificación (🟢🟡🟠🔴) y el rendimiento esperado de cada uno. La
+  columna de acciones tiene ancho fijo: **Descargar**/**Seleccionar**
+  siempre son visibles. Los 🔴 están deshabilitados; descargar **siempre
+  pide confirmación** con el tamaño y el disco necesario.
+* La misma escala de colores y textos se usa en **Recomendar
+  configuración** para clasificar cada nivel de consumo (el peor de los
+  modelos de Ollama que ese nivel recomendaría): no hay dos sistemas de
+  evaluación distintos.
+
+## Descargas y progreso (2.1.0)
+
+* Todas las descargas pasan por `DownloadManager`
+  (`app/desktop/downloads.py`): una a la vez, sin duplicados, cancelables
+  y no ligadas a la ventana (continúan si se cierra).
+* `PullTracker` (`app/ollama_pull.py`) agrega las líneas de `/api/pull`
+  por capa (`digest`): porcentaje = bytes completados de todas las capas
+  ÷ bytes totales; MB, velocidad (ventana de 4 s) y fases **Preparando**,
+  **Descargando**, **Verificando**, **Finalizando**, **Completado**,
+  **Cancelado**, **Error**.
+* Sin total fiable la barra es indeterminada; el 100 % solo se muestra
+  cuando Ollama confirma `success` **y** el modelo aparece en
+  `/api/tags`. Si la conexión se corta sin `success` se informa un error
+  (al reintentar, Ollama reanuda las capas ya descargadas).
+* Prueba real: `scripts/pull_progress_e2e.py` (descarga ~46 MB y borra el
+  modelo al terminar).
 
 ## Referencia técnica
 
@@ -89,4 +114,6 @@ Además, modelos **no instalados** se evalúan contra el espacio en disco
   `parse_parameter_count`).
 * Catálogo estático de sugerencias: `local-bridge/app/model_catalog.py`.
 * Hardware: `local-bridge/app/hardware.py`.
+* Progreso de descargas: `local-bridge/app/ollama_pull.py`,
+  `local-bridge/app/desktop/downloads.py`.
 * Pruebas: `local-bridge/tests/test_hardware_models.py`.

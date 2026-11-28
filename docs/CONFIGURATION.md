@@ -2,14 +2,14 @@
 
 Toda la configuración vive en `local-bridge\.env` (creado desde
 `.env.example`) como valores **base**. Desde la v1.2.0 también se puede
-configurar desde la propia aplicación (menú ⚙ del panel), y esos ajustes
+configurar desde la propia aplicación (menú ☰ del panel), y esos ajustes
 del usuario se guardan en `local-bridge\data\user_settings.json` y
 **prevalecen sobre el .env**. No hay valores hardcodeados en el código:
 cambiar de modelo o puerto se hace editando el archivo o desde la UI.
 
 ## Configurar desde la aplicación (v1.2.0)
 
-El menú ⚙ del panel flotante ofrece:
+El menú ☰ del panel flotante ofrece:
 
 * **Modelos de IA** — selector con semáforo 🟢🟡🟠🔴 según tu hardware
   (ver [`docs/MODELS_CATALOG.md`](MODELS_CATALOG.md)). Instalados y
@@ -69,7 +69,7 @@ del usuario y vuelve a los valores del `.env`.
 | Variable | Por defecto | Descripción |
 |---|---|---|
 | `WINDOW_WIDTH` / `WINDOW_HEIGHT` | `480` / `600` | Tamaño inicial (y de restauración si no hay geometría guardada). |
-| `WINDOW_OPACITY` | `95` | Opacidad inicial (40–100). También editable desde el menú ⚙. |
+| `WINDOW_OPACITY` | `95` | Opacidad inicial (40–100). También editable desde el menú ☰. |
 | `ALWAYS_ON_TOP` | `1` | Iniciar siempre visible sobre las demás ventanas (conmutable con 📌). |
 | `HOVER_SCROLL_HOOK` | `1` | Hook Win32 de bajo nivel que garantiza el hover scroll aunque el ajuste del sistema esté desactivado. |
 
@@ -80,7 +80,29 @@ del usuario y vuelve a los valores del `.env`.
 | `LOG_LEVEL` | `INFO` | `DEBUG`/`INFO`/`WARNING`/`ERROR`/`CRITICAL`. |
 | `LOG_PRIVACY` | `1` | `1` = los logs **nunca** contienen el texto de las selecciones (solo longitudes). |
 
-Los logs rotan en `local-bridge\logs\bridge.log` (1 MB × 3).
+Los logs rotan en `local-bridge\logs\bridge.log` (1 MB × 3) en desarrollo y
+en `%LOCALAPPDATA%\UNnexor\logs\` en la aplicación instalada.
+
+### Rutas de datos (2.1.0)
+
+| Variable | Por defecto | Descripción |
+|---|---|---|
+| `UNNEXOR_DATA_DIR` | `%LOCALAPPDATA%\UNnexor` (instalado) · `local-bridge\app\data` (desarrollo) | Directorio de ajustes, `.env`, perfiles y registros. Con este valor forzado no se ejecuta la migración. |
+| `UNNEXOR_ENV_FILE` | `<datos>\.env` (instalado) · `local-bridge\.env` (desarrollo) | Archivo de configuración. |
+| `UNNEXOR_MODELS_DIR` | `%LOCALAPPDATA%\UNnexor\models` | Modelos de voz descargados con consentimiento. |
+
+Los nombres anteriores `EXTDATOR_DATA_DIR`, `EXTDATOR_ENV_FILE` y
+`EXTDATOR_MODELS_DIR` se siguen aceptando (el nombre nuevo tiene prioridad).
+
+**Migración desde Extdator/UNnexor 2.0:** al arrancar, si existe
+`%LOCALAPPDATA%\Extdator`, sus archivos se copian a
+`%LOCALAPPDATA%\UNnexor` (sin los logs antiguos). Nunca se sobrescribe un
+archivo que ya exista en la carpeta nueva ni se borra la antigua; cada
+copia se verifica por tamaño. El resultado queda en
+`%LOCALAPPDATA%\UNnexor\migration.json` y en el registro; si hubo errores
+(por ejemplo, un archivo bloqueado) se reintenta en el siguiente arranque.
+Cuando compruebes que todo funciona puedes borrar la carpeta antigua (la
+desinstalación con limpieza completa también lo hace).
 
 ## Configuración en caliente: `POST /api/config`
 
@@ -144,14 +166,14 @@ región. Después, un diálogo de vista previa permite:
   panel lo avisa en lugar de enviar la imagen a ciegas.
 * Repetir la selección o cancelar.
 
-Las imágenes temporales (`%TEMP%\extdator_capture_*.png`) se borran tras
+Las imágenes temporales (`%TEMP%\unnexor_capture_*.png`) se borran tras
 procesar. La imagen no sale de la máquina salvo que uses un proveedor
 remoto con un modelo de visión (y solo hacia ese proveedor).
 
 ## Asistente de primer inicio (escritorio)
 
 En el primer arranque real, el panel abre un asistente modal de tres pasos
-(se puede reabrir desde **⚙ → Asistente de inicio**):
+(se puede reabrir desde **☰ → Asistente de inicio**):
 
 1. **Bienvenida y privacidad** — qué hace UNnexor y qué datos salen del
    equipo (por defecto, solo hacia Ollama en `127.0.0.1`).
@@ -167,7 +189,7 @@ el `.env`, no descarga modelos y no envía datos a terceros.
 
 ## Exportar diagnóstico (soporte)
 
-**⚙ → Exportar diagnóstico…** genera un ZIP (por ejemplo
+**☰ → Exportar diagnóstico…** genera un ZIP (por ejemplo
 `UNnexor-diagnostico-20261124-1030.zip`) con `LEEME.txt`,
 `resumen.json`, `diagnostico.txt` y `logs/bridge.log*` si existen. La
 recogida de estado de Ollama y la lectura de logs ocurren en segundo plano;
@@ -189,7 +211,7 @@ la interfaz sigue respondiendo.
 La página de opciones es un asistente de 4 pasos:
 
 1. **Bienvenida** — cómo funciona UNnexor.
-2. **Conectar** — pega el código de 6 dígitos del panel (⚙ → Emparejar
+2. **Conectar** — pega el código de 6 dígitos del panel (☰ → Emparejar
    extensión). La extensión obtiene su token por `POST /api/pair/confirm`
    (el código vale 10 minutos y un solo uso). Abajo queda un panel
    colapsado **manual avanzado** para pegar URL + token a mano (como en
@@ -202,12 +224,18 @@ La página de opciones es un asistente de 4 pasos:
    `chrome.storage.onChanged`).
 
 La configuración técnica (modelo, temperatura, prompt...) **no se edita
-aquí**: la fuente única es la aplicación de escritorio (menú ⚙), para
+aquí**: la fuente única es la aplicación de escritorio (menú ☰), para
 no duplicar valores.
 
-## Cambiar de modelo en tres pasos
+## Cambiar de modelo
 
-1. `ollama pull mistral` (instala el modelo).
-2. Edita `OLLAMA_MODEL=mistral` en `local-bridge\.env`.
-3. `scripts\stop.ps1` y luego `scripts\start.ps1`.
-   (O usa `POST /api/config` sin reiniciar.)
+**Desde la aplicación (recomendado):** menú ☰ → **Centro de control** →
+**Modelos de IA**. Pulsa **Descargar** en un modelo compatible (se pide
+confirmación con el tamaño; el progreso es real y la descarga continúa
+aunque cierres la ventana) y después **Seleccionar**. O bien **Recomendar
+configuración → Aplicar**, que elige, descarga y activa los modelos
+adecuados para tu equipo tras tu autorización.
+
+**Manual:** `ollama pull mistral`, edita `OLLAMA_MODEL=mistral` en el
+`.env` y reinicia (`scripts\stop.ps1` y `scripts\start.ps1`), o usa
+`POST /api/config` sin reiniciar.

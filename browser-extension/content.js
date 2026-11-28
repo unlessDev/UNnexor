@@ -13,15 +13,15 @@
  *      resultado.
  *
  * No toca el CSS del sitio: todo el estilo vive dentro del Shadow DOM.
- * Los identificadores internos (``__extdatorInjected``, ``extdator:*``) se
- * conservan por compatibilidad entre versiones de la extensión y del puente.
+ * Los identificadores internos (``__unnexorInjected``, ``unnexor:*``) se
+ * comparten solo el content script y el service worker de esta extensión.
  */
 (() => {
   "use strict";
 
   // Protección contra doble inyección (p. ej. recargas de la extensión).
-  if (window.__extdatorInjected) return;
-  window.__extdatorInjected = "content";
+  if (window.__unnexorInjected) return;
+  window.__unnexorInjected = "content";
 
   const BUTTON_W = 34;
   const BUTTON_H = 34;
@@ -69,7 +69,7 @@
   /* ------------------------------------------------------------------ */
 
   const host = document.createElement("div");
-  host.dataset.extdator = "host";
+  host.dataset.unnexor = "host";
   const shadow = host.attachShadow({ mode: "closed" });
 
   const style = document.createElement("style");
@@ -547,7 +547,7 @@
     let result;
     try {
       const response = await chrome.runtime.sendMessage({
-        type: "extdator:send-selection",
+        type: "unnexor:send-selection",
         text,
         question,
         sourceUrl: location.href,

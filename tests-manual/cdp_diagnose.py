@@ -1,4 +1,4 @@
-"""Diagnóstico E2E de la extensión Extdator con un Chromium real (v2).
+"""Diagnóstico E2E de la extensión UNnexor con un Chromium real (v2).
 
 Estrategia:
   * Chrome 137+ ignora --load-extension en builds estables. Se usa el comando
@@ -204,7 +204,7 @@ def main() -> int:
     else:
         report["fatal"] = f"la página no cargó (estado: {state!r})"
 
-    injected = cdp.evaluate("!!document.querySelector('div[data-extdator=\"host\"]')")
+    injected = cdp.evaluate("!!document.querySelector('div[data-unnexor=\"host\"]')")
     report["content_injected"] = bool(injected)
     if not injected:
         # ¿la extensión quedó cargada aunque loadUnpacked no respondiera?

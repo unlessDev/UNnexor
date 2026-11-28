@@ -297,7 +297,7 @@ def test_factory_builds_remote_engines_with_injected_keys():
 
 
 def test_engine_status_reports_missing_models_and_keys(tmp_path, monkeypatch):
-    monkeypatch.setenv("EXTDATOR_MODELS_DIR", str(tmp_path))
+    monkeypatch.setenv("UNNEXOR_MODELS_DIR", str(tmp_path))
     status = engine_status(get_spec("faster-whisper:small"))
     assert not status.ready
     assert "no descargado" in status.reason or "no está instalado" in status.reason
@@ -306,7 +306,7 @@ def test_engine_status_reports_missing_models_and_keys(tmp_path, monkeypatch):
 
 
 def test_local_model_paths_are_validated(tmp_path, monkeypatch):
-    monkeypatch.setenv("EXTDATOR_MODELS_DIR", str(tmp_path))
+    monkeypatch.setenv("UNNEXOR_MODELS_DIR", str(tmp_path))
     with pytest.raises(STTError):
         fw.model_dir("../evil")
     assert fw.installed_models() == []

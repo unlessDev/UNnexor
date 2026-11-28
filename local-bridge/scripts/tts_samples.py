@@ -37,11 +37,11 @@ def synthesize(text: str, culture_prefix: str, target: Path, pause_ms: int = 0) 
         "if ($v) { $s.SelectVoice($v.VoiceInfo.Name) };"
         f"$s.SetOutputToWaveFile('{target}');"
         "$p = New-Object System.Speech.Synthesis.PromptBuilder;"
-        "foreach ($line in ($env:EXTDATOR_TTS_TEXT -split '\\|')) {"
+        "foreach ($line in ($env:UNNEXOR_TTS_TEXT -split '\\|')) {"
         f" $p.AppendText($line); $p.AppendBreak([TimeSpan]::FromMilliseconds({pause_ms})) }};"
         "$s.Speak($p); $s.Dispose()"
     )
-    env = dict(os.environ, EXTDATOR_TTS_TEXT=text)
+    env = dict(os.environ, UNNEXOR_TTS_TEXT=text)
     subprocess.run(
         ["powershell", "-NoProfile", "-Command", script],
         check=True,

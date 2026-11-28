@@ -8,9 +8,56 @@ datos, propone una respuesta honesta y marca ``[completar: …]``.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 from ..knowledge.profiles import ContextProfile, Detail
+
+# Muletillas de «asesor» que algunos modelos anteponen pese a las
+# instrucciones («Podrías responder: …»). Se retiran para que la respuesta
+# pueda decirse tal cual; el contenido nunca se modifica.
+_META_PREFIX = re.compile(
+    r"^\s*(?:\*\*)?(?:"
+    r"(?:una\s+)?(?:posible|buena)\s+respuesta(?:\s+(?:podría\s+ser|sería))?"
+    r"|respuesta\s+sugerida"
+    r"|(?:tú\s+)?podrías\s+(?:responder|decir|contestar|explicarle)"
+    r"(?:\s+(?:algo\s+como|lo\s+siguiente|que))?"
+    r"|puedes\s+(?:responder|decir|contestar|explicarle)"
+    r"(?:\s+(?:algo\s+como|lo\s+siguiente|que))?"
+    r"|te\s+recomiendo\s+(?:que\s+)?(?:digas|respondas|contestes|le\s+expliques)"
+    r"(?:\s+(?:algo\s+como|lo\s+siguiente|que))?"
+    r"|deberías\s+(?:decir|responder|contestar|explicarle)(?:\s+que)?"
+    r"|aquí\s+tienes\s+(?:una|la)\s+(?:posible\s+)?respuesta"
+    r")\s*(?:\*\*)?\s*[:：]?\s*(?:\*\*)?\s*",
+    re.IGNORECASE,
+)
+_QUOTE_PAIRS = (("«", "»"), ('"', '"'), ("“", "”"))
+
+
+def clean_spoken_answer(text: str) -> str:
+    """Quita introducciones de «asesor» y comillas que envuelven la respuesta."""
+    cleaned = text.strip()
+    match = _META_PREFIX.match(cleaned)
+    prefix = match.group(0).replace("*", "").strip().lower() if match else ""
+    introduces = prefix.endswith((":", "：", " que", "algo como", "lo siguiente"))
+    rest = cleaned[match.end() :] if match else ""
+    if match and introduces and any(ch.isalpha() for ch in rest):
+        cleaned = cleaned[match.end() :].lstrip()
+        if cleaned[:1].islower():
+            cleaned = cleaned[0].upper() + cleaned[1:]
+    for opening, closing in _QUOTE_PAIRS:
+        inner = cleaned[1:-1]
+        if (
+            len(cleaned) > 2
+            and cleaned.startswith(opening)
+            and cleaned.endswith(closing)
+            and opening not in inner
+            and closing not in inner
+        ):
+            cleaned = inner.strip()
+            break
+    return cleaned or text.strip()
+
 
 LANGUAGE_NAMES = {
     "es": "español",
@@ -58,17 +105,27 @@ def answer_messages(
     detail = (profile.detail if profile else Detail.BRIEF).instruction
     tone = profile.tone_instruction() if profile else ""
     system = (
-        "Eres un copiloto que ayuda a una persona durante una conversación en "
-        "vivo. Redacta lo que la persona podría responder, en primera persona, "
-        "natural para decirlo en voz alta. "
+        "Hablas EN NOMBRE de una persona durante una conversación en vivo. Tu "
+        "texto es exactamente lo que esa persona va a decir en voz alta a su "
+        "interlocutor: escribe en primera persona, como si fueras ella, con un "
+        "tono natural y conversacional, y contesta directamente a lo que el "
+        "interlocutor dijo o preguntó. "
         f"Responde en {language}. {detail} {tone}\n"
-        "Usa solo la información del perfil, del contexto y de la conversación. "
-        "No inventes experiencias, empresas, cifras, títulos ni resultados que "
-        "no aparezcan ahí: si faltan datos, propone una respuesta honesta y "
-        "marca lo que la persona debe completar como [completar: …]. "
-        "No menciones que eres una IA ni que hay un copiloto. Entrega solo la "
-        "respuesta sugerida: sin introducciones, comentarios ni preguntas "
-        "dirigidas a quien te consulta."
+        "PROHIBIDO dirigirte a la persona o explicarle qué decir: nunca empieces "
+        "con «Podrías responder…», «Te recomiendo que digas…», «Una posible "
+        "respuesta sería…», «Puedes contestar que…», «Deberías explicarle que…» "
+        "ni fórmulas parecidas; no ofrezcas varias alternativas, no añadas "
+        "introducciones, títulos, comillas, notas ni preguntas para quien te "
+        "consulta. Empieza directamente por el contenido de la respuesta.\n"
+        "Mantén la precisión técnica, conserva el contexto de la conversación y "
+        "ajusta la extensión a la complejidad de la pregunta.\n"
+        "Hablar en primera persona NO te autoriza a inventar: usa solo la "
+        "información del perfil, de sus documentos y de la conversación. No "
+        "inventes experiencias, opiniones, empresas, cifras, títulos, "
+        "compromisos ni resultados. Si la pregunta pide un dato personal que no "
+        "tienes, responde de forma neutral sin afirmarlo o indica brevemente "
+        "solo lo que no puede determinarse, marcándolo como [completar: …]. "
+        "No menciones que eres una IA ni que hay un copiloto."
     ).strip()
     sections: list[str] = []
     if profile is not None:
@@ -95,25 +152,32 @@ def answer_messages(
     if mode == "alternative" and previous_answer:
         task = (
             f"Pregunta: «{question.strip()}»\nYa se sugirió esta respuesta:\n"
-            f"«{previous_answer.strip()}»\nPropón otra respuesta distinta (otro "
-            "enfoque o ejemplo), igual de honesta."
+            f"«{previous_answer.strip()}»\nDa otra respuesta distinta (otro "
+            "enfoque o ejemplo), igual de honesta, en primera persona y lista "
+            "para decirla en voz alta."
         )
     elif mode == "expand" and previous_answer:
         task = (
             f"Pregunta: «{question.strip()}»\nRespuesta sugerida:\n"
             f"«{previous_answer.strip()}»\nAmplíala con más detalle, ejemplos y "
-            "explicación, manteniendo los mismos hechos."
+            "explicación, manteniendo los mismos hechos, en primera persona y "
+            "lista para decirla en voz alta."
         )
     elif mode == "window":
         task = (
             "Fragmento de la conversación escuchado a petición de la persona "
             f"(puede ser largo y mezclar explicaciones):\n«{question.strip()}»\n"
             "Identifica la pregunta o petición principal que el interlocutor "
-            "le hace (suele estar al final) y sugiere la respuesta. Si hay "
-            "varias preguntas, responde a todas en orden, brevemente."
+            "le hace (suele estar al final) y contéstala tú, en primera "
+            "persona, como si hablaras con él. Si hay varias preguntas, "
+            "responde a todas en orden, brevemente."
         )
     else:
-        task = f"Pregunta o intervención del interlocutor: «{question.strip()}»\nSugiere la respuesta."
+        task = (
+            f"El interlocutor acaba de decir: «{question.strip()}»\n"
+            "Contéstale ahora, en primera persona, con las palabras exactas que "
+            "vas a decir."
+        )
     sections.append(task)
     return [
         {"role": "system", "content": system},

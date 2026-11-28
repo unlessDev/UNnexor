@@ -35,6 +35,7 @@ class AppTray(QSystemTrayIcon):
             action.triggered.connect(slot)
 
         add("window", "Mostrar / ocultar el panel", self.toggle_panel)
+        add("home", "Centro de control", lambda: window.open_control_center())
         add("copilot", "Copiloto en tiempo real", lambda: window.open_copilot())
         add("capture", "Capturar una región…", lambda: window._start_capture())
         menu.addSeparator()
@@ -43,7 +44,7 @@ class AppTray(QSystemTrayIcon):
             "Recomendar configuración…",
             lambda: window.open_recommendations(),
         )
-        add("models", "Modelos de IA…", lambda: window._open_model_selector())
+        add("models", "Modelos de IA…", lambda: window.open_control_center("models"))
         add("settings", "Ajustes…", lambda: window._open_settings())
         add("terminal", "Consola del puente", lambda: window.toggle_log_console())
         menu.addSeparator()
@@ -68,7 +69,7 @@ class AppTray(QSystemTrayIcon):
 
     def introduce(self) -> None:
         """Aviso único: dónde encontrar UNnexor."""
-        settings = QSettings("Extdator", "Bridge")
+        settings = QSettings("UNnexor", "Bridge")
         if str(settings.value(FIRST_RUN_KEY, "")).lower() in ("true", "1"):
             return
         settings.setValue(FIRST_RUN_KEY, True)

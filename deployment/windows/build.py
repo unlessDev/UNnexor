@@ -163,8 +163,8 @@ def smoke_test(exe: Path, timeout: int = 180) -> Dict[str, object]:
     with tempfile.TemporaryDirectory(prefix="unnexor-smoke-") as tmp:
         data_dir = Path(tmp) / "data"
         env = os.environ.copy()
-        env["EXTDATOR_DATA_DIR"] = str(data_dir)
-        env["EXTDATOR_ENV_FILE"] = str(data_dir / ".env")
+        env["UNNEXOR_DATA_DIR"] = str(data_dir)
+        env["UNNEXOR_ENV_FILE"] = str(data_dir / ".env")
         port = find_free_port()
         started = time.monotonic()
         try:
@@ -205,6 +205,11 @@ def smoke_test(exe: Path, timeout: int = 180) -> Dict[str, object]:
             raise RuntimeError(
                 f"Faltan componentes del copiloto en el EXE: {components}"
             )
+        rendering = (report.get("results") or {}).get("rendering") or {}
+        if not rendering.get("ok"):
+            raise RuntimeError(
+                f"El renderizado de fórmulas/código falla en el EXE: {rendering}"
+            )
         if report.get("env_file") != str(data_dir / ".env"):
             raise RuntimeError(
                 f"El .env no se resolvió en datos: {report.get('env_file')}"
@@ -216,6 +221,7 @@ def smoke_test(exe: Path, timeout: int = 180) -> Dict[str, object]:
             "port": port,
             "data_dir_isolated": True,
             "copilot_components": True,
+            "rendering": True,
         }
 
 
@@ -237,8 +243,8 @@ def gui_smoke(exe: Path, timeout: int = 90) -> Dict[str, object]:
     with tempfile.TemporaryDirectory(prefix="unnexor-gui-") as tmp:
         data_dir = Path(tmp) / "data"
         env = os.environ.copy()
-        env["EXTDATOR_DATA_DIR"] = str(data_dir)
-        env["EXTDATOR_ENV_FILE"] = str(data_dir / ".env")
+        env["UNNEXOR_DATA_DIR"] = str(data_dir)
+        env["UNNEXOR_ENV_FILE"] = str(data_dir / ".env")
         env["QT_QPA_PLATFORM"] = "offscreen"
         port = find_free_port()
         started = time.monotonic()
@@ -341,7 +347,7 @@ def build(*, skip_smoke: bool = False) -> Dict[str, object]:
     version_file = write_version_file(version, WORK_ROOT / "version_info.txt")
 
     env = os.environ.copy()
-    env["EXTDATOR_VERSION_FILE"] = str(version_file)
+    env["UNNEXOR_VERSION_FILE"] = str(version_file)
     command = [
         sys.executable,
         "-m",

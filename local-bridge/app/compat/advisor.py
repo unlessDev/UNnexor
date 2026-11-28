@@ -127,6 +127,11 @@ class Recommendation:
     quality: str = ""
     alternative: str = ""
     download: str = ""  # "" = ya instalado / sin descarga
+    # Descarga automatizable (Recomendar configuración → Aplicar):
+    # kind "ollama" | "whisper" | "manual" (requiere una acción externa).
+    download_kind: str = ""
+    download_name: str = ""
+    download_bytes: int = 0
     params: dict[str, Any] = field(default_factory=dict)
     reasons: list[str] = field(default_factory=list)
     available: bool = True  # False = no hay ninguna opción viable
@@ -352,6 +357,9 @@ def _llm_recommendation(
     rec.speed, rec.confidence = _speed_hint(chosen, measured)
     rec.quality = _quality_hint(chosen.params_b)
     rec.download = "" if chosen.installed else f"ollama pull {chosen.name}"
+    if not chosen.installed:
+        rec.download_kind, rec.download_name = "ollama", chosen.name
+        rec.download_bytes = int(chosen.size_bytes or 0)
     if lighter is not None:
         rec.alternative = f"{lighter.name} ({_requirements(lighter)})"
     rec.reasons.append(
@@ -454,6 +462,9 @@ def _stt_recommendation(stt_recs: list[Any], profile: str) -> Recommendation:
     )
     rec.quality = f"español {chosen.spec.spanish_quality}/5 (orientativo)"
     rec.download = "" if chosen.ready else "Descárgalo en Copiloto → Motores y modelos"
+    if not chosen.ready and chosen.spec.engine == "faster-whisper":
+        rec.download_kind, rec.download_name = "whisper", chosen.spec.model
+        rec.download_bytes = int((chosen.spec.download_mb or 0) * 1_048_576)
     if lighter:
         rec.alternative = min(lighter, key=lambda r: r.spec.ram_mb or 0).spec.label
     rec.reasons = list(chosen.reasons) + list(chosen.warnings)
@@ -472,6 +483,7 @@ def _ocr_recommendation(hw: Mapping[str, Any], available: list[str]) -> Recommen
         rec.available = False
         rec.tier = TIER_SIN_EVALUAR
         rec.download = "pip install rapidocr-onnxruntime (texto) o pix2text (fórmulas)"
+        rec.download_kind = "manual"
         rec.reasons.append(
             "No hay motores OCR instalados; las capturas pueden leerse con un "
             "modelo con visión."
@@ -513,6 +525,8 @@ def _documents_recommendation(
     else:
         rec.choice = "BM25 + nomic-embed-text"
         rec.download = "ollama pull nomic-embed-text (~0,3 GB)"
+        rec.download_kind, rec.download_name = "ollama", "nomic-embed-text"
+        rec.download_bytes = 274 * 1_048_576
         rec.reasons.append(
             "Los embeddings mejoran la búsqueda por significado con muy poca memoria."
         )

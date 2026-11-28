@@ -22,7 +22,66 @@ FONT_FAMILIES = [
     "Courier New",
 ]
 
-APP_QSS = """
+# Mensajes del chat: compartidos por el panel principal y el flotante del
+# copiloto (antes el flotante no los recibía y sus mensajes salían sin estilo).
+MESSAGE_QSS = """
+#chatArea, #chatArea > QWidget > QWidget {
+    background: transparent;
+    border: none;
+}
+#userMessage, #assistantMessage, #noteMessage {
+    border-radius: 8px;
+    border: 1px solid #262b36;
+}
+#userMessage {
+    background: #1a1e29;
+    border-left: 3px solid #8b7cff;
+}
+#assistantMessage {
+    background: #151820;
+    border-left: 3px solid #3ddc97;
+}
+#assistantMessage[spoken="true"] {
+    background: #14201b;
+    border: 1px solid #2b5a45;
+    border-left: 4px solid #3ddc97;
+}
+#assistantMessage[error="true"] {
+    border-left: 3px solid #ff6b6b;
+}
+#noteMessage {
+    background: transparent;
+    border: 1px dashed #262b36;
+}
+#noteMessage[error="true"] {
+    border: 1px solid rgba(255, 107, 107, 0.55);
+    background: rgba(255, 107, 107, 0.08);
+}
+#msgRole {
+    color: #8b7cff;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+#assistantMessage #msgRole { color: #3ddc97; }
+#msgTime {
+    color: #6b7385;
+    font-size: 10px;
+}
+#msgContent {
+    color: #d6dae2;
+    font-size: 13px;
+}
+#assistantText {
+    background: transparent;
+    color: #d6dae2;
+    border: none;
+    font-size: 14px;
+}
+"""
+
+APP_QSS = (
+    """
 * {
     font-family: "Cascadia Mono", "Consolas", "DejaVu Sans Mono", monospace;
     outline: none;
@@ -52,54 +111,9 @@ QLabel {
 #connDot {
     font-size: 11px;
 }
-#chatArea, #chatArea > QWidget > QWidget {
-    background: transparent;
-    border: none;
-}
-#userMessage, #assistantMessage, #noteMessage {
-    border-radius: 8px;
-    border: 1px solid #262b36;
-}
-#userMessage {
-    background: #1a1e29;
-    border-left: 3px solid #8b7cff;
-}
-#assistantMessage {
-    background: #151820;
-    border-left: 3px solid #3ddc97;
-}
-#assistantMessage[error="true"] {
-    border-left: 3px solid #ff6b6b;
-}
-#noteMessage {
-    background: transparent;
-    border: 1px dashed #262b36;
-}
-#noteMessage[error="true"] {
-    border: 1px solid rgba(255, 107, 107, 0.55);
-    background: rgba(255, 107, 107, 0.08);
-}
-#msgRole {
-    color: #8b7cff;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 1px;
-}
-#assistantMessage #msgRole { color: #3ddc97; }
-#msgTime {
-    color: #6b7385;
-    font-size: 10px;
-}
-#msgContent {
-    color: #d6dae2;
-    font-size: 12px;
-}
-#assistantText {
-    background: transparent;
-    color: #d6dae2;
-    border: none;
-    font-size: 12px;
-}
+"""
+    + MESSAGE_QSS
+    + """
 QToolButton {
     background: transparent;
     border: none;
@@ -169,3 +183,4 @@ QToolTip {
     border: 1px solid #262b36; padding: 4px;
 }
 """
+)

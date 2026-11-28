@@ -19,8 +19,24 @@ if str(BRIDGE_DIR) not in sys.path:
 
 import pytest  # noqa: E402
 
+from app import paths as _paths  # noqa: E402
 from app.config import Config  # noqa: E402
 from app.queue_manager import Bus, RuntimeState  # noqa: E402
+
+REAL_MODELS_DIR = _paths.models_dir()
+
+
+@pytest.fixture(autouse=True)
+def _isolated_localappdata(tmp_path_factory, monkeypatch):
+    """Ninguna prueba debe leer, migrar ni escribir en el %LOCALAPPDATA% real
+    (``main()`` ejecuta la migración Extdator → UNnexor al arrancar)."""
+    root = tmp_path_factory.mktemp("localappdata")
+    monkeypatch.setenv("LOCALAPPDATA", str(root))
+    # Los modelos de voz ya descargados se siguen encontrando (solo lectura)
+    # para las pruebas de integración marcadas con skipif.
+    if not os.environ.get("UNNEXOR_MODELS_DIR"):
+        monkeypatch.setenv("UNNEXOR_MODELS_DIR", str(REAL_MODELS_DIR))
+    yield
 
 
 def make_config(**overrides) -> Config:

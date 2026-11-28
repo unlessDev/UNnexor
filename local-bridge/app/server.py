@@ -23,7 +23,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from . import __version__
+from . import APP_ID, __version__
 from .config import Config
 from .hardware import detect as detect_hardware
 from .hardware import gpu_acceleration_active
@@ -47,7 +47,7 @@ from .settings_store import (
     restart_required_for,
 )
 
-log = logging.getLogger("extdator.server")
+log = logging.getLogger("unnexor.server")
 
 # Límite de la imagen base64 en el JSON (≈12 MB codificados → ~9 MB reales).
 MAX_IMAGE_B64_LENGTH = 12_000_000
@@ -68,6 +68,9 @@ class SelectionIn(BaseModel):
     token: Optional[str] = None
     # Opción "Consultar" de la extensión: pregunta sobre el texto.
     question: str = Field(default="", max_length=MAX_QUESTION_LENGTH)
+    # Modalidad explícita: "direct" (Enviar directamente) o "ask"
+    # (Consultar). Vacío = deducida de ``question`` (clientes anteriores).
+    mode: str = Field(default="", pattern=r"^(|direct|ask)$")
 
 
 class ConfigIn(BaseModel):
@@ -160,7 +163,7 @@ def create_app(
         reachable, detail = ollama.is_reachable()
         return {
             "status": "ok",
-            "app": "extdator-bridge",
+            "app": APP_ID,
             "version": __version__,
             "ollama": {"reachable": reachable, "detail": detail},
             "model": state.model_name(),
@@ -193,6 +196,16 @@ def create_app(
             )
 
         question = payload.question.strip()
+        if payload.mode == "ask" and not question:
+            raise HTTPException(
+                status_code=422,
+                detail="La consulta está vacía: escribe una pregunta o instrucción.",
+            )
+        if payload.mode == "direct" and question:
+            raise HTTPException(
+                status_code=422,
+                detail="Un envío directo no lleva pregunta; usa la modalidad Consultar.",
+            )
         event = SelectionRequest(
             text=text,
             source_url=payload.source_url[:2048],
@@ -227,6 +240,7 @@ def create_app(
                 # La extensión comprueba este campo: un puente antiguo
                 # ignoraría la pregunta en silencio.
                 "question_received": bool(question),
+                "mode": event.mode,
                 "message": (
                     "Consulta en cola. El modelo la procesará en breve."
                     if question
@@ -241,7 +255,7 @@ def create_app(
         _require_auth(request)
         reachable, detail = ollama.is_reachable()
         return {
-            "app": "extdator-bridge",
+            "app": APP_ID,
             "version": __version__,
             "model": state.model_name(),
             "ollama": {"reachable": reachable, "detail": detail},

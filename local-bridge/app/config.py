@@ -48,7 +48,9 @@ class Config:
     ollama_model: str = "llama3"
     ollama_system_prompt: str = (
         "Eres un asistente personal útil y conciso. Responde en el idioma "
-        "del texto del usuario. Usa Markdown cuando ayude a leer la respuesta."
+        "del usuario, salvo que te pida explícitamente otro idioma. Usa Markdown "
+        "cuando ayude a leer la respuesta y escribe las fórmulas en LaTeX "
+        "entre $…$ (en línea) o $$…$$ (en bloque)."
     )
     ollama_temperature: Optional[float] = 0.7
     ollama_keep_alive: str = "5m"

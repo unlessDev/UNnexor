@@ -56,9 +56,9 @@ def synthesize(text: str, voice_hint: str, target: Path) -> None:
         "if ($v) { $s.SelectVoice($v.VoiceInfo.Name) };"
         "$s.Rate = 0;"
         f"$s.SetOutputToWaveFile('{target}');"
-        "$s.Speak($env:EXTDATOR_TTS_TEXT); $s.Dispose()"
+        "$s.Speak($env:UNNEXOR_TTS_TEXT); $s.Dispose()"
     )
-    env = dict(os.environ, EXTDATOR_TTS_TEXT=text)
+    env = dict(os.environ, UNNEXOR_TTS_TEXT=text)
     subprocess.run(
         ["powershell", "-NoProfile", "-Command", script],
         check=True,

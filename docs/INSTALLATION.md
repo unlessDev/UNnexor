@@ -28,8 +28,9 @@ Puedes ejecutar `scripts\check_environment.ps1` para un diagnóstico completo.
    release.
 2. Instala [Ollama](https://ollama.com/download) si aún no lo tienes
    (UNnexor lo iniciará cuando lo necesite).
-3. Abre **UNnexor** desde el menú Inicio; usa **☰ → Recomendar
-   configuración** para elegir modelos adecuados a tu equipo.
+3. Abre **UNnexor** desde el menú Inicio; usa **☰ → Centro de control → Recomendar
+   configuración** → **Aplicar**: propone modelos adecuados a tu equipo y,
+   si lo autorizas, los descarga e instala con progreso real.
 4. Carga la extensión (sección 4) y emparéjala con el código de 6 dígitos.
 
 ## Generar el instalador desde el código
@@ -57,7 +58,7 @@ Pasos:
    `SHA256SUMS.txt` antes de continuar. El instalador no está firmado con
    Authenticode.
 3. Los datos (ajustes, logs, `.env`, estado de proveedores) se guardan en
-   `%LOCALAPPDATA%\Extdator`. Las claves conectadas desde el panel viven en
+   `%LOCALAPPDATA%\UNnexor` (desde 2.1.0; los datos de `%LOCALAPPDATA%\Extdator` se copian en el primer arranque y la carpeta antigua se conserva). Las claves conectadas desde el panel viven en
    el Administrador de credenciales de Windows; las que pongas manualmente
    en `.env` pueden retirarse con `--purge-secrets`.
 4. Continúa con el **paso 2** (Ollama) y el **paso 4** (cargar la extensión)
@@ -69,7 +70,7 @@ Pasos:
 * Por defecto, tus datos y credenciales se conservan para una futura
   reinstalación.
 * Si eliges la **limpieza completa**, el desinstalador ejecuta
-  `UNnexor.exe --purge-secrets` y borra `%LOCALAPPDATA%\Extdator`.
+  `UNnexor.exe --purge-secrets` y borra `%LOCALAPPDATA%\UNnexor` y, si existe, `%LOCALAPPDATA%\Extdator`.
 
 Para borrar solo credenciales y el token sin desinstalar:
 
@@ -173,11 +174,11 @@ Idéntico a Chrome con `brave://extensions`.
    panel flotante (sin perder el foco del navegador).
 4. Rueda del ratón sobre el panel → desplazamiento sin clic.
 5. Botones del panel: 📌 siempre visible · ⧉ copiar · ⟲ nueva conversación ·
-   ⚙ menú (opacidad…) · — minimizar · ✕ cerrar.
+   ☰ menú (centro de control, opacidad…) · — minimizar · ✕ cerrar.
 6. En el primer arranque, el panel abre el **asistente de inicio**:
    privacidad, comprobación de Ollama/modelo y código de emparejamiento.
-   Se puede reabrir desde `⚙ → Asistente de inicio`.
-7. Si algo falla, `⚙ → Exportar diagnóstico…` guarda un ZIP saneado para
+   Se puede reabrir desde `☰ → Asistente de inicio`.
+7. Si algo falla, `☰ → Exportar diagnóstico…` guarda un ZIP saneado para
    soporte (sin token, claves, `.env`, historial ni capturas). Revisa su
    contenido antes de compartirlo.
 
@@ -203,7 +204,7 @@ En la versión instalada (sin consola):
 ```
 
 El resultado se escribe en
-`%LOCALAPPDATA%\Extdator\self-check.json`; el código de salida es 0 si
+`%LOCALAPPDATA%\UNnexor\self-check.json`; el código de salida es 0 si
 todo funciona.
 
 ## Pruebas

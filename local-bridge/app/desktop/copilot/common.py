@@ -90,6 +90,37 @@ def escape(text: str) -> str:
     return html.escape(text).replace("\n", "<br>")
 
 
+SPEAKER_COLORS = {"Interlocutor": "#ffd166", "Tú": ACCENT, "Original": MUTED}
+
+
+def transcript_line_html(
+    speaker: str,
+    text: str,
+    *,
+    partial: bool = False,
+    low_confidence: bool = False,
+    font_px: int = 14,
+) -> str:
+    """Línea de transcripción legible: hablante en color + texto separado.
+
+    El texto definitivo se muestra en claro; el que aún se está
+    transcribiendo, en cursiva atenuada con «transcribiendo…». El color del
+    hablante es un refuerzo: el nombre siempre aparece escrito.
+    """
+    color = SPEAKER_COLORS.get(speaker, ACCENT)
+    body_color = MUTED if partial else TEXT
+    style = "font-style: italic;" if partial else ""
+    suffix = " <span style='color:#8a93a5'>· transcribiendo…</span>" if partial else ""
+    flag = " <span title='Baja confianza'>⚠️</span>" if low_confidence else ""
+    return (
+        f"<p style='margin: 0 0 8px 0; line-height: 140%;'>"
+        f"<span style='color:{color}; font-weight:700; font-size:{font_px - 2}px;'>"
+        f"{html.escape(speaker).upper()}</span>{suffix}<br>"
+        f"<span style='color:{body_color}; font-size:{font_px}px; {style}'>"
+        f"{escape(text)}</span>{flag}</p>"
+    )
+
+
 def export_pdf(markdown: str, path: str) -> None:
     """Markdown → PDF con el motor de texto de Qt (sin dependencias)."""
     document = QTextDocument()

@@ -28,7 +28,7 @@ from ..routing.router import Task
 from .engine import GenerationEngine
 from .prompts import challenge_messages
 
-log = logging.getLogger("extdator.copilot.challenges")
+log = logging.getLogger("unnexor.copilot.challenges")
 
 
 def fingerprint(gray: npt.NDArray[Any]) -> int:

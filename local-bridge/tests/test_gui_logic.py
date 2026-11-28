@@ -42,8 +42,11 @@ def test_assistant_message_converts_math_to_unicode(qapp):
     assert final == "Resuelvo: 1/2 y luego x² = 4"
     # …y el texto crudo se conserva para la lógica (historial/stats).
     assert widget.text() == raw
+    # La fórmula delimitada se compone como imagen (ziamath); la notación
+    # suelta fuera de delimitadores sigue pasando a Unicode legible.
     plain = widget.browser.toPlainText()
-    assert "1/2" in plain and "x²" in plain
+    assert "￼" in plain and "x²" in plain
+    assert "\\frac" not in plain
 
 
 def test_assistant_message_empty_marks_error(qapp):

@@ -181,7 +181,7 @@ async function runDiagnostic() {
       signal: AbortSignal.timeout(6000),
     });
     const body = await resp.json().catch(() => ({}));
-    if (resp.ok && body.app === "extdator-bridge") {
+    if (resp.ok && (body.app === "unnexor-bridge" || body.app === "extdator-bridge")) {
       bridgeOk = true;
       const o = body.ollama || {};
       ollamaDetail = o.reachable

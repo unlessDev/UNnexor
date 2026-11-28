@@ -24,9 +24,12 @@ from .base import ProviderError
 from .openai_compat import OpenAICompatClient
 from .presets import PRESETS, SPEECH_ONLY_PROVIDER_IDS, preset
 
-log = logging.getLogger("extdator.providers")
+log = logging.getLogger("unnexor.providers")
 
-SERVICE = "Extdator"
+SERVICE = "UNnexor"
+# Servicio usado por las versiones anteriores al cambio de nombre: las
+# claves se copian a SERVICE la primera vez que se leen (sin borrarlas).
+LEGACY_SERVICE = "Extdator"
 ACCOUNT_PREFIX = "provider-key"
 CONFIG_FILE = paths.providers_file()
 CONF_LOCK = threading.Lock()
@@ -76,16 +79,31 @@ def store_key(provider_id: str, key: str) -> None:
 def get_key(provider_id: str) -> Optional[str]:
     import keyring
 
-    return keyring.get_password(SERVICE, _account(provider_id))
+    account = _account(provider_id)
+    value = keyring.get_password(SERVICE, account)
+    if value:
+        return value
+    try:
+        legacy = keyring.get_password(LEGACY_SERVICE, account)
+    except Exception:
+        legacy = None
+    if legacy:
+        try:
+            keyring.set_password(SERVICE, account, legacy)
+            log.info("Credencial de '%s' migrada desde Extdator.", provider_id)
+        except Exception as exc:  # se sigue usando la copia antigua
+            log.warning("No se pudo migrar la credencial de '%s': %s", provider_id, exc)
+    return legacy or value
 
 
 def delete_key(provider_id: str) -> None:
     import keyring
 
-    try:
-        keyring.delete_password(SERVICE, _account(provider_id))
-    except Exception:  # entry no existe en algunos backends
-        pass
+    for service in (SERVICE, LEGACY_SERVICE):
+        try:
+            keyring.delete_password(service, _account(provider_id))
+        except Exception:  # entry no existe en algunos backends
+            pass
 
 
 def purge_all_keys() -> List[str]:

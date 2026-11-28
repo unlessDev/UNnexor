@@ -2,20 +2,20 @@
 ;
 ; Compilar con:
 ;   "C:\Users\<usuario>\AppData\Local\Programs\Inno Setup 6\ISCC.exe" ^
-;       /DMyAppVersion=2.0.0 deployment\installer\UNnexor.iss
+;       /DMyAppVersion=2.1.0 deployment\installer\UNnexor.iss
 ;
 ; O, preferiblemente, con deployment\installer\build.py, que valida el
 ; ejecutable, compila, prueba la instalación y genera SHA-256 e informe.
 ;
 ; Instalación POR USUARIO (sin administrador) en
 ; %LOCALAPPDATA%\Programs\UNnexor. Los datos viven en
-; %LOCALAPPDATA%\Extdator (nombre histórico conservado a propósito: una
-; actualización desde Extdator mantiene ajustes, credenciales y modelos)
-; y se conservan al desinstalar salvo que el
-; usuario elija la limpieza completa.
+; %LOCALAPPDATA%\UNnexor (desde 2.1.0). En el primer arranque UNnexor copia
+; los datos de versiones anteriores (%LOCALAPPDATA%\Extdator) a la carpeta
+; nueva sin borrar la antigua (local-bridge/app/migration.py). Los datos se
+; conservan al desinstalar salvo que el usuario elija la limpieza completa.
 
 #ifndef MyAppVersion
-  #define MyAppVersion "2.0.0"
+  #define MyAppVersion "2.1.0"
 #endif
 #define MyAppName "UNnexor"
 #define MyAppExeName "UNnexor.exe"
@@ -106,29 +106,46 @@ begin
   Answer := MsgBox(
     '¿Quieres eliminar también tus ajustes, registros y credenciales de UNnexor?'
     + #13#10 + #13#10
-    + 'Si eliges No, los datos se conservarán en %LOCALAPPDATA%\Extdator '
-    + 'para una futura reinstalación.',
+    + 'Si eliges No, los datos se conservarán en %LOCALAPPDATA%\UNnexor '
+    + 'para una futura reinstalación. Si eliges Sí, también se eliminará la '
+    + 'copia de versiones anteriores (%LOCALAPPDATA%\Extdator), si existe.',
     mbConfirmation, MB_YESNO or MB_DEFBUTTON2);
   PurgeUserData := Answer = IDYES;
+end;
+
+function LooksLikeDataDir(const Dir: String): Boolean;
+begin
+  // Seguridad: solo se borra lo que parece un directorio de datos propio.
+  Result := DirExists(Dir) and (
+    FileExists(Dir + '\.env') or
+    FileExists(Dir + '\user_settings.json') or
+    FileExists(Dir + '\providers.json') or
+    FileExists(Dir + '\self-check.json') or
+    FileExists(Dir + '\migration.json') or
+    DirExists(Dir + '\logs')
+  );
 end;
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
   DataDir: String;
+  LegacyDir: String;
 begin
   if (CurUninstallStep = usPostUninstall) and PurgeUserData then
   begin
-    DataDir := GetEnv('EXTDATOR_DATA_DIR');
+    DataDir := GetEnv('UNNEXOR_DATA_DIR');
     if DataDir = '' then
-      DataDir := ExpandConstant('{localappdata}\Extdator');
-    // Seguridad: solo borrar si parece un directorio de datos de UNnexor.
-    if DirExists(DataDir) and (
-      FileExists(DataDir + '\.env') or
-      FileExists(DataDir + '\user_settings.json') or
-      FileExists(DataDir + '\providers.json') or
-      FileExists(DataDir + '\self-check.json') or
-      DirExists(DataDir + '\logs')
-    ) then
+      DataDir := GetEnv('EXTDATOR_DATA_DIR');
+    if DataDir = '' then
+      DataDir := ExpandConstant('{localappdata}\UNnexor');
+    if LooksLikeDataDir(DataDir) then
       DelTree(DataDir, True, True, True);
+    // Copia de versiones anteriores: la migración nunca la borra sola; la
+    // limpieza completa elegida por el usuario sí. Con un directorio de
+    // datos forzado (pruebas, portable) no se toca nada más.
+    LegacyDir := ExpandConstant('{localappdata}\Extdator');
+    if (GetEnv('UNNEXOR_DATA_DIR') = '') and (GetEnv('EXTDATOR_DATA_DIR') = '')
+      and LooksLikeDataDir(LegacyDir) then
+      DelTree(LegacyDir, True, True, True);
   end;
 end;

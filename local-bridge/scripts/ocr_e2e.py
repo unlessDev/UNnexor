@@ -56,7 +56,7 @@ def main() -> int:
     chosen = engine or recommend({"ram_available_mb": 8600})
     print("Motor elegido:", chosen)
 
-    path = os.path.join(tempfile.gettempdir(), "extdator_ocr_e2e.png")
+    path = os.path.join(tempfile.gettempdir(), "unnexor_ocr_e2e.png")
     render_math(
         ["x^2 + y^2 = 25", "x + y = 7", "E = mc^2"],
         path,

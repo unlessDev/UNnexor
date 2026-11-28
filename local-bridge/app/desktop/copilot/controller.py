@@ -51,7 +51,7 @@ from ...stt.catalog import get_spec
 from ...stt.factory import create_recognizer, engine_status
 from .tasks import run_async
 
-log = logging.getLogger("extdator.copilot.ui")
+log = logging.getLogger("unnexor.copilot.ui")
 
 MODES = ("conversation", "translation")
 
@@ -489,7 +489,7 @@ class CopilotController(QObject):
             return ""
         texts: list[str] = []
         for b64 in images_b64:
-            handle, path = tempfile.mkstemp(suffix=".png", prefix="extdator_challenge_")
+            handle, path = tempfile.mkstemp(suffix=".png", prefix="unnexor_challenge_")
             try:
                 with os.fdopen(handle, "wb") as out:
                     out.write(base64.b64decode(b64))

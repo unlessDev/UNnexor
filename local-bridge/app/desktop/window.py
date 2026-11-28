@@ -70,7 +70,7 @@ from .widgets import (
 from .window_manager import HoverScrollHook, NoActivateFilter, apply_noactivate
 from .workers import DiagnosticsWorker, GenerationWorker, OCRWorker, StatusWorker
 
-log = logging.getLogger("extdator.window")
+log = logging.getLogger("unnexor.window")
 
 SPINNER_FRAMES = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
 
@@ -122,7 +122,7 @@ class BridgeWindow(QMainWindow):
         self._log_console = None  # LogConsoleWindow (opcional)
         self._on_top = cfg.always_on_top
         self._opacity = cfg.window_opacity
-        self._settings = QSettings("Extdator", "Bridge")
+        self._settings = QSettings("UNnexor", "Bridge")
         self._streaming_widget: Optional[AssistantMessage] = None
         self._last_assistant_text = ""
         self._hook = HoverScrollHook()
@@ -145,6 +145,15 @@ class BridgeWindow(QMainWindow):
         self._pending_ocr_instruction: Optional[str] = None
         # Copiloto en tiempo real (se crea al abrirlo por primera vez).
         self._copilot_window = None
+        # Centro de control (gestión unificada) y cola común de descargas.
+        self._control_center = None
+        self._reachable: Optional[bool] = None
+        self._conn_detail = ""
+        from .downloads import DownloadManager
+
+        self._downloads = DownloadManager.instance(ollama)
+        self._downloads.jobProgress.connect(self._on_download_progress)
+        self._downloads.jobFinished.connect(self._on_download_finished)
 
         self._build_ui()
 
@@ -300,6 +309,14 @@ class BridgeWindow(QMainWindow):
                 self._ollama.close()
                 self._worker.wait(2000)
         self._stop_ocr_workers()
+        if self._control_center is not None:
+            self._control_center.shutdown()
+            self._control_center = None
+        # Cierre de la aplicación: se cancela la descarga activa (Ollama
+        # reanuda las capas ya descargadas la próxima vez).
+        from .downloads import DownloadManager
+
+        DownloadManager.reset_instance()
         if self._copilot_window is not None:
             self._copilot_window.shutdown()
             self._copilot_window = None
@@ -485,6 +502,9 @@ class BridgeWindow(QMainWindow):
     # ------------------------------------------------------------------ #
     def _on_status_changed(self, reachable: bool, detail: str, model_ok: bool) -> None:
         model = self._cfg.ollama_model
+        self._reachable, self._conn_detail = reachable, detail
+        if self._control_center is not None:
+            self._control_center.refresh()
         if reachable and model_ok:
             self._titlebar.set_status(True, f"Ollama {detail} · modelo listo")
         elif reachable:
@@ -493,6 +513,48 @@ class BridgeWindow(QMainWindow):
             )
         else:
             self._titlebar.set_status(False, f"Ollama sin conexión: {detail}")
+
+    # Estado consultado por el centro de control (fuente única de verdad).
+    def connection_state(self) -> Optional[bool]:
+        return self._reachable
+
+    def connection_detail(self) -> str:
+        return self._conn_detail
+
+    def active_model_label(self) -> str:
+        provider_id, remote_model = self._state.provider()
+        if provider_id != "ollama" and remote_model:
+            return f"{remote_model} (API remota: {provider_id})"
+        return f"{self._cfg.ollama_model} (Ollama local)"
+
+    def _on_download_progress(self, snapshot) -> None:
+        # Como mucho una actualización por segundo en el pie (sin temporizadores
+        # acumulados): el detalle fino está en el centro de control.
+        now = self._time()
+        if now - getattr(self, "_last_download_footer", 0.0) < 1.0:
+            return
+        self._last_download_footer = now
+        name = snapshot.model.partition(":")[2]
+        self._set_footer_transient(f"⬇ {name} · {snapshot.describe()}", seconds=3)
+
+    def _on_download_finished(self, snapshot) -> None:
+        from ..ollama_pull import COMPLETED
+
+        name = snapshot.model.partition(":")[2]
+        self._set_footer_transient(
+            f"{'✓' if snapshot.phase == COMPLETED else '⚠'} {name}: {snapshot.describe()}",
+            seconds=8,
+            error=snapshot.phase != COMPLETED,
+        )
+
+    def open_control_center(self, page: str = "home") -> None:
+        """Abre (o trae al frente) el centro de control en la página pedida."""
+        if self._control_center is None:
+            from .control_center import ControlCenter
+
+            self._control_center = ControlCenter(self, self._downloads)
+        self._control_center.refresh()
+        self._control_center.open_page(page)
 
     def _on_models_ready(self, models: list) -> None:
         if models:
@@ -599,6 +661,7 @@ class BridgeWindow(QMainWindow):
         from . import icons
 
         menu = QMenu(self)
+        menu.setMinimumWidth(300)
 
         def add(section_menu, icon_name, text, slot, shortcut_hint=""):
             action = section_menu.addAction(icons.menu_icon(icon_name), text)
@@ -607,6 +670,7 @@ class BridgeWindow(QMainWindow):
             action.triggered.connect(slot)
             return action
 
+        add(menu, "home", "Centro de control…", lambda: self.open_control_center())
         menu.addSection("Conversación")
         add(menu, "copy", "Copiar la última respuesta", self._copy_last)
         add(menu, "new", "Nueva conversación", self._clear_conversation)
@@ -618,7 +682,12 @@ class BridgeWindow(QMainWindow):
 
         menu.addSection("Modelos y configuración")
         add(menu, "sparkles", "Recomendar configuración…", self.open_recommendations)
-        add(menu, "models", "Modelos de IA…", lambda: self._open_model_selector())
+        add(
+            menu,
+            "models",
+            "Modelos de IA…",
+            lambda: self.open_control_center("models"),
+        )
         add(menu, "providers", "Proveedores de API…", self._open_providers)
         add(menu, "settings", "Ajustes…", lambda: self._open_settings())
 
@@ -675,7 +744,10 @@ class BridgeWindow(QMainWindow):
         from .dialogs import ModelSelectorDialog
 
         dialog = ModelSelectorDialog(
-            self._ollama, self._cfg.ollama_model, parent=parent or self
+            self._ollama,
+            self._cfg.ollama_model,
+            parent=parent or self,
+            downloads=self._downloads,
         )
         dialog.modelSelected.connect(self.apply_model)
         dialog.exec()
@@ -760,7 +832,8 @@ class BridgeWindow(QMainWindow):
             # verdad (si no, los sobrescribiría al guardar).
             copilot_settings=(lambda: controller.settings) if controller else None,
             save_copilot=controller.save_settings if controller else None,
-            parent=self,
+            downloads=self._downloads,
+            parent=self._control_center or self,
         )
         dialog.exec()
 
@@ -1049,7 +1122,7 @@ class BridgeWindow(QMainWindow):
         """PNG temporal (se elimina al terminar el procesamiento)."""
         import time as _time
 
-        base = os.path.join(tempfile.gettempdir(), "extdator_capture")
+        base = os.path.join(tempfile.gettempdir(), "unnexor_capture")
         path = f"{base}_{int(_time.time() * 1000)}.png"
         if not pixmap.save(path, "PNG"):
             return None

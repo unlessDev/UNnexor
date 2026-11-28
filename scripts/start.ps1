@@ -58,7 +58,7 @@ Ok "Configuración: $envFile"
 # ---------------------------------------------------------------- ¿ya en marcha?
 try {
     $health = Invoke-RestMethod -Uri "http://127.0.0.1:5000/health" -TimeoutSec 2
-    if ($health.app -eq "extdator-bridge") {
+    if ($health.app -in @("unnexor-bridge", "extdator-bridge")) {
         Warn "UNnexor ya está en ejecución. Nada que hacer (usa stop.ps1 para detenerlo)."
         exit 0
     }
@@ -108,7 +108,7 @@ for ($i = 0; $i -lt 40; $i++) {
     Start-Sleep -Milliseconds 500
     try {
         $health = Invoke-RestMethod -Uri "http://127.0.0.1:$port/health" -TimeoutSec 2
-        if ($health.app -eq "extdator-bridge") { $ready = $true; break }
+        if ($health.app -in @("unnexor-bridge", "extdator-bridge")) { $ready = $true; break }
     } catch {}
 }
 

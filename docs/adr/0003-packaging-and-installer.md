@@ -35,8 +35,8 @@ instalador para Windows 10/11, preferiblemente por usuario y sin admin.
   positivos de antivirus; one-folder permite sustituir binarios y reducir
   el tiempo de inicio.
 - **Inno Setup** con instalación por usuario en
-  `%LOCALAPPDATA%\Programs\Extdator`, sin privilegios administrativos.
-- Datos en `%LOCALAPPDATA%\Extdator`; el instalador no incluye modelos,
+  `%LOCALAPPDATA%\Programs\UNnexor`, sin privilegios administrativos.
+- Datos en `%LOCALAPPDATA%\UNnexor` (hasta 2.0.0, `%LOCALAPPDATA%\Extdator`; migración automática en 2.1.0); el instalador no incluye modelos,
   pesos OCR, claves ni historiales.
 - El desinstalador conserva datos personales por defecto y ofrece una
   limpieza explícita.

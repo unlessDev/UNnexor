@@ -14,7 +14,7 @@ from __future__ import annotations
 import logging
 from typing import Iterable, Optional
 
-from PySide6.QtCore import QObject, QRunnable, Qt, QThreadPool, QTimer, Signal
+from PySide6.QtCore import QObject, QRunnable, QSize, Qt, QThreadPool, QTimer, Signal
 from PySide6.QtWidgets import (
     QDialog,
     QHBoxLayout,
@@ -38,8 +38,9 @@ from .styles import (
     RED,
     TEXT,
 )
+from .ui_kit import fit_to_screen
 
-log = logging.getLogger("extdator.onboarding")
+log = logging.getLogger("unnexor.onboarding")
 
 ONBOARDING_SEEN_KEY = "onboarding/seen"
 STEP_TITLES = ("Bienvenida", "Requisitos", "Conectar extensión")
@@ -217,7 +218,7 @@ class OnboardingDialog(QDialog):
         self._task: Optional[RequirementsCheckTask] = None
 
         self.setWindowTitle("Asistente de inicio — UNnexor")
-        self.setMinimumSize(580, 470)
+        fit_to_screen(self, QSize(760, 640), QSize(560, 460), anchor=parent)
         self.setStyleSheet(DIALOG_QSS)
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
         self.setModal(True)

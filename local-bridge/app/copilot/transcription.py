@@ -32,7 +32,7 @@ from ..audio.dsp import rms_dbfs
 from ..audio.types import SourceKind, SpeechSegment
 from ..stt.base import SpeechRecognizer, STTError, Transcript
 
-log = logging.getLogger("extdator.copilot.transcription")
+log = logging.getLogger("unnexor.copilot.transcription")
 
 FATAL_KINDS = frozenset({"auth", "payment", "unavailable", "model_missing"})
 MIN_SPEECH_DBFS = -50.0  # por debajo: casi silencio, no se transcribe

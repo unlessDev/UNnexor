@@ -5,7 +5,7 @@
 
 ## Contexto
 
-Extdator es una aplicación local de escritorio con una extensión de
+UNnexor (antes Extdator) es una aplicación local de escritorio con una extensión de
 navegador. El código actual funciona y tiene 202 pruebas. Una extracción
 física completa a `apps/`, `core/` e `infrastructure/` obligaría a mover
 casi todos los módulos, reescribir imports y asumir un riesgo alto sin una
