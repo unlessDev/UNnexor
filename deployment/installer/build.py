@@ -204,8 +204,8 @@ def _install(setup: Path, install_dir: Path, log_file: Path, timeout: float) -> 
 
 def _run_installed_check(exe: Path, data_dir: Path, timeout: float) -> dict:
     env = os.environ.copy()
-    env["EXTDATOR_DATA_DIR"] = str(data_dir)
-    env["EXTDATOR_ENV_FILE"] = str(data_dir / ".env")
+    env["UNNEXOR_DATA_DIR"] = str(data_dir)
+    env["UNNEXOR_ENV_FILE"] = str(data_dir / ".env")
     port = _free_port()
     started = time.monotonic()
     process = subprocess.Popen(
@@ -240,7 +240,7 @@ def _run_installed_check(exe: Path, data_dir: Path, timeout: float) -> dict:
         raise RuntimeError("El ejecutable instalado no detecta modo empaquetado.")
     if Path(report.get("data_dir", "")) != data_dir:
         raise RuntimeError(
-            f"El ejecutable instalado no respetó EXTDATOR_DATA_DIR: "
+            f"El ejecutable instalado no respetó UNNEXOR_DATA_DIR: "
             f"{report.get('data_dir')} != {data_dir}"
         )
     return {
@@ -263,7 +263,7 @@ def _uninstall(
     timeout: float,
 ) -> None:
     env = os.environ.copy()
-    env["EXTDATOR_DATA_DIR"] = str(data_dir)
+    env["UNNEXOR_DATA_DIR"] = str(data_dir)
     command = [
         str(uninstaller),
         "/VERYSILENT",
@@ -295,8 +295,8 @@ def _uninstall(
 
 def _purge_secrets(exe: Path, data_dir: Path, timeout: float) -> None:
     env = os.environ.copy()
-    env["EXTDATOR_DATA_DIR"] = str(data_dir)
-    env["EXTDATOR_ENV_FILE"] = str(data_dir / ".env")
+    env["UNNEXOR_DATA_DIR"] = str(data_dir)
+    env["UNNEXOR_ENV_FILE"] = str(data_dir / ".env")
     process = subprocess.Popen(
         [str(exe), "--purge-secrets"],
         env=env,
@@ -318,6 +318,64 @@ def _purge_secrets(exe: Path, data_dir: Path, timeout: float) -> None:
         )
 
 
+def _run_migration_check(exe: Path, root: Path, timeout: float) -> dict:
+    """Actualización desde Extdator: datos antiguos en un LOCALAPPDATA aislado.
+
+    Ejecuta el EXE instalado sin forzar el directorio de datos, con un
+    ``%LOCALAPPDATA%\\Extdator`` simulado, y comprueba que UNnexor usa
+    ``%LOCALAPPDATA%\\UNnexor``, que copió los datos sin pisar nada y que la
+    carpeta antigua sigue intacta.
+    """
+    local = root / "localappdata"
+    legacy = local / "Extdator"
+    (legacy / "copilot" / "profiles").mkdir(parents=True)
+    (legacy / "user_settings.json").write_text(
+        '{"ollama_model": "modelo-migrado:1b"}\n', encoding="utf-8"
+    )
+    (legacy / "copilot" / "profiles" / "perfil.json").write_text(
+        '{"name": "prueba"}\n', encoding="utf-8"
+    )
+    env = {
+        k: v
+        for k, v in os.environ.items()
+        if not k.startswith(("UNNEXOR_", "EXTDATOR_"))
+    }
+    env["LOCALAPPDATA"] = str(local)
+    port = _free_port()
+    completed = subprocess.run(
+        [str(exe), "--check", "--port", str(port)],
+        env=env,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=timeout,
+    )
+    target = local / "UNnexor"
+    marker = target / "migration.json"
+    if not marker.is_file():
+        raise RuntimeError(
+            "El EXE instalado no migró los datos de Extdator "
+            f"(exit={completed.returncode}; stderr={completed.stderr[-600:]})"
+        )
+    record = json.loads(marker.read_text(encoding="utf-8"))
+    report = json.loads((target / "self-check.json").read_text(encoding="utf-8"))
+    checks = {
+        "status_completed": record.get("status") == "completed",
+        "settings_copied": (target / "user_settings.json").is_file(),
+        "profile_copied": (target / "copilot" / "profiles" / "perfil.json").is_file(),
+        "legacy_kept": (legacy / "user_settings.json").is_file(),
+        "uses_new_folder": Path(report.get("data_dir", "")) == target,
+        "no_new_extdator_files": not (legacy / "self-check.json").exists(),
+        "rendering_ok": bool(
+            ((report.get("results") or {}).get("rendering") or {}).get("ok")
+        ),
+    }
+    if not all(checks.values()):
+        raise RuntimeError(f"Migración incorrecta en el EXE instalado: {checks}")
+    return {"ok": True, "copied": record.get("copied"), **checks}
+
+
 def test_installer(
     setup: Path, version: str, timeout: float, keep: bool = False
 ) -> dict:
@@ -330,6 +388,9 @@ def test_installer(
         result["installed"] = True
         result["self_check"] = _run_installed_check(
             install_dir / "UNnexor.exe", data_dir, timeout
+        )
+        result["upgrade_from_extdator"] = _run_migration_check(
+            install_dir / "UNnexor.exe", root, timeout
         )
 
         # Datos de usuario que deben sobrevivir a una desinstalación normal.
@@ -465,7 +526,11 @@ def build(
         "unsigned_notice": ("Instalador sin Authenticode; SmartScreen puede advertir."),
         "install_scope": "per-user",
         "default_install_dir": "%LOCALAPPDATA%\\Programs\\UNnexor",
-        "data_dir": "%LOCALAPPDATA%\\Extdator",
+        "data_dir": "%LOCALAPPDATA%\\UNnexor",
+        "legacy_data_migration": (
+            "%LOCALAPPDATA%\\Extdator -> %LOCALAPPDATA%\\UNnexor "
+            "(copia verificada en el primer arranque; el origen se conserva)"
+        ),
         "desktop_version": desktop.get("version"),
         "test": test,
         "timestamp": datetime.now(timezone.utc).isoformat(),

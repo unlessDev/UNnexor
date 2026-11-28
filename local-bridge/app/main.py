@@ -353,6 +353,10 @@ def run_check(cfg: Config, bus: Bus, state: RuntimeState, ollama: OllamaClient) 
     from .copilot.components import check_components
 
     results["copilot_components"] = check_components()
+    # Renderizado de respuestas: fórmulas (ziamath) y código (Pygments).
+    from .desktop.rich_text import self_check as rendering_check
+
+    results["rendering"] = rendering_check()
     ok = bool(
         results.get("health")
         and results["selection"]

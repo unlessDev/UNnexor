@@ -19,14 +19,14 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from fastapi.testclient import TestClient  # noqa: E402
-from PySide6.QtCore import QCoreApplication  # noqa: E402
+from fastapi.testclient import TestClient
+from PySide6.QtCore import QCoreApplication
 
-from app.desktop.workers import GenerationWorker  # noqa: E402
-from app.ollama_client import OllamaClient  # noqa: E402
-from app.queue_manager import Bus, RuntimeState  # noqa: E402
-from app.server import create_app  # noqa: E402
-from tests.conftest import make_config  # noqa: E402
+from app.desktop.workers import GenerationWorker
+from app.ollama_client import OllamaClient
+from app.queue_manager import Bus, RuntimeState
+from app.server import create_app
+from tests.conftest import make_config
 
 TEXT = (
     "La fotosíntesis es el proceso por el cual las plantas convierten la luz "
@@ -36,10 +36,22 @@ TEXT = (
 CASES = [
     ("informativa", "ask", TEXT, "¿Dónde ocurre este proceso?", ["cloroplasto"]),
     ("técnica", "ask", "def f(x): return x * 2", "¿Qué devuelve f(21)?", ["42"]),
-    ("orden", "ask", TEXT, "Tradúcelo al inglés en una sola frase.", ["sunlight", "carbon dioxide"]),
+    (
+        "orden",
+        "ask",
+        TEXT,
+        "Tradúcelo al inglés en una sola frase.",
+        ["sunlight", "carbon dioxide"],
+    ),
     ("con contexto", "ask", TEXT, "¿Qué gas se libera según el texto?", ["oxígeno"]),
     ("seguimiento", "ask", TEXT, "¿Y qué gas se consume?", ["dióxido", "co2", "co₂"]),
-    ("directo", "direct", "Capital de Francia (responde con una palabra)", "", ["parís", "paris"]),
+    (
+        "directo",
+        "direct",
+        "Capital de Francia (responde con una palabra)",
+        "",
+        ["parís", "paris"],
+    ),
 ]
 
 

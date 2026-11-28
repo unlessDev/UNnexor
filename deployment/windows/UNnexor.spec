@@ -4,7 +4,7 @@
 Uso normal (genera el informe y el ZIP):
     python deployment/windows/build.py
 
-El archivo de versión se inyecta con la variable EXTDATOR_VERSION_FILE
+El archivo de versión se inyecta con la variable UNNEXOR_VERSION_FILE
 para no duplicar la versión en el repositorio.
 """
 
@@ -21,7 +21,7 @@ PROJECT_ROOT = Path(SPECPATH).resolve().parents[1]
 LOCAL_BRIDGE = PROJECT_ROOT / "local-bridge"
 ICON = LOCAL_BRIDGE / "assets" / "unnexor.ico"
 
-version_file = os.environ.get("EXTDATOR_VERSION_FILE") or None
+version_file = os.environ.get("UNNEXOR_VERSION_FILE") or None
 
 datas = [
     (str(LOCAL_BRIDGE / ".env.example"), "."),
@@ -36,9 +36,23 @@ datas += collect_data_files("faster_whisper")
 datas += collect_data_files("soundcard")
 # CTranslate2 no tiene hook: sus DLL (ctranslate2, libiomp5md, cudnn) se
 # copian en su carpeta para que el paquete las encuentre.
+# Respuestas (2.1): fórmulas con ziamath (fuente STIX Two Math y tablas de
+# latex2mathml) y resaltado con Pygments (lexers y estilos se cargan por
+# nombre en tiempo de ejecución).
+datas += collect_data_files("ziamath")
+datas += collect_data_files("ziafont")
+datas += collect_data_files("latex2mathml")
 binaries = collect_dynamic_libs("ctranslate2")
 
-hiddenimports = collect_submodules("app") + [
+hiddenimports = (
+    collect_submodules("app")
+    + collect_submodules("pygments.lexers")
+    + collect_submodules("pygments.styles")
+    + collect_submodules("pygments.formatters")
+    + collect_submodules("ziamath")
+    + collect_submodules("ziafont")
+    + collect_submodules("latex2mathml")
+) + [
     "uvicorn.logging",
     "uvicorn.loops.auto",
     "uvicorn.loops.asyncio",
@@ -100,6 +114,7 @@ excludes = [
     "PySide6.QtNetwork",
     "PySide6.QtOpenGL",
     "PySide6.QtOpenGLWidgets",
+    # Sin motor web: las respuestas se componen de forma nativa (ADR-0006).
     "PySide6.QtWebEngineCore",
     "PySide6.QtWebEngineWidgets",
     "PySide6.QtWebChannel",

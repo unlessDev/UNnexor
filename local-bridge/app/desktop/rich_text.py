@@ -458,3 +458,34 @@ class RichTextBrowser(QTextBrowser):
                 self.codeCopied.emit(index)
         elif scheme in ("http", "https", "mailto"):
             QDesktopServices.openUrl(url)
+
+
+def self_check() -> dict:
+    """Comprueba en el EXE que fórmulas y resaltado funcionan (sin red).
+
+    Lo usa ``UNnexor.exe --check``: detecta fuentes de ziamath o lexers de
+    Pygments que no se empaquetaron.
+    """
+    from PySide6.QtGui import QGuiApplication
+
+    result: dict = {"ok": False}
+    owner = None
+    if QGuiApplication.instance() is None:
+        owner = QGuiApplication(["unnexor-check", "-platform", "offscreen"])
+    try:
+        image = render_math(
+            r"x = \frac{-b \pm \sqrt{b^2-4ac}}{2a}",
+            display=True,
+            color="#ffffff",
+            size_px=16,
+        )
+        result["math"] = image is not None and image.width() > 20
+        code_html, label = highlight_code("def f(x):\n    return x * 2\n", "python")
+        result["code"] = "<span" in code_html and label == "python"
+        result["sql"] = "<span" in highlight_code("SELECT 1 FROM t;", "sql")[0]
+        result["ok"] = bool(result["math"] and result["code"] and result["sql"])
+    except Exception as exc:  # el chequeo nunca debe tumbar el proceso
+        result["error"] = f"{type(exc).__name__}: {exc}"
+    finally:
+        del owner
+    return result

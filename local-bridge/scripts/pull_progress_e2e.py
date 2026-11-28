@@ -19,12 +19,16 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from PySide6.QtCore import QCoreApplication  # noqa: E402
+from PySide6.QtCore import QCoreApplication
 
-from app.desktop.downloads import KIND_OLLAMA, DownloadJob, DownloadManager  # noqa: E402
-from app.ollama_client import OllamaClient  # noqa: E402
-from app.ollama_pull import COMPLETED  # noqa: E402
-from tests.conftest import make_config  # noqa: E402
+from app.desktop.downloads import (
+    KIND_OLLAMA,
+    DownloadJob,
+    DownloadManager,
+)
+from app.ollama_client import OllamaClient
+from app.ollama_pull import COMPLETED
+from tests.conftest import make_config
 
 
 def main() -> int:
@@ -50,7 +54,7 @@ def main() -> int:
     for snap in snapshots:
         if not phases or phases[-1] != snap.phase:
             phases.append(snap.phase)
-    monotonic = all(b >= a for a, b in zip(fractions, fractions[1:]))
+    monotonic = all(b >= a for a, b in zip(fractions, fractions[1:], strict=False))
     early_100 = any(f >= 1.0 for f in fractions)
     speeds = [s.speed_bps for s in snapshots if s.speed_bps]
     print(f"Modelo: {model} · actualizaciones: {len(snapshots)}")

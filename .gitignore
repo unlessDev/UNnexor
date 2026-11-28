@@ -21,6 +21,7 @@ local-bridge/.env
 local-bridge/app/data/
 local-bridge/data/
 %LOCALAPPDATA%/Extdator/
+%LOCALAPPDATA%/UNnexor/
 
 # --- Logs y estado de ejecución ---
 local-bridge/logs/
