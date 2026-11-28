@@ -102,7 +102,7 @@ class LogConsoleWindow(QWidget):
             "QCheckBox { color: #c9cde0; }"
         )
         self._buffer = buffer
-        self._settings = QSettings("Extdator", "Bridge")
+        self._settings = QSettings("UNnexor", "Bridge")
         self._filter = ""
 
         header = QHBoxLayout()

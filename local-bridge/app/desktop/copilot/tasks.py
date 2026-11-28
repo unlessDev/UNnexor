@@ -12,7 +12,7 @@ from typing import Any
 
 from PySide6.QtCore import QObject, QRunnable, QThreadPool, Signal
 
-log = logging.getLogger("extdator.copilot.ui")
+log = logging.getLogger("unnexor.copilot.ui")
 
 _alive: set[_Bridge] = set()
 

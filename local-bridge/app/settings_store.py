@@ -24,7 +24,7 @@ from typing import Any, Dict, List, Optional
 from . import paths
 from .config import Config
 
-log = logging.getLogger("extdator.settings")
+log = logging.getLogger("unnexor.settings")
 
 SETTINGS_FILE = paths.settings_file()
 

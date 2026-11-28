@@ -16,7 +16,7 @@ from typing import Any
 
 from .. import paths
 
-log = logging.getLogger("extdator.providers.usage")
+log = logging.getLogger("unnexor.providers.usage")
 
 _COUNTERS = (
     "requests",

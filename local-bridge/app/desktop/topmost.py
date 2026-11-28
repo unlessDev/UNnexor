@@ -27,7 +27,7 @@ from PySide6.QtCore import QSettings, Qt
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QWidget
 
-log = logging.getLogger("extdator.desktop.topmost")
+log = logging.getLogger("unnexor.desktop.topmost")
 
 IS_WINDOWS = sys.platform == "win32"
 HWND_TOPMOST = -1
@@ -60,7 +60,7 @@ if IS_WINDOWS:  # pragma: no branch
     except (AttributeError, OSError):  # pragma: no cover
         _user32 = None
 
-SETTINGS_GROUP = ("Extdator", "WindowPins")
+SETTINGS_GROUP = ("UNnexor", "WindowPins")
 
 
 def native_available() -> bool:

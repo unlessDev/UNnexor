@@ -27,9 +27,12 @@ def test_frozen_paths_use_local_appdata(monkeypatch, tmp_path):
     monkeypatch.setattr(paths, "is_frozen", lambda: True)
     monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
     monkeypatch.delenv("EXTDATOR_DATA_DIR", raising=False)
-    assert paths.data_dir() == tmp_path / "Extdator"
-    assert paths.logs_dir() == tmp_path / "Extdator" / "logs"
-    assert paths.env_file() == tmp_path / "Extdator" / ".env"
+    monkeypatch.delenv("UNNEXOR_DATA_DIR", raising=False)
+    assert paths.data_dir() == tmp_path / "UNnexor"
+    assert paths.logs_dir() == tmp_path / "UNnexor" / "logs"
+    assert paths.env_file() == tmp_path / "UNnexor" / ".env"
+    assert paths.models_dir() == tmp_path / "UNnexor" / "models"
+    assert paths.legacy_data_root() == tmp_path / "Extdator"
 
 
 def test_env_file_override(monkeypatch, tmp_path):

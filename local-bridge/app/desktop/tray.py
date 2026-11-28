@@ -68,7 +68,7 @@ class AppTray(QSystemTrayIcon):
 
     def introduce(self) -> None:
         """Aviso único: dónde encontrar UNnexor."""
-        settings = QSettings("Extdator", "Bridge")
+        settings = QSettings("UNnexor", "Bridge")
         if str(settings.value(FIRST_RUN_KEY, "")).lower() in ("true", "1"):
             return
         settings.setValue(FIRST_RUN_KEY, True)

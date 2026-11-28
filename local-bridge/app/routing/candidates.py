@@ -33,7 +33,7 @@ from ..providers.base import ProviderError
 from ..providers.catalog import get_provider
 from .router import Candidate
 
-log = logging.getLogger("extdator.routing")
+log = logging.getLogger("unnexor.routing")
 
 _VISION_HINTS = re.compile(
     r"(vision|-vl|vl:|llava|pixtral|gpt-4o|gpt-4\.1|gpt-5|gemini|claude|llama-4|"

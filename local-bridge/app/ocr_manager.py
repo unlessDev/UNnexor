@@ -23,7 +23,7 @@ import threading
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-log = logging.getLogger("extdator.ocr")
+log = logging.getLogger("unnexor.ocr")
 
 
 # --------------------------------------------------------------------- #

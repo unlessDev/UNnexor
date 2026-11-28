@@ -70,7 +70,7 @@ from .widgets import (
 from .window_manager import HoverScrollHook, NoActivateFilter, apply_noactivate
 from .workers import DiagnosticsWorker, GenerationWorker, OCRWorker, StatusWorker
 
-log = logging.getLogger("extdator.window")
+log = logging.getLogger("unnexor.window")
 
 SPINNER_FRAMES = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
 
@@ -122,7 +122,7 @@ class BridgeWindow(QMainWindow):
         self._log_console = None  # LogConsoleWindow (opcional)
         self._on_top = cfg.always_on_top
         self._opacity = cfg.window_opacity
-        self._settings = QSettings("Extdator", "Bridge")
+        self._settings = QSettings("UNnexor", "Bridge")
         self._streaming_widget: Optional[AssistantMessage] = None
         self._last_assistant_text = ""
         self._hook = HoverScrollHook()
@@ -1049,7 +1049,7 @@ class BridgeWindow(QMainWindow):
         """PNG temporal (se elimina al terminar el procesamiento)."""
         import time as _time
 
-        base = os.path.join(tempfile.gettempdir(), "extdator_capture")
+        base = os.path.join(tempfile.gettempdir(), "unnexor_capture")
         path = f"{base}_{int(_time.time() * 1000)}.png"
         if not pixmap.save(path, "PNG"):
             return None

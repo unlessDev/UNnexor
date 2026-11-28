@@ -28,7 +28,7 @@ from typing import Any, Callable
 
 from PySide6.QtCore import QAbstractNativeEventFilter, QByteArray
 
-log = logging.getLogger("extdator.win32")
+log = logging.getLogger("unnexor.win32")
 
 try:  # pragma: no cover - depende del entorno
     _user32: Any = ctypes.windll.user32

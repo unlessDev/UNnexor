@@ -37,7 +37,7 @@ import httpx
 
 from . import paths
 
-log = logging.getLogger("extdator.ollama_library")
+log = logging.getLogger("unnexor.ollama_library")
 
 LIBRARY_URL = "https://ollama.com/library?sort=newest"
 RELEASES_URL = "https://api.github.com/repos/ollama/ollama/releases/latest"

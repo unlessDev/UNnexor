@@ -39,7 +39,7 @@ from .styles import (
     TEXT,
 )
 
-log = logging.getLogger("extdator.onboarding")
+log = logging.getLogger("unnexor.onboarding")
 
 ONBOARDING_SEEN_KEY = "onboarding/seen"
 STEP_TITLES = ("Bienvenida", "Requisitos", "Conectar extensión")

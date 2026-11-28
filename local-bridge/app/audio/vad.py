@@ -24,7 +24,7 @@ import numpy as np
 from .dsp import SILENCE_DBFS, rms_dbfs
 from .types import SAMPLE_RATE, FloatArray
 
-log = logging.getLogger("extdator.audio.vad")
+log = logging.getLogger("unnexor.audio.vad")
 
 
 class VADUnavailable(RuntimeError):
@@ -79,7 +79,7 @@ class EnergyVAD:
 
 def silero_model_path() -> Path | None:
     """Ruta del ONNX de Silero que distribuye faster-whisper, si existe."""
-    override = os.environ.get("EXTDATOR_SILERO_VAD", "").strip()
+    override = os.environ.get("UNNEXOR_SILERO_VAD", os.environ.get("EXTDATOR_SILERO_VAD", "")).strip()
     if override:
         path = Path(override)
         return path if path.is_file() else None

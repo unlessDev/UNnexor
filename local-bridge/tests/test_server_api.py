@@ -58,7 +58,7 @@ def test_health_open_without_token(client):
     response = client.get("/health")
     assert response.status_code == 200
     body = response.json()
-    assert body["app"] == "extdator-bridge"
+    assert body["app"] == "unnexor-bridge"
     assert body["ollama"]["reachable"] is True
 
 

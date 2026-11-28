@@ -16,7 +16,7 @@ from PySide6.QtWidgets import QLabel, QWidget
 
 from .. import paths
 
-log = logging.getLogger("extdator.desktop.brand")
+log = logging.getLogger("unnexor.desktop.brand")
 
 APP_NAME = "UNnexor"
 TAGLINE = "AI Bridge"

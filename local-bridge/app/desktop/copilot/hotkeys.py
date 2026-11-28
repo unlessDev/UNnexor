@@ -17,7 +17,7 @@ from typing import Any
 
 from PySide6.QtCore import QAbstractNativeEventFilter, QByteArray
 
-log = logging.getLogger("extdator.copilot.hotkeys")
+log = logging.getLogger("unnexor.copilot.hotkeys")
 
 MOD_ALT, MOD_CONTROL, MOD_SHIFT, MOD_WIN, MOD_NOREPEAT = 0x1, 0x2, 0x4, 0x8, 0x4000
 WM_HOTKEY = 0x0312

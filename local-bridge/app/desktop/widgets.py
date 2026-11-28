@@ -19,7 +19,6 @@ from PySide6.QtWidgets import (
     QScrollArea,
     QScrollBar,
     QSizePolicy,
-    QTextBrowser,
     QToolButton,
     QVBoxLayout,
     QWidget,
@@ -27,6 +26,8 @@ from PySide6.QtWidgets import (
 
 from ..math_unicode import to_human_math
 from .brand import LogoLabel
+from .rich_text import RichTextBrowser
+from .styles import TEXT as TEXT_COLOR
 
 FONT_FAMILIES = ["Segoe UI Emoji", "Segoe UI Symbol", "Segoe UI", "Arial"]
 
@@ -278,16 +279,25 @@ class SystemNote(QFrame):
 
 
 class AssistantMessage(QFrame):
-    """Respuesta del modelo: texto progresivo + Markdown final.
+    """Respuesta del modelo con Markdown, fórmulas y código resaltado.
 
-    Durante el streaming se muestra el texto ya convertido a matemática
-    Unicode (re-render coalescido); al terminar se renderiza con
-    Markdown (código, listas, títulos) sobre el texto convertido, de
-    modo que el LaTeX crudo nunca es lo que el usuario lee o copia.
+    El renderizado (``rich_text.RichRenderer``) se aplica también durante
+    el streaming, coalescido cada ``STREAM_RENDER_MS`` para no bloquear la
+    interfaz; las respuestas muy largas se muestran como texto durante la
+    generación y se componen una sola vez al terminar. ``finalize`` devuelve
+    la versión legible (fórmulas en Unicode) que copia el portapapeles.
     """
 
+    STREAM_RENDER_MS = 140
+    STREAM_RICH_LIMIT = 24_000  # caracteres
+
     def __init__(
-        self, model: str = "", parent: QWidget | None = None, role: str = "OLLAMA"
+        self,
+        model: str = "",
+        parent: QWidget | None = None,
+        role: str = "OLLAMA",
+        *,
+        font_px: float = 14.0,
     ) -> None:
         super().__init__(parent)
         self.setObjectName("assistantMessage")
@@ -302,19 +312,21 @@ class AssistantMessage(QFrame):
         layout.setSpacing(2)
         layout.addWidget(MessageHeader(role, model))
 
-        self.browser = QTextBrowser()
+        self.browser = RichTextBrowser()
         self.browser.setObjectName("assistantText")
-        self.browser.setOpenExternalLinks(True)
-        self.browser.setOpenLinks(False)
+        self.browser.set_text_style(TEXT_COLOR, font_px)
         self.browser.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.browser.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        # Las líneas de código largas no se parten: barra horizontal si hace falta.
+        self.browser.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.browser.setFrameShape(QFrame.Shape.NoFrame)
         self.browser.setTextInteractionFlags(
             Qt.TextInteractionFlag.TextSelectableByMouse
+            | Qt.TextInteractionFlag.LinksAccessibleByMouse
         )
         self.browser.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
         )
+        self.browser.codeCopied.connect(self._on_code_copied)
         layout.addWidget(self.browser)
 
         self._document().contentsChange.connect(self._schedule_height_update)
@@ -325,47 +337,44 @@ class AssistantMessage(QFrame):
 
     # ------------------------------------------------------------------
     def append_streaming(self, delta: str) -> None:
-        """Acumula el fragmento y agenda un re-render Unicode.
-
-        La conversión se hace sobre el texto acumulado (un comando LaTeX
-        puede llegar partido entre fragmentos) y coalescida con
-        ``QTimer.singleShot(0)``: varios fragmentos del mismo ciclo de
-        eventos producen un solo re-render.
-        """
+        """Acumula el fragmento y agenda un re-render coalescido."""
         self._parts.append(delta)
         if self._stream_pending:
             return
         self._stream_pending = True
-        QTimer.singleShot(0, self, self._render_streaming)
+        QTimer.singleShot(self.STREAM_RENDER_MS, self, self._render_streaming)
 
     def _render_streaming(self) -> None:
         self._stream_pending = False
         if self._finalized:
-            return  # finalize ya dejó el texto definitivo (Markdown)
-        converted = to_human_math("".join(self._parts))
-        if converted == self._last_shown:
+            return  # finalize ya dejó el texto definitivo
+        text = "".join(self._parts)
+        if text == self._last_shown:
             return
-        self._last_shown = converted
-        self.browser.setPlainText(converted)
-        # contentsChange ya agenda la actualización de altura.
+        self._last_shown = text
+        if len(text) > self.STREAM_RICH_LIMIT:
+            self.browser.setPlainText(to_human_math(text))
+        else:
+            self._render(text)
+
+    def _render(self, text: str) -> None:
+        try:
+            self.browser.set_rich_text(text)
+        except Exception:  # nunca perder la respuesta por un fallo de formato
+            self.browser.setPlainText(to_human_math(text))
 
     def finalize(self) -> str:
-        """Renderiza con Markdown (ya en Unicode) y devuelve el texto.
-
-        El valor devuelto es el que copia el botón de portapapeles: se
-        devuelve la versión legible, no el LaTeX crudo.
-        """
+        """Compone la respuesta definitiva y devuelve su versión legible."""
         self._final_text = "".join(self._parts)
         self._finalized = True
-        converted = to_human_math(self._final_text)
-        self._last_shown = converted
+        self._last_shown = self._final_text
         if self._final_text.strip():
-            self.browser.setMarkdown(converted)
+            self._render(self._final_text)
         else:
             self.browser.setPlainText("(respuesta vacía)")
             self.setProperty("error", True)
         self._update_height()
-        return converted
+        return to_human_math(self._final_text)
 
     def text(self) -> str:
         return self._final_text or "".join(self._parts)
@@ -376,6 +385,10 @@ class AssistantMessage(QFrame):
         if style is not None:
             style.unpolish(self)
             style.polish(self)
+
+    def _on_code_copied(self, _index: int) -> None:
+        self.browser.setToolTip("Código copiado al portapapeles ✓")
+        QTimer.singleShot(2500, self, lambda: self.browser.setToolTip(""))
 
     # ------------------------------------------------------------------
     def resizeEvent(self, event) -> None:
@@ -393,6 +406,9 @@ class AssistantMessage(QFrame):
         self._height_pending = False
         doc = self._document()
         height = int(doc.size().height()) + 2 * int(doc.documentMargin()) + 6
+        bar = self.browser.horizontalScrollBar()
+        if bar is not None and doc.size().width() > self.browser.viewport().width() + 1:
+            height += bar.sizeHint().height()
         self.browser.setFixedHeight(max(24, height))
 
 

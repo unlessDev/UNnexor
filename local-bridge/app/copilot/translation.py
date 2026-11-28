@@ -25,7 +25,7 @@ from .engine import GenerationEngine
 from .prompts import language_name, summary_messages, translation_messages
 from .transcription import TranscriptEvent
 
-log = logging.getLogger("extdator.copilot.translation")
+log = logging.getLogger("unnexor.copilot.translation")
 
 
 class SegmentStatus(str, Enum):

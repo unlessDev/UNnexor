@@ -108,7 +108,7 @@ def main() -> int:
     out = (
         sys.argv[1]
         if len(sys.argv) > 1
-        else os.path.join(tempfile.gettempdir(), "extdator_math_preview.png")
+        else os.path.join(tempfile.gettempdir(), "unnexor_math_preview.png")
     )
     if not root.grab().save(out, "PNG"):
         print("ERROR: no se pudo guardar", out)

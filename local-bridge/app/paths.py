@@ -3,12 +3,17 @@
 En desarrollo se conservan las rutas históricas (``local-bridge/.env``,
 ``local-bridge/logs`` y ``local-bridge/app/data``) para no romper datos ni
 pruebas existentes. En un ejecutable PyInstaller se usa un directorio
-escribible por usuario (``%LOCALAPPDATA%\\Extdator``) porque el directorio
+escribible por usuario (``%LOCALAPPDATA%\\UNnexor``) porque el directorio
 del programa puede ser de solo lectura.
 
-Variables de entorno:
-  * ``EXTDATOR_DATA_DIR``: fuerza el directorio de datos (tests, portable).
-  * ``EXTDATOR_ENV_FILE``: fuerza la ruta del archivo de configuración.
+Las instalaciones anteriores al cambio de nombre guardaban los datos en
+``%LOCALAPPDATA%\\Extdator``; ``app/migration.py`` los copia a la ruta
+nueva al arrancar (sin borrar la carpeta antigua).
+
+Variables de entorno (las ``EXTDATOR_*`` se aceptan como alias heredados):
+  * ``UNNEXOR_DATA_DIR``: fuerza el directorio de datos (tests, portable).
+  * ``UNNEXOR_ENV_FILE``: fuerza la ruta del archivo de configuración.
+  * ``UNNEXOR_MODELS_DIR``: fuerza la carpeta de modelos locales.
 """
 
 from __future__ import annotations
@@ -17,9 +22,20 @@ import os
 import sys
 from pathlib import Path
 
-APP_DIR_NAME = "Extdator"
+APP_DIR_NAME = "UNnexor"
+# Nombre histórico: solo se usa para migrar datos de versiones anteriores.
+LEGACY_APP_DIR_NAME = "Extdator"
 BASE_DIR = Path(__file__).resolve().parent.parent  # local-bridge/
 PROJECT_ROOT = BASE_DIR.parent
+
+
+def env_override(name: str) -> str:
+    """Valor de ``UNNEXOR_<name>`` o, si falta, del alias ``EXTDATOR_<name>``."""
+    for prefix in ("UNNEXOR_", "EXTDATOR_"):
+        value = os.environ.get(prefix + name, "").strip()
+        if value:
+            return value
+    return ""
 
 
 def is_frozen() -> bool:
@@ -27,20 +43,34 @@ def is_frozen() -> bool:
     return bool(getattr(sys, "frozen", False))
 
 
-def _local_appdata() -> Path:
+def local_appdata() -> Path:
     raw = os.environ.get("LOCALAPPDATA")
     if raw:
         return Path(raw)
     return Path.home() / "AppData" / "Local"
 
 
+# Alias privado conservado para el código existente.
+_local_appdata = local_appdata
+
+
+def app_data_root() -> Path:
+    """``%LOCALAPPDATA%\\UNnexor`` (con o sin ejecutable empaquetado)."""
+    return local_appdata() / APP_DIR_NAME
+
+
+def legacy_data_root() -> Path:
+    """``%LOCALAPPDATA%\\Extdator``: datos de versiones anteriores."""
+    return local_appdata() / LEGACY_APP_DIR_NAME
+
+
 def data_dir() -> Path:
     """Directorio escribible para configuración, ajustes y logs."""
-    override = os.environ.get("EXTDATOR_DATA_DIR", "").strip()
+    override = env_override("DATA_DIR")
     if override:
         return Path(override).expanduser()
     if is_frozen():
-        return _local_appdata() / APP_DIR_NAME
+        return app_data_root()
     return BASE_DIR / "app" / "data"
 
 
@@ -50,7 +80,7 @@ def logs_dir() -> Path:
 
 def env_file() -> Path:
     """Archivo ``.env``: junto al proyecto en desarrollo, en datos al instalar."""
-    override = os.environ.get("EXTDATOR_ENV_FILE", "").strip()
+    override = env_override("ENV_FILE")
     if override:
         return Path(override).expanduser()
     return data_dir() / ".env" if is_frozen() else BASE_DIR / ".env"
@@ -67,15 +97,15 @@ def providers_file() -> Path:
 def models_dir() -> Path:
     """Modelos locales descargados con consentimiento (voz, embeddings…).
 
-    Siempre en ``%LOCALAPPDATA%\\Extdator\\models`` (también en desarrollo)
+    Siempre en ``%LOCALAPPDATA%\\UNnexor\\models`` (también en desarrollo)
     para no duplicar cientos de MB entre el repositorio y la instalación ni
-    meterlos en el árbol de Git. ``EXTDATOR_MODELS_DIR`` lo sustituye.
+    meterlos en el árbol de Git. ``UNNEXOR_MODELS_DIR`` lo sustituye.
     La desinstalación ordinaria los conserva.
     """
-    override = os.environ.get("EXTDATOR_MODELS_DIR", "").strip()
+    override = env_override("MODELS_DIR")
     if override:
         return Path(override).expanduser()
-    return _local_appdata() / APP_DIR_NAME / "models"
+    return app_data_root() / "models"
 
 
 def copilot_dir() -> Path:

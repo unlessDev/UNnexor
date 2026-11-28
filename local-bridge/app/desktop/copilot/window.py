@@ -36,7 +36,7 @@ from .pages_challenge import ChallengesPage
 from .pages_config import EnginesPage, HomePage, PrivacyPage, ProfilesPage
 from .pages_session import ConversationPage, TranslationPage
 
-log = logging.getLogger("extdator.copilot.ui")
+log = logging.getLogger("unnexor.copilot.ui")
 
 PAGES = [
     ("home", "Inicio"),

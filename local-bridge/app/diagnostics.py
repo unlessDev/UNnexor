@@ -29,7 +29,7 @@ from . import __version__, paths
 from .config import Config
 from .ollama_client import OllamaClient, OllamaError
 
-log = logging.getLogger("extdator.diagnostics")
+log = logging.getLogger("unnexor.diagnostics")
 
 ARCHIVE_FORMAT = 1
 MAX_LOG_FILES = 4
@@ -177,7 +177,7 @@ def _display_path(path: Path) -> str:
 def _is_writable(directory: Path) -> bool:
     try:
         directory.mkdir(parents=True, exist_ok=True)
-        with tempfile.NamedTemporaryFile(prefix=".extdator-diag-", dir=directory):
+        with tempfile.NamedTemporaryFile(prefix=".unnexor-diag-", dir=directory):
             pass
         return True
     except OSError:

@@ -77,7 +77,7 @@ class CopilotOverlay(QWidget):
         self._current_item: int | None = None
         self._answer: AssistantMessage | None = None
         self._recent: list[str] = []
-        self._settings = QSettings("Extdator", "CopilotOverlay")
+        self._settings = QSettings("UNnexor", "CopilotOverlay")
         self._compact = False
 
         root = QFrame(self)

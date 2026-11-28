@@ -42,7 +42,7 @@ from ..queue_manager import (
     SelectionRequest,
 )
 
-log = logging.getLogger("extdator.worker")
+log = logging.getLogger("unnexor.worker")
 
 
 class GenerationWorker(QThread):

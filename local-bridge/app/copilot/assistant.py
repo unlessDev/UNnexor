@@ -32,7 +32,7 @@ from .questions import SENSITIVITY_THRESHOLDS, TurnAccumulator, score_question, 
 from .settings import CopilotSettings
 from .transcription import TranscriptEvent
 
-log = logging.getLogger("extdator.copilot.assistant")
+log = logging.getLogger("unnexor.copilot.assistant")
 
 
 class QAStatus(str, Enum):

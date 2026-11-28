@@ -25,7 +25,7 @@ from urllib.parse import urlparse
 
 import httpx
 
-log = logging.getLogger("extdator.ollama_service")
+log = logging.getLogger("unnexor.ollama_service")
 
 START_TIMEOUT_S = 20.0
 

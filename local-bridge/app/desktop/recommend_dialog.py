@@ -45,7 +45,7 @@ from ..copilot.settings import CopilotSettings, SettingsRepository
 from ..ollama_client import OllamaClient
 from .brand import LogoLabel
 
-log = logging.getLogger("extdator.desktop.recommend")
+log = logging.getLogger("unnexor.desktop.recommend")
 
 BACKUP_NAME = "config_backup.json"
 PROFILE_HELP = {

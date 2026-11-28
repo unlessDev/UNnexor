@@ -26,7 +26,7 @@ from .segmenter import Segmenter, SegmenterConfig
 from .types import AudioChunk, SourceKind, SpeechSegment
 from .vad import VoiceActivityDetector, create_vad
 
-log = logging.getLogger("extdator.audio.pipeline")
+log = logging.getLogger("unnexor.audio.pipeline")
 
 LevelCallback = Callable[[SourceKind, float, float], None]
 

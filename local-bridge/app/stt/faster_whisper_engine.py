@@ -28,7 +28,7 @@ from ..audio.types import SAMPLE_RATE, FloatArray
 from .base import STTError, Transcript, TranscriptPiece
 from .hallucinations import collapse_repetitions, is_hallucination, is_repetition_loop
 
-log = logging.getLogger("extdator.stt.whisper")
+log = logging.getLogger("unnexor.stt.whisper")
 
 ENGINE_ID = "faster-whisper"
 _REQUIRED_FILES = ("model.bin", "config.json", "tokenizer.json")
