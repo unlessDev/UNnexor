@@ -205,7 +205,12 @@ def test_phase_mapping():
     assert phase_for_status("pulling 6a0746a1ec1a") == DOWNLOADING
     assert phase_for_status("verifying sha256 digest") == VERIFYING
     assert phase_for_status("writing manifest") == FINALIZING
-    assert phase_for_status("success") == COMPLETED
+    # success de Ollama no es aún «Completado»: falta la verificación propia.
+    assert phase_for_status("success") == FINALIZING
+    tracker = PullTracker("ollama:m")
+    tracker.update("pulling a", 10, 10, "a")
+    snap = tracker.update("success")
+    assert snap.phase == FINALIZING and snap.fraction is not None and snap.fraction < 1
 
 
 def test_tracker_aggregates_layers_and_never_jumps_back():

@@ -50,7 +50,8 @@ class SelectionRequest:
             f'"""\n{self.text}\n"""\n\n'
             "Atiende la consulta del usuario usando el texto seleccionado como "
             "contexto. Si es una orden (resumir, traducir, corregir, explicar…), "
-            "ejecútala sobre ese texto; si es una pregunta, respóndela. Si la "
+            "ejecútala sobre ese texto; si es una pregunta, respóndela. Si pide "
+            "otro idioma o formato, respétalo aunque el texto esté en otro. Si la "
             "consulta se refiere a algo dicho antes en esta conversación, usa "
             "ese contexto también."
         )

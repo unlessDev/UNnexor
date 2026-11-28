@@ -10,6 +10,7 @@ from app import __version__, paths
 
 def test_development_paths_keep_historical_layout(monkeypatch):
     monkeypatch.delenv("EXTDATOR_DATA_DIR", raising=False)
+    monkeypatch.delenv("UNNEXOR_DATA_DIR", raising=False)
     monkeypatch.setattr(paths, "is_frozen", lambda: False)
     assert paths.data_dir() == paths.BASE_DIR / "app" / "data"
     assert paths.logs_dir() == paths.BASE_DIR / "logs"
@@ -28,6 +29,7 @@ def test_frozen_paths_use_local_appdata(monkeypatch, tmp_path):
     monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
     monkeypatch.delenv("EXTDATOR_DATA_DIR", raising=False)
     monkeypatch.delenv("UNNEXOR_DATA_DIR", raising=False)
+    monkeypatch.delenv("UNNEXOR_MODELS_DIR", raising=False)
     assert paths.data_dir() == tmp_path / "UNnexor"
     assert paths.logs_dir() == tmp_path / "UNnexor" / "logs"
     assert paths.env_file() == tmp_path / "UNnexor" / ".env"

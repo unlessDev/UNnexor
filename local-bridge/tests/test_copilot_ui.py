@@ -29,7 +29,7 @@ def window(qapp, tmp_path, monkeypatch):
     from app.desktop.copilot.controller import CopilotController
     from app.desktop.copilot.window import CopilotWindow
 
-    monkeypatch.setenv("EXTDATOR_MODELS_DIR", str(tmp_path / "models"))
+    monkeypatch.setenv("UNNEXOR_MODELS_DIR", str(tmp_path / "models"))
     ini = str(tmp_path / "overlay.ini")
     monkeypatch.setattr(
         overlay_module,

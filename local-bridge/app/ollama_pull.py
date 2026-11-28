@@ -50,7 +50,9 @@ def phase_for_status(status: str) -> str:
     """Traduce el ``status`` de Ollama a una fase normalizada."""
     text = (status or "").strip().lower()
     if text == "success":
-        return COMPLETED
+        # Ollama terminó, pero UNnexor aún verifica que el modelo esté
+        # instalado: el 100 % lo marca solo PullTracker.finish(COMPLETED).
+        return FINALIZING
     if text.startswith("pulling manifest") or not text:
         return PREPARING
     if text.startswith("pulling") or text.startswith("downloading"):
