@@ -31,7 +31,10 @@ browser-extension ──HTTP/JSON──▶ server (API)
 | `hardware.py` | Biblioteca estándar; psutil (lazy); puerto `RunningModelsSource` | Cliente Ollama concreto, Qt |
 | `ollama_client.py`, `providers/` | httpx, keyring, contratos del proveedor | PySide6, ventanas |
 | `server.py` | FastAPI, dominio, cola, seguridad | PySide6, `desktop/` |
+| `migration.py`, `ollama_pull.py` | Biblioteca estándar, `paths` (Qt solo de forma diferida para QSettings) | FastAPI, ventanas |
 | `desktop/*` | Qt, dominio, cola, adaptadores | `server.py`, `main.py`, FastAPI |
+| `desktop/rich_text.py` | Qt (QtGui/QtSvg/QtWidgets), ziamath, Pygments, `math_unicode` | Motores web, ejecución de contenido del modelo |
+| `desktop/downloads.py` | Qt, `OllamaClient`, `ollama_pull`, `stt` | Ventanas concretas (las ventanas lo usan, no al revés) |
 | `main.py` | Composición de todos los módulos | — (es el composition root) |
 | `browser-extension` | `chrome.*`, `fetch` al puente | Claves de proveedores, código remoto |
 

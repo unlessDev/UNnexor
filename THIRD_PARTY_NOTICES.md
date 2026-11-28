@@ -28,6 +28,10 @@ los componentes de terceros se conservan y se listan aquí.
 | ONNX Runtime | 1.32.x | MIT | Silero VAD |
 | pypdf | 6.x | BSD-3-Clause | Texto de PDF para la base de conocimiento (PyMuPDF se descarta por AGPL) |
 | tokenizers / huggingface_hub | 0.22.x / 0.36.x | Apache-2.0 | Tokenizador de Whisper y descarga consentida de modelos |
+| ziamath / ziafont | 0.13 / 0.11 | MIT | Composición de fórmulas (LaTeX → SVG) en las respuestas |
+| latex2mathml | 3.81.x | MIT | Conversión LaTeX → MathML usada por ziamath |
+| STIX Two Math (fuente incluida en ziamath) | 2.x | SIL Open Font License 1.1 | Glifos matemáticos de las fórmulas |
+| Pygments | 2.21.x | BSD-2-Clause | Resaltado de sintaxis de los bloques de código |
 
 Modelos descargados por el usuario (no se distribuyen con la aplicación):
 pesos de Whisper convertidos por SYSTRAN (`Systran/faster-whisper-*`, MIT) y

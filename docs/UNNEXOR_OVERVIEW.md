@@ -152,7 +152,7 @@ Sin cuota por petición: puedes usar UNnexor todo el día, siempre que:
   carpeta [`local-bridge/`](../local-bridge).
 - 🛠️ **Propón mejoras**: [CONTRIBUTING.md](../CONTRIBUTING.md).
 - 🐞 **Reporta errores**: usa las *Issues* del repositorio (plantilla
-  incluida) y adjunta el diagnóstico (⚙ → Diagnóstico).
+  incluida) y adjunta el diagnóstico (☰ → Diagnóstico).
 - 🌟 **Dale una estrella** al proyecto en GitHub si te resulta útil.
 
 <p align="center"><b>UNnexor AI Bridge</b><br><sub>Developed by UnlessDev</sub></p>

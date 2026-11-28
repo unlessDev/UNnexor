@@ -2,7 +2,7 @@
 
 El copiloto escucha, transcribe y ayuda durante conversaciones, traduce en
 vivo y resuelve desafíos visibles en pantalla. Se abre desde el panel
-flotante con el botón **🧭** o desde **⚙ → Copiloto en tiempo real…**.
+flotante con el botón **🧭** o desde **☰ → Copiloto en tiempo real…**.
 
 > Estado: funciona desde el código fuente (validado en Windows 11 con
 > Whisper local, Ollama y Groq). El ejecutable/instalador todavía no
@@ -36,8 +36,22 @@ flotante con el botón **🧭** o desde **⚙ → Copiloto en tiempo real…**.
 - Fuentes: **audio del sistema** (lo que suena en el equipo: la otra parte
   de una videollamada) y/o **micrófono** (tu voz). Se pueden usar a la vez.
 - **Iniciar** comienza la captura; el panel flotante muestra el estado
-  (capturando, transcribiendo, generando, pausado…), la transcripción y la
-  sugerencia. **Pausar** y **Finalizar** detienen al instante.
+  (capturando, transcribiendo, generando, pausado…), lo que dice el
+  interlocutor (las frases definitivas en claro, la que aún se transcribe
+  en cursiva con «transcribiendo…») y, separada y destacada, **tu
+  respuesta para decir en voz alta**. **Pausar** y **Finalizar** detienen
+  al instante.
+- El panel flotante se **cierra** con ✕ (o Alt+F4): si hay una sesión en
+  curso se finaliza de forma segura y se libera el audio; UNnexor sigue
+  abierto y el panel vuelve a aparecer con la siguiente sesión. Minimizar
+  (—) lo deja en la barra de tareas sin detener nada.
+- Las respuestas se redactan **en primera persona**, como una intervención
+  tuya lista para decir, sin «Podrías responder…», «Te recomiendo que
+  digas…» ni alternativas. La primera persona no autoriza a inventar:
+  experiencias, cifras u opiniones que no estén en tu perfil o tus
+  documentos no se afirman; si falta un dato personal la respuesta es
+  neutral o lo marca como `[completar: …]`. Si un modelo antepone igualmente
+  una introducción de ese tipo, se retira antes de mostrarla.
 - Las preguntas del interlocutor se detectan cuando termina de hablar (no
   por cada fragmento). Ajusta la **sensibilidad** o desactiva la respuesta
   automática y usa la **pregunta manual**.
@@ -98,7 +112,7 @@ funciona igual.
 - En **Motores y modelos** eliges la estrategia (equilibrado, velocidad,
   calidad, local, bajo costo o solo los modelos que elijas) y puedes fijar
   un modelo por tarea.
-- Para usar un servicio externo, conecta su clave (⚙ → Proveedores de API)
+- Para usar un servicio externo, conecta su clave (☰ → Proveedores de API)
   y marca sus permisos: **Enviar datos**, **Costos** (si puede cobrar o
   consumir saldo) y **Documentos** (extractos de tus documentos). Sin esos
   permisos el servicio no se usa y UNnexor explica por qué.

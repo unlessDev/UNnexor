@@ -2,7 +2,7 @@
 
 Además de Ollama (local), UNnexor puede usar proveedores de IA en la nube
 compatibles con la API de OpenAI. El panel de escritorio administra las
-conexiones (⚙ → **Proveedores de IA**); la clave nunca sale del equipo
+conexiones (☰ → **Proveedores de IA**); la clave nunca sale del equipo
 salvo hacia el propio proveedor al generar.
 
 ## Seguridad: dónde viven las claves
@@ -94,7 +94,7 @@ OpenAI-compatible: pegas la `base_url` y la clave. También está
 
 ## Cómo se conecta un proveedor
 
-1. Panel → menú ⚙ → **Proveedores de IA**.
+1. Panel → menú ☰ → **Proveedores de IA**.
 2. Elige la tarjeta del proveedor → **Conectar**.
 3. Pega tu clave API (se guarda en el keyring al instante).
 4. El diálogo valida la conexión con una petición real y lista los
@@ -108,7 +108,7 @@ limit · errores de red/DNS.
 
 ## Cómo se usa
 
-Con un proveedor conectado, el botón 🤖 del panel (o ⚙ → Modelos) muestra
+Con un proveedor conectado, el botón 🤖 del panel (o ☰ → Centro de control → Modelos de IA) muestra
 ambas fuentes: modelos locales de Ollama y el modelo remoto del
 proveedor. Al elegir uno remoto, las selecciones del navegador se envían
 a ese proveedor en lugar de Ollama. El cambio es en caliente y se

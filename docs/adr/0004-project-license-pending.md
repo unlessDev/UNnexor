@@ -1,4 +1,4 @@
-# ADR-0004 — Licencia principal pendiente
+# ADR-0004 — Licencia principal (Apache-2.0)
 
 - **Estado:** aceptado (2026-11-27) — licencia **Apache-2.0**
 - **Fecha:** 2026-11-19

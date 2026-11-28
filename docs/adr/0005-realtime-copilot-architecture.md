@@ -75,7 +75,7 @@ en esos paquetes. Las vistas no contienen lógica de negocio.
 
 ### Persistencia
 
-- Modelos descargados (con consentimiento): `%LOCALAPPDATA%\Extdator\models`
+- Modelos descargados (con consentimiento): `%LOCALAPPDATA%\UNnexor\models`
   en desarrollo e instalado (`paths.models_dir()`).
 - Perfiles, base de conocimiento e historial de uso: `paths.copilot_dir()`
   (JSON + SQLite). Transcripciones solo en memoria salvo exportación

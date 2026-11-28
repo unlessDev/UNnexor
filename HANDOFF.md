@@ -1,6 +1,6 @@
 # HANDOFF — estado técnico y próximos pasos
 
-Última actualización: 2026-11-27. Documento para retomar el trabajo sin
+Última actualización: 2026-11-28. Documento para retomar el trabajo sin
 contexto previo. Complementa `CHANGELOG.md`, `ARCHITECTURE.md`,
 `docs/COPILOT_STATUS.md` y `docs/BRANDING.md`.
 
@@ -25,8 +25,8 @@ modelos locales en Ollama. Monolito modular con límites Clean/Hexagonal
   **Nunca tocar `main`** ni reescribir historia; publicar una versión
   requiere autorización expresa.
 - Si `gh pr create/merge` falla con errores GraphQL, usar la API REST:
-  `gh api -X POST repos/unlessDev/Extdator/pulls …` /
-  `gh api -X PUT repos/unlessDev/Extdator/pulls/<n>/merge`.
+  `gh api -X POST repos/unlessDev/UNnexor/pulls …` /
+  `gh api -X PUT repos/unlessDev/UNnexor/pulls/<n>/merge`.
 - Puertas de calidad (desde `local-bridge/`): `python -m black --check .
   ../deployment ../scripts`, `python -m ruff check . ../deployment
   ../scripts`, `python -m mypy`, `python -m pytest -q`. **Comprobar el
@@ -95,15 +95,42 @@ equipo real (Ryzen 5 2600X, 16 GB, RX 590 8 GB).
 - Interfaz: iconos vectoriales propios, menú ☰ por secciones, icono en el
   área de notificación como centro de ventanas.
 
-## 6. Pendiente
+## 6. Versión 2.1.0 — rama `feature/ux-overhaul` (2026-11-28, sin publicar)
 
-1. Versiones para **macOS y Linux** (empaquetado, captura de audio
-   —WASAPI solo existe en Windows—, atajos globales y «siempre visible»
-   tienen implementación solo para Windows).
-2. Firma Authenticode del instalador (evita el aviso de SmartScreen).
-3. Publicación en Chrome Web Store / Edge Add-ons (cuentas de desarrollador;
-   la política de privacidad ya puede apuntar al repositorio público).
-4. Pulsar físicamente los atajos de escucha con la aplicación real.
-5. Ollama 0.40.17 instalado; disponible 0.40.18 (la app solo avisa).
-6. Programa 1 aún abierto: auditoría de seguridad final, prueba en un equipo
-   limpio y en NVIDIA/CUDA, claves reales de OpenAI/Deepgram/Anthropic.
+Detalle completo en `CHANGELOG.md` [2.1.0]. Resumen:
+
+| Área | Qué se hizo | Dónde | Verificación |
+|---|---|---|---|
+| Identidad y datos | `%LOCALAPPDATA%\UNnexor`; migración copia-verifica desde `Extdator` (sin borrar), QSettings y keyring; identificadores internos `unnexor-*` con compatibilidad | `app/paths.py`, `app/migration.py`, `providers/manager.py` | Unitarias; migración real en este equipo (22 archivos, 605 MB, SHA-256 idénticos, origen intacto); instalador: actualización simulada OK |
+| Consultar | Causa raíz: `background.js` no reenviaba `question`. Ahora `question` + `mode`, validación 422, `question_received` exigido | `browser-extension/background.js`, `server.py`, `queue_manager.py` | `scripts/selection_e2e.py` con Ollama real: 6/6 (informativa, técnica, orden, contexto, seguimiento, directo) |
+| Progreso de descargas | Agregación por capas, fases, MB, velocidad, sin 100 % antes de verificar; gestor único | `app/ollama_pull.py`, `app/desktop/downloads.py` | Unitarias; `scripts/pull_progress_e2e.py` real (monótono, verificado, modelo borrado después) |
+| Ventanas | Centro de control; Modelos y Recomendar rediseñados; tamaños según pantalla | `control_center.py`, `dialogs.py`, `recommend_dialog.py`, `ui_kit.py` | `scripts/ui_snapshots.py` (capturas 2 tamaños con datos reales) + pruebas Qt |
+| Recomendar → Aplicar | Consentimiento, descarga automática, activación tras verificar, reintento de lo fallido | `recommend_dialog.py` | Pruebas con gestor simulado; sin descarga real de un modelo grande |
+| Respuestas | Fórmulas (ziamath) y código (Pygments) nativos | `app/desktop/rich_text.py`, ADR-0006 | Pruebas + capturas + `--check` del EXE |
+| Copiloto | ✕ en el panel flotante (detiene la escucha), transcripción legible, respuestas en primera persona | `copilot/overlay.py`, `copilot/window.py`, `copilot/prompts.py` | Pruebas Qt; no se probó con audio real en esta sesión |
+| Distribución | EXE 2.1.0, instalador 86,1 MB, extensión, SBOM; `verify_artifacts` 4/4 | `release/` | Smoke, GUI offscreen, instalación/actualización/purga/desinstalación en temporales |
+
+Pruebas: **527 aprobadas, 1 omitida**; ruff, black y mypy limpios.
+
+## 7. Pendiente
+
+1. Revisar y fusionar el PR de `feature/ux-overhaul` → `develop`; publicar
+   2.1.0 (`develop` → `main`, etiqueta, release con el instalador también
+   como `UNnexor-Setup-Windows-x64.exe`) solo con autorización.
+2. Prueba manual en el navegador con la extensión 2.1.0 recargada: menú de
+   la X → *Consultar…* (la versión instalada de la extensión debe
+   actualizarse: la 2.0.0 no envía la pregunta).
+3. Prueba manual del copiloto con audio real (cerrar el panel durante una
+   escucha) y de «Recomendar configuración → Aplicar» con una descarga real
+   de un modelo grande.
+4. Prueba en un **equipo limpio** (no realizada: todo se validó en el equipo
+   de desarrollo con directorios temporales).
+5. Versiones para **macOS y Linux** (captura WASAPI, atajos y «siempre
+   visible» son solo de Windows).
+6. Firma Authenticode del instalador (evita el aviso de SmartScreen).
+7. Publicación en Chrome Web Store / Edge Add-ons (cuentas de desarrollador y
+   URL pública de la política de privacidad).
+8. Programa 1 aún abierto: auditoría de seguridad final, NVIDIA/CUDA y
+   claves reales de OpenAI/Deepgram/Anthropic.
+9. La carpeta `%LOCALAPPDATA%\Extdator` de este equipo se conserva (ya
+   migrada); puede borrarse cuando el propietario lo decida.

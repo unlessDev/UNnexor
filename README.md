@@ -63,8 +63,8 @@ muestra el panel; al cerrarlo detiene todo lo que inició. Ver
 | Extensión MV3 | Funcional; paquete de tienda generado y validado localmente |
 | Puente local + panel | Funcional; ejecutable one-folder generado y validado |
 | Copiloto en tiempo real | Funcional (conversación con escucha continua/temporizada/manual, traducción, desafíos); incluido en el ejecutable |
-| Pruebas | `492 passed, 1 skipped` (2026-11-27) |
-| Instalador Windows | **v2.0.0 publicado** en [Releases](https://github.com/unlessDev/UNnexor/releases/latest) (Inno Setup, por usuario, sin firma Authenticode) |
+| Pruebas | `527 passed, 1 skipped` (2026-11-28, versión 2.1.0 en la rama `feature/ux-overhaul`) |
+| Instalador Windows | v2.0.0 publicado en [Releases](https://github.com/unlessDev/UNnexor/releases/latest); 2.1.0 generado y probado localmente, **sin publicar** (Inno Setup, por usuario, sin firma Authenticode) |
 | Publicación en tiendas | No iniciada; requiere cuentas de desarrollador y URL pública de privacidad |
 | Licencia | **Apache-2.0** ([LICENSE](LICENSE)) |
 | macOS / Linux | Previstos; por ahora solo Windows 10/11 x64 |
@@ -99,7 +99,7 @@ powershell -ExecutionPolicy Bypass -File scripts\start.ps1
 # 3) Cargar la extensión
 #    chrome://extensions → Modo desarrollador → Cargar descomprimida
 #    → carpeta browser-extension → abre "Opciones" y sigue el asistente:
-#    panel ⚙ → Emparejar extensión → código de 6 dígitos → Conectar.
+#    panel ☰ → Emparejar extensión → código de 6 dígitos → Conectar.
 #    (Alternativa manual: pegar el token de local-bridge\.env.)
 ```
 
@@ -146,7 +146,9 @@ desinstalación con datos preservados, `--purge-secrets` y limpieza
 completa. Genera `release/installer/UNnexor-<versión>-win64-setup.exe`,
 `SHA256SUMS.txt` y un informe. El instalador se instala por usuario en
 `%LOCALAPPDATA%\Programs\UNnexor` y guarda los datos en
-`%LOCALAPPDATA%\Extdator`.
+`%LOCALAPPDATA%\UNnexor` (los datos de versiones anteriores, en
+`%LOCALAPPDATA%\Extdator`, se copian automáticamente en el primer arranque
+sin borrar la carpeta antigua).
 
 No hay release pública todavía. Para borrar solo credenciales y el token
 sin desinstalar:
@@ -184,20 +186,34 @@ informes de build y el propio SBOM, y escribe
 
 ### 🌐 Extensión del navegador (Chrome, Brave, Edge)
 * Botón con la **X de UNnexor** junto al texto seleccionado (Shadow DOM: no
-  altera la página). Al pulsarlo: **Enviar directamente** o **Consultar…**,
-  un panel pequeño para escribir una pregunta sobre la selección
-  (Ctrl+Enter / Esc).
+  altera la página). Al pulsarlo:
+  * **Enviar directamente**: el texto seleccionado llega tal cual al modelo.
+  * **Consultar…**: un panel pequeño para escribir una pregunta u orden
+    sobre la selección (Ctrl+Enter / Esc). La consulta es la tarea y la
+    selección su contexto; las consultas siguientes conservan el contexto.
+    (En 2.0.0 la pregunta no llegaba al puente; corregido en 2.1.0.)
 * Página de opciones con asistente de conexión en 4 pasos y cabecera
   animada; emparejamiento con código de 6 dígitos.
 * Permisos mínimos: `storage` + acceso solo a `127.0.0.1`/`localhost`.
 
 ### 🪟 Aplicación de escritorio
-* Panel flotante que **no roba el foco**, con Hover Scroll, historial,
-  Markdown/LaTeX y streaming; redimensionable y minimizable.
+* Panel flotante que **no roba el foco**, con Hover Scroll, historial y
+  streaming; redimensionable y minimizable.
+* **Respuestas formateadas**: fórmulas compuestas de verdad (fracciones,
+  raíces, sumatorias, integrales, límites, matrices, sistemas, letras
+  griegas) con ziamath, y bloques de código con **resaltado de sintaxis**
+  (Python, JavaScript, TypeScript, HTML, CSS, SQL, JSON, Bash, C, C++,
+  Java, C#, PHP, YAML…), etiqueta de lenguaje y botón «Copiar código». Sin
+  motor web ni JavaScript: el HTML del modelo nunca se interpreta.
+* **Centro de control** (menú ☰ o icono de la bandeja): estado de Ollama,
+  modelo activo y descargas, guía de uso en tres pasos, acciones
+  frecuentes y el catálogo de modelos integrado.
+* Ventanas que se abren a un tamaño adaptado a tu pantalla, con scroll
+  cuando hace falta (nada de textos cortados ni botones fuera de la vista).
 * Iconos vectoriales propios y menú ☰ por secciones (Conversación,
   Herramientas, Modelos y configuración, Ventana).
-* **Icono en el área de notificación**: abre el panel, el copiloto, los
-  modelos, los ajustes o la consola desde un único lugar.
+* **Icono en el área de notificación**: abre el panel, el centro de
+  control, el copiloto, los ajustes o la consola desde un único lugar.
 * **«Siempre visible» real por ventana** (panel, copiloto y panel flotante).
 * **Consola del puente opcional** con los registros en vivo (oculta por
   defecto).
@@ -205,9 +221,13 @@ informes de build y el propio SBOM, y escribe
 
 ### 🧭 Copiloto en tiempo real ([guía](docs/COPILOT.md))
 * **Conversaciones**: audio del sistema (WASAPI loopback) y/o micrófono,
-  Whisper local o remoto, sugerencias con tu perfil y documentos sin
-  inventar datos. Escucha **continua**, **temporizada** (10 s – 10 min) o
-  **manual con tecla**.
+  Whisper local o remoto y respuestas **en primera persona, listas para
+  decirlas en voz alta** (sin «Podrías responder…»), con tu perfil y
+  documentos y sin inventar datos. Escucha **continua**, **temporizada**
+  (10 s – 10 min) o **manual con tecla**.
+* Panel flotante legible: lo que dice el interlocutor (texto provisional en
+  cursiva) separado de **tu respuesta** destacada; se **cierra** con ✕ (la
+  escucha se detiene y libera el audio; UNnexor sigue abierto).
 * **Traducción en vivo** con texto provisional/confirmado, resumen y
   exportación TXT/Markdown/PDF.
 * **Desafíos en pantalla**: región, pantalla completa, varias regiones o
@@ -217,9 +237,16 @@ informes de build y el propio SBOM, y escribe
 
 ### 🤖 Modelos y rendimiento
 * **Recomendar configuración**: detecta CPU, RAM, GPU (NVIDIA/AMD/Intel,
-  VRAM, aceleración real), disco y sistema; tres perfiles de consumo y una
-  propuesta por función con motivos, parámetros de generación, alternativa
-  ligera, copia de seguridad y restauración.
+  VRAM, aceleración real), disco y sistema; tres niveles de consumo en
+  tarjetas con la misma clasificación del catálogo, y una propuesta por
+  función. **Aplicar** pide tu autorización (con tamaño y recursos),
+  descarga e instala lo que falte con progreso real, verifica cada modelo y
+  solo entonces lo activa; si algo falla, «Reintentar» pide solo lo que
+  falló. Copia de seguridad y restauración incluidas.
+* **Descargas con progreso real**: porcentaje sobre el total de todas las
+  capas, MB descargados, velocidad y fases (preparando, descargando,
+  verificando, finalizando); nunca 100 % antes de terminar y verificar.
+  Continúan aunque cierres la ventana; una sola a la vez, sin duplicados.
 * **Catálogo de Ollama en línea** (modelos nuevos, capacidades, tamaños
   estimados) y aviso de versiones nuevas de Ollama; nunca descarga nada solo.
 * Clasificación de cada modelo para tu equipo: ÓPTIMO, COMPATIBLE, EXIGENTE,
@@ -250,7 +277,7 @@ pueden retirarse con `--purge-secrets`. Las capturas de pantalla se borran
 de `%TEMP%` tras procesarlas. Ninguna petición sale de tu máquina sin que tú lo configures.
 El copiloto procesa el audio en memoria (nunca lo guarda) y solo envía contenido a un servicio externo si le diste permiso expreso en 'Motores y modelos'.
 Los logs no registran el contenido de las selecciones por defecto. No hay
-analítica ni publicidad. El diagnóstico exportable desde ⚙ se redacta antes
+analítica ni publicidad. El diagnóstico exportable desde el menú ☰ se redacta antes
 de guardarse y no incluye token, claves API, `.env`, historial ni capturas;
 aun así, conviene revisar el ZIP antes de compartirlo. Política completa:
 [`browser-extension/privacy.html`](browser-extension/privacy.html) (su

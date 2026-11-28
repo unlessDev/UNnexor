@@ -213,10 +213,15 @@ enlazan a señales y llaman a sus métodos.
 
 | Módulo | Responsabilidad |
 |---|---|
-| `window.py` | Ventana frameless, always-on-top, no-activación, menú, opacidad, copia, historial visual. |
-| `widgets.py` | Burbujas, Markdown final, matemática Unicode, autoscroll y recálculo de altura. |
+| `window.py` | Panel flotante frameless (superficie de respuestas): always-on-top, no-activación, menú por secciones, opacidad, copia, historial visual; posee el `DownloadManager` y abre el centro de control. |
+| `control_center.py` | **Centro de control** (2.1): estado real (Ollama, modelo, descargas), guía de uso, acciones frecuentes y el catálogo de modelos integrado. Superficie de gestión única. |
+| `widgets.py` | Burbujas, autoscroll, recálculo de altura; `AssistantMessage` delega el formato en `rich_text`. |
+| `rich_text.py` | Respuestas con Markdown seguro (`MarkdownNoHTML`), fórmulas compuestas con **ziamath** (LaTeX → MathML → SVG → QtSvg) y código resaltado con **Pygments**; visor que solo sirve recursos propios (ADR-0006). |
+| `downloads.py` | `DownloadManager`: cola única y en serie de descargas (Ollama y Whisper), sin duplicados, progreso real (`ollama_pull.PullTracker`), verificación final y cancelación. Sobrevive al cierre de las ventanas. |
+| `ui_kit.py` | Lenguaje visual común: QSS de diálogos, `fit_to_screen`, `ChoiceCard`, `TierChip` (misma escala que el catálogo), `DownloadProgress`. |
 | `workers.py` | Consumo de cola, streaming, cancelación, visión/OCR, sondeo de estado y generación del diagnóstico. |
-| `dialogs.py` | Ajustes, selector de modelos y emparejamiento. |
+| `dialogs.py` | `ModelsPanel`/`ModelSelectorDialog` (catálogo con columna de acciones fija), ajustes y emparejamiento. |
+| `recommend_dialog.py` | «Recomendar configuración»: tarjetas de consumo, recomendación por función y aplicación con descarga automática consentida. |
 | `onboarding.py` | Asistente de primer inicio: privacidad, requisitos y código de vinculación. |
 | `diagnostics.py` | Paquete ZIP para soporte: resumen, comprobaciones y logs redactados; no lee claves ni historial. |
 | `providers_dialog.py` | Alta/baja de proveedores; claves al keyring. |
@@ -249,30 +254,50 @@ transcripción y los pesos no se descargan sin consentimiento.
 
 | Dato | Ubicación | Sensibilidad |
 |---|---|---|
-| Configuración base | `local-bridge/.env` (desarrollo) / `%LOCALAPPDATA%\Extdator\.env` (instalado) | Token de puente |
-| Ajustes de UI | `app/data/user_settings.json` (desarrollo) / `%LOCALAPPDATA%\Extdator\` (instalado) | Baja |
+| Configuración base | `local-bridge/.env` (desarrollo) / `%LOCALAPPDATA%\UNnexor\.env` (instalado) | Token de puente |
+| Ajustes de UI | `app/data/user_settings.json` (desarrollo) / `%LOCALAPPDATA%\UNnexor\` (instalado) | Baja |
+| Preferencias de ventanas | Registro `HKCU\Software\UNnexor` (QSettings) | Baja |
 | Proveedores | `providers.json` sin claves | Media (metadatos) |
 | Claves API | Windows Credential Manager (keyring); posibles copias en `.env` hasta purgar | Alta |
 | Historial | Memoria del worker; no se persiste | Alta |
-| Modelos locales del copiloto (voz, embeddings) | `%LOCALAPPDATA%\Extdator\models` (también en desarrollo; `EXTDATOR_MODELS_DIR`) | Baja (pesos públicos) |
+| Modelos locales del copiloto (voz) | `%LOCALAPPDATA%\UNnexor\models` (también en desarrollo; `UNNEXOR_MODELS_DIR`) | Baja (pesos públicos) |
 | Audio capturado | Solo en memoria durante la sesión; nunca se escribe a disco | Alta |
-| Logs | `local-bridge/logs/` (desarrollo) / `%LOCALAPPDATA%\Extdator\logs\` (instalado) | Contenido prohibido por `LOG_PRIVACY=1` |
+| Logs | `local-bridge/logs/` (desarrollo) / `%LOCALAPPDATA%\UNnexor\logs\` (instalado) | Contenido prohibido por `LOG_PRIVACY=1` |
 
 `app/paths.py` centraliza las rutas. En desarrollo conserva las rutas
-históricas; en un ejecutable PyInstaller usa `%LOCALAPPDATA%\Extdator`.
-`EXTDATOR_DATA_DIR` y `EXTDATOR_ENV_FILE` permiten tests y modo portable.
+históricas; en un ejecutable PyInstaller usa `%LOCALAPPDATA%\UNnexor`.
+`UNNEXOR_DATA_DIR`, `UNNEXOR_ENV_FILE` y `UNNEXOR_MODELS_DIR` permiten
+tests y modo portable (los alias `EXTDATOR_*` siguen aceptándose).
+
+**Migración desde versiones anteriores** (`app/migration.py`): al arrancar,
+antes de leer configuración, se copia `%LOCALAPPDATA%\Extdator` a
+`%LOCALAPPDATA%\UNnexor` archivo a archivo (temporal + verificación de
+tamaño + renombrado atómico), sin sobrescribir archivos existentes, sin
+migrar logs y **sin borrar el origen** (se deja una nota). El resultado se
+registra en `migration.json`; si hubo errores se reintenta en el siguiente
+arranque. Las preferencias QSettings (`HKCU\Software\Extdator`) se copian a
+`UNnexor` si el destino está vacío y las credenciales del keyring se copian
+del servicio `Extdator` al servicio `UNnexor` la primera vez que se leen.
 
 ## 6. Flujos de información
 
 ### 6.1 Selección de texto
 
-1. `content.js` detecta `mouseup`/`selectionchange` y muestra ✦.
-2. El clic conserva la selección y envía `{type,text,sourceUrl}` al SW.
-3. El SW hace `POST /api/selection` con token.
-4. FastAPI valida origen, token, tamaño y tasa; publica en `Bus` (202).
-5. `GenerationWorker` añade el turno, llama al adaptador y emite señales.
-6. `BridgeWindow` muestra el streaming y el autoscroll sigue el final salvo
-   que el usuario haya subido a leer.
+1. `content.js` detecta `mouseup`/`selectionchange` y muestra la X.
+2. El menú ofrece **Enviar directamente** (solo el texto) o **Consultar…**
+   (panel para escribir una pregunta u orden sobre la selección).
+3. El SW hace `POST /api/selection` con token y
+   `{text, question, mode: "direct" | "ask", source_url}`. Hasta 2.0.0 el
+   SW no reenviaba `question` y «Consultar» se comportaba como un envío
+   directo; desde 2.1.0 el SW exige `question_received` en modo `ask`.
+4. FastAPI valida origen, token, tamaño, tasa y la coherencia del modo
+   (`ask` sin pregunta o `direct` con pregunta → 422); publica en `Bus`.
+5. `GenerationWorker` añade el turno: en modo directo, el texto tal cual;
+   en modo consulta, la consulta como tarea y la selección como contexto
+   (`SelectionRequest.prompt`). El historial conserva el contexto para
+   consultas de seguimiento.
+6. `BridgeWindow` muestra el streaming formateado (`rich_text`) y el
+   autoscroll sigue el final salvo que el usuario haya subido a leer.
 
 ### 6.2 Captura y OCR
 
@@ -290,7 +315,22 @@ históricas; en un ejecutable PyInstaller usa `%LOCALAPPDATA%\Extdator`.
 4. El worker construye el adaptador y envía el historial completo (los
    proveedores remotos no conservan estado entre peticiones).
 
-### 6.4 Actualizaciones (objetivo)
+### 6.4 Descargas de modelos
+
+1. Las ventanas (Modelos de IA, Recomendar configuración) piden
+   consentimiento con tamaño y recursos **antes** de encolar nada.
+2. `DownloadManager` ejecuta una descarga a la vez en un `QThread`;
+   `OllamaClient.pull_stream(on_line=…)` entrega cada línea NDJSON.
+3. `PullTracker` agrega las capas (`digest`): porcentaje = Σ completado /
+   Σ total; sin total → barra indeterminada; nunca 100 % antes de
+   verificar; fases Preparando → Descargando → Verificando → Finalizando →
+   Completado/Cancelado/Error; velocidad en ventana deslizante.
+4. Al terminar, se comprueba que el modelo aparece en `/api/tags`; solo
+   entonces se emite «Completado» y la recomendación aplica su parte.
+5. Un flujo que se corta sin `success` es un error (reintento: Ollama
+   reanuda las capas ya descargadas).
+
+### 6.5 Actualizaciones (objetivo)
 
 La extensión se actualiza por las tiendas oficiales. La aplicación
 comprobará releases firmadas/checksum desde GitHub, nunca ejecutará un
@@ -328,8 +368,8 @@ seguridad de una aplicación local.
 |---|---|---|
 | ZIP Chrome | `deployment/extension/build.py` + validación estática | **Generado y verificado localmente** |
 | ZIP Edge | mismo paquete, validación de manifiesto | **Generado y verificado localmente** |
-| EXE/one-folder | `deployment/windows/build.py` + PyInstaller 6 | **Generado y validado (smoke + GUI offscreen + componentes del copiloto)**; 302 MB en disco, ZIP 121 MB |
-| Instalador | `deployment/installer/build.py` + Inno Setup 6 por usuario | **Generado y probado (instalación, preservación, purga y desinstalación)**; 84,5 MB con el copiloto |
+| EXE/one-folder | `deployment/windows/build.py` + PyInstaller 6 | Generado y validado en este equipo (smoke `--check` con componentes del copiloto y renderizado, GUI offscreen). Tamaños en `release/windows/build-report.json` |
+| Instalador | `deployment/installer/build.py` + Inno Setup 6 por usuario | Generado y probado en directorios temporales (instalación, actualización con migración desde Extdator, preservación, purga y desinstalación). Informe en `release/installer/build-report.json` |
 | SBOM | `deployment/sbom/build.py` (CycloneDX 1.5) | **Generado y verificado localmente** |
 | Verificación | `deployment/verify_artifacts.py` | **Checksums, informes y SBOM** |
 | CI | `.github/workflows/ci.yml` (GitHub Actions, Windows) | Pruebas + empaquetado + verificación |
@@ -342,15 +382,18 @@ las tiendas requieren cuenta, URL pública de privacidad, capturas reales y
 aprobación del propietario. La matriz de cumplimiento está en
 `docs/stores/COMPLIANCE_MATRIX.md`.
 
-El instalador no incluye modelos de Ollama, pesos OCR, claves ni historiales.
-La aplicación instalada escribe datos en `%LOCALAPPDATA%\Extdator`.
+El instalador no incluye modelos de Ollama ni de voz, pesos OCR, claves ni
+historiales. La aplicación instalada escribe datos en
+`%LOCALAPPDATA%\UNnexor` (con migración desde `%LOCALAPPDATA%\Extdator`).
+El EXE incluye ziamath (con la fuente STIX Two Math), latex2mathml y
+Pygments para el formato de respuestas; **no** incluye QtWebEngine.
 
 El instalador de Inno Setup 6 se instala **por usuario** en
 `%LOCALAPPDATA%\Programs\UNnexor`, no solicita administrador y crea
 accesos directos opcionales. Al desinstalar conserva
-`%LOCALAPPDATA%\Extdator` por defecto; si el usuario elige la limpieza
+`%LOCALAPPDATA%\UNnexor` por defecto; si el usuario elige la limpieza
 completa, ejecuta `UNnexor.exe --purge-secrets` y borra el directorio de
-datos. La purga de secretos también puede ejecutarse manualmente y no toca
+datos y la copia antigua `%LOCALAPPDATA%\Extdator` si existe. La purga de secretos también puede ejecutarse manualmente y no toca
 ajustes no sensibles.
 
 El ejecutable se construye en modo one-folder (`UNnexor/UNnexor.exe` +
@@ -367,9 +410,9 @@ pruebas instala dependencias y ejecuta pytest; el de artefactos compila la
 extensión, el EXE, el instalador (Inno Setup instalado con Chocolatey),
 genera el SBOM y ejecuta `deployment/verify_artifacts.py`. Los artefactos
 se conservan 14 días como adjuntos del flujo y no se publican. El SBOM
-CycloneDX 1.5 cubre el entorno Python de build/runtime y declara
-explícitamente la licencia como pendiente; no incluye modelos, claves ni
-datos de usuario. Límites y comandos: `docs/CI.md`.
+CycloneDX 1.5 cubre el entorno Python de build/runtime y declara la
+licencia del proyecto (Apache-2.0); no incluye modelos, claves ni datos de
+usuario. Límites y comandos: `docs/CI.md`.
 
 ## 9. Decisiones registradas
 
@@ -380,34 +423,46 @@ datos de usuario. Límites y comandos: `docs/CI.md`.
 - [ADR-0003](docs/adr/0003-packaging-and-installer.md): PyInstaller +
   Inno Setup, instalación por usuario.
 - [ADR-0004](docs/adr/0004-project-license-pending.md): licencia del
-  proyecto pendiente de autorización del propietario.
+  proyecto — Apache-2.0, elegida por el propietario el 2026-11-27.
 - [ADR-0005](docs/adr/0005-realtime-copilot-architecture.md): paquetes,
   concurrencia, enrutamiento y reglas de privacidad del copiloto en tiempo
   real (sin mecanismos para ocultarlo a terceros).
+- [ADR-0006](docs/adr/0006-native-answer-rendering.md): fórmulas con
+  ziamath y código con Pygments dentro del visor nativo, sin QtWebEngine.
 
 ## 10. Deuda técnica y límites conocidos
 
-1. `server.py` y `window.py` concentran varias responsabilidades; se
-   dividirán solo cuando aparezca una necesidad real y con pruebas.
+Revisado el 2026-11-28 contra el código (versión 2.1.0):
+
+1. `server.py` (≈570 líneas) y `window.py` (≈1250) siguen concentrando
+   varias responsabilidades. En 2.1 se extrajeron el centro de control, el
+   gestor de descargas, el renderizado y el kit visual; dividir más se
+   hará con pruebas cuando haga falta.
 2. La UI no tiene un ViewModel formal: la separación es por widgets,
-   señales y worker. Introducir MVVM completo ahora duplicaría estado.
-3. El historial es en memoria; no hay persistencia de conversaciones.
-4. El modo instalado se validó desde el EXE PyInstaller y el instalador
-   Inno en directorios temporales; falta una prueba manual en un equipo
-   limpio, la firma Authenticode y un mecanismo de actualización.
-5. No hay firma de código ni certificado; los builds no firmados deben
-   identificarse como tales.
+   señales y workers. El estado compartido de descargas vive en un único
+   `DownloadManager` para no duplicarlo entre ventanas.
+3. El historial del panel principal es en memoria (`Conversation`); no se
+   persisten conversaciones entre arranques.
+4. El EXE y el instalador se validaron en este equipo de desarrollo, en
+   directorios y `LOCALAPPDATA` temporales (incluida la actualización con
+   migración desde Extdator). **Falta** una prueba en un equipo limpio y no
+   existe mecanismo de actualización automática de la aplicación.
+5. No hay firma de código ni certificado: los builds no están firmados y
+   SmartScreen puede advertir.
 6. La política de privacidad está empaquetada, pero falta una URL pública
-   para las tiendas; tampoco existen capturas reales ni IDs de tienda.
+   para las tiendas; tampoco existen capturas oficiales ni IDs de tienda.
 7. El ejecutable incluye el copiloto (NumPy, SoundCard, faster-whisper,
-   CTranslate2, ONNX Runtime, PyAV, pypdf) pero no los modelos: Whisper y
-   los de Ollama se descargan con consentimiento. El auto-chequeo del EXE
-   valida esos componentes (Silero en ONNX Runtime, CTranslate2 int8 y,
-   si hay un modelo Whisper, una transcripción real). SciPy, pandas, torch
-   y otros paquetes del entorno de desarrollo se excluyen explícitamente.
-8. El ejecutable base no incluye motores OCR locales pesados
-   (Pix2Text/RapidOCR/Tesseract): el OCR local queda para la versión de
-   desarrollo o una futura edición opcional. La visión multimodal del
-   modelo activo sí está disponible.
-8. La licencia principal no está decidida; no se redistribuye públicamente
-   hasta que el propietario la confirme.
+   CTranslate2, ONNX Runtime, PyAV, pypdf) y el formato de respuestas
+   (ziamath, latex2mathml, Pygments), pero no los modelos: los de Whisper y
+   Ollama se descargan con consentimiento. El auto-chequeo del EXE valida
+   componentes del copiloto y el renderizado de fórmulas/código.
+8. El ejecutable no incluye motores OCR locales pesados
+   (Pix2Text/RapidOCR/Tesseract): «Recomendar configuración» los marca como
+   instalación manual. La visión multimodal del modelo activo sí funciona.
+9. ziamath cubre LaTeX habitual (fracciones, raíces, sumatorias,
+   integrales, límites, matrices, `cases`, `aligned`); comandos fuera de su
+   soporte se muestran en Unicode legible en lugar de componerse.
+10. La comprobación de que una respuesta del copiloto «suena en primera
+    persona» depende del modelo: el prompt lo exige y `clean_spoken_answer`
+    retira introducciones del tipo «Podrías responder…», pero un modelo muy
+    pequeño puede seguir desviándose.

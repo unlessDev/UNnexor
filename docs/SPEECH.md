@@ -22,7 +22,7 @@ motores locales rápidos: con servicios remotos consumiría cuota.
 ### Locales (faster-whisper / CTranslate2, licencia MIT)
 
 El audio no sale del equipo. Los modelos se descargan solo con
-consentimiento a `%LOCALAPPDATA%\Extdator\models\faster-whisper`.
+consentimiento a `%LOCALAPPDATA%\UNnexor\models\faster-whisper`.
 
 | Modelo | Descarga | Español | Notas |
 |---|---|---|---|

@@ -37,8 +37,8 @@ El trabajo de artefactos ejecuta, en orden:
 6. `python deployment/verify_artifacts.py` — checksums, informes y SBOM.
 
 Los artefactos verificados se adjuntan al flujo durante 14 días con el
-nombre `extdator-windows-artifacts`. Si algo falla se adjuntan además los
-informes y logs con el nombre `extdator-ci-reports`. Nada se publica en
+nombre `unnexor-windows-artifacts`. Si algo falla se adjuntan además los
+informes y logs con el nombre `unnexor-ci-reports`. Nada se publica en
 Releases, tiendas ni servidores externos.
 
 ## Reproducción local
@@ -58,7 +58,7 @@ escribe en `release/verification-report.json`.
 
 ## SBOM
 
-`deployment/sbom/build.py` genera `release/sbom/extdator-<versión>.cdx.json`
+`deployment/sbom/build.py` genera `release/sbom/unnexor-<versión>.cdx.json`
 y su `SHA256SUMS.txt` sin dependencias externas:
 
 - formato CycloneDX 1.5 con `serialNumber` determinista para el mismo
