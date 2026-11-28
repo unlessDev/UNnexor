@@ -27,7 +27,7 @@ from ..knowledge.service import KnowledgeBase, SearchHit, build_context
 from ..routing.executor import RoutingCancelled, RoutingError
 from ..routing.router import Task
 from .engine import GenerationEngine
-from .prompts import TranscriptLine, answer_messages
+from .prompts import TranscriptLine, answer_messages, clean_spoken_answer
 from .questions import SENSITIVITY_THRESHOLDS, TurnAccumulator, score_question, similar
 from .settings import CopilotSettings
 from .transcription import TranscriptEvent
@@ -310,7 +310,8 @@ class ConversationAssistant:
                 on_notice=self._cb.on_notice,
             )
             with self._lock:
-                item.answer = result.text
+                # Texto listo para decir en voz alta (sin «Podrías responder…»).
+                item.answer = clean_spoken_answer(result.text)
                 item.model = result.model_label
                 item.status = QAStatus.DONE
         except RoutingCancelled:

@@ -214,7 +214,7 @@ def test_dialog_plan_applies_only_installed_and_restores(qapp, tmp_path, monkeyp
     result["hardware"] = HW_8GB
     result["installed_names"] = [m["name"] for m in INSTALLED]
     dialog._on_done(result)
-    assert dialog._table.rowCount() == 7
+    assert len(dialog._rec_cards) == 7
     dialog.apply()
     assert applied[-1]["ollama_model"] == "qwen3:8b"
     assert settings.pinned["answer"] == "ollama:qwen3:8b"

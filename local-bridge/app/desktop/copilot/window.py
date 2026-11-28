@@ -134,6 +134,7 @@ class CopilotWindow(QMainWindow):
         self.overlay.openMainClicked.connect(self.bring_to_front)
         self.overlay.pinChanged.connect(self._save_overlay_pin)
         self.overlay.listenClicked.connect(c.toggle_listening)
+        self.overlay.closeRequested.connect(self._on_overlay_closed)
         c.listeningChanged.connect(self.overlay.set_listening)
         c.sessionChanged.connect(self._on_session)
         c.pausedChanged.connect(self.overlay.set_paused)
@@ -265,6 +266,19 @@ class CopilotWindow(QMainWindow):
         self.controller.stop_session()
         self.challenges.stop_periodic()
 
+    def _on_overlay_closed(self) -> None:
+        """✕ del panel flotante: cerrar la ventana ≠ cerrar la aplicación.
+
+        Si hay una sesión activa se finaliza de forma segura (la captura de
+        audio y la transcripción se detienen y liberan el dispositivo); la
+        ventana principal y el resto de UNnexor siguen funcionando, y el
+        panel vuelve a abrirse con la próxima sesión.
+        """
+        if self.controller.mode != "idle":
+            log.info("Panel flotante cerrado: se finaliza la sesión en curso.")
+            self.controller.stop_session()
+        self.challenges.stop_periodic()
+
     def _on_status(self, component: str, text: str) -> None:
         kind = "busy" if component == "llm" and text.endswith("…") else "capture"
         if "Error" in text or "error" in text:
@@ -335,5 +349,6 @@ class CopilotWindow(QMainWindow):
         self.controller.shutdown()
         # Deja terminar las tareas en segundo plano antes de destruir vistas.
         QThreadPool.globalInstance().waitForDone(5000)
+        self.overlay.prepare_shutdown()
         self.overlay.close()
         self.close()

@@ -27,6 +27,7 @@ from ...copilot.transcription import TranscriptEvent
 from ...copilot.translation import SegmentStatus, TranslationSegment
 from ..frameless import enable_frameless_resize
 from ..styles import ACCENT, AMBER, BORDER, GREEN, MUTED, PANEL, RED, TEXT
+from .common import transcript_line_html
 from ..topmost import IS_WINDOWS, set_topmost
 from ..widgets import AssistantMessage, ChatScroller, UserMessage, make_chat_area
 from ..window_manager import apply_noactivate
@@ -38,8 +39,12 @@ OVERLAY_QSS = f"""
 #overlayBar {{ background: {PANEL}; border-bottom: 1px solid {BORDER};
               border-top-left-radius: 10px; border-top-right-radius: 10px; }}
 #overlayStatus {{ color: {MUTED}; font-size: 11px; }}
-#overlayTranscript {{ color: {MUTED}; font-size: 11px; padding: 4px 8px; }}
+#overlayHeard {{ background: #161a24; border-bottom: 1px solid {BORDER}; }}
+#overlayHeardTitle {{ color: {AMBER}; font-size: 11px; font-weight: 700;
+              letter-spacing: 1px; }}
+#overlayTranscript {{ color: {TEXT}; font-size: 14px; }}
 #overlayQuestion {{ color: {ACCENT}; font-weight: 700; padding: 2px 8px; }}
+#overlayClose:hover {{ background: #5a1f2a; border-color: {RED}; }}
 QPushButton {{ background: #1d212b; color: {TEXT}; border: 1px solid {BORDER};
               border-radius: 5px; padding: 3px 8px; font-size: 11px; }}
 QPushButton:hover {{ border-color: {ACCENT}; }}
@@ -54,6 +59,9 @@ class CopilotOverlay(QWidget):
     openMainClicked = Signal()
     pinChanged = Signal(bool)  # el usuario cambió «Siempre visible»
     listenClicked = Signal()  # 🎙 iniciar / terminar la escucha
+    # El usuario cerró el panel (✕ o Alt+F4): la ventana del copiloto
+    # finaliza la escucha en curso y libera el audio; la app sigue abierta.
+    closeRequested = Signal()
 
     def __init__(self, on_top: bool = True, opacity: int = 92) -> None:
         flags = (
@@ -79,6 +87,7 @@ class CopilotOverlay(QWidget):
         self._recent: list[str] = []
         self._settings = QSettings("UNnexor", "CopilotOverlay")
         self._compact = False
+        self._shutting_down = False
 
         root = QFrame(self)
         root.setObjectName("overlayRoot")
@@ -125,6 +134,12 @@ class CopilotOverlay(QWidget):
         minimize = QPushButton("—")
         minimize.setToolTip("Minimizar a la barra de tareas")
         minimize.clicked.connect(self.showMinimized)
+        close = QPushButton("✕")
+        close.setObjectName("overlayClose")
+        close.setToolTip(
+            "Cerrar el panel (finaliza la escucha en curso; UNnexor sigue abierto)"
+        )
+        close.clicked.connect(self.close)
         for button in (
             self._listen,
             self._pause,
@@ -134,6 +149,7 @@ class CopilotOverlay(QWidget):
             main,
             self._pin,
             minimize,
+            close,
         ):
             button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
             bar_layout.addWidget(button)
@@ -143,10 +159,25 @@ class CopilotOverlay(QWidget):
         body = QVBoxLayout(self._body)
         body.setContentsMargins(0, 0, 0, 0)
         body.setSpacing(0)
+        heard = QFrame()
+        heard.setObjectName("overlayHeard")
+        heard_layout = QVBoxLayout(heard)
+        heard_layout.setContentsMargins(10, 6, 10, 8)
+        heard_layout.setSpacing(2)
+        self._heard_title = QLabel("🗣 LO QUE SE ESTÁ DICIENDO")
+        self._heard_title.setObjectName("overlayHeardTitle")
+        heard_layout.addWidget(self._heard_title)
         self._transcript = QLabel("")
         self._transcript.setObjectName("overlayTranscript")
         self._transcript.setWordWrap(True)
-        body.addWidget(self._transcript)
+        self._transcript.setTextFormat(Qt.TextFormat.RichText)
+        self._transcript.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse
+        )
+        heard_layout.addWidget(self._transcript)
+        self._heard = heard
+        heard.setVisible(False)
+        body.addWidget(heard)
         self._question = QLabel("")
         self._question.setObjectName("overlayQuestion")
         self._question.setWordWrap(True)
@@ -177,7 +208,7 @@ class CopilotOverlay(QWidget):
         if geometry is not None:
             self.restoreGeometry(geometry)
         else:
-            self.resize(420, 360)
+            self.resize(460, 520)
         # Redimensionado desde cualquier borde (además del agarre inferior).
         enable_frameless_resize(self)
 
@@ -193,6 +224,12 @@ class CopilotOverlay(QWidget):
     def closeEvent(self, event) -> None:
         self._settings.setValue("geometry", self.saveGeometry())
         super().closeEvent(event)
+        if not self._shutting_down:
+            self.closeRequested.emit()
+
+    def prepare_shutdown(self) -> None:
+        """Cierre de la aplicación: no reemitir ``closeRequested``."""
+        self._shutting_down = True
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.MouseButton.LeftButton and event.position().y() < 34:
@@ -286,16 +323,20 @@ class CopilotOverlay(QWidget):
 
     # ------------------------------------------------------ conversación
     def show_transcript(self, event: TranscriptEvent) -> None:
+        """Últimas frases: las definitivas en claro y la parcial en cursiva."""
         if not event.text:
             return
-        line = f"{event.source.speaker_label}: {event.text}"
+        line = transcript_line_html(event.source.speaker_label, event.text)
         if event.final:
             self._recent.append(line)
             self._recent = self._recent[-3:]
-            shown = self._recent
+            shown = list(self._recent)
         else:
-            shown = self._recent[-2:] + [line + " …"]
-        self._transcript.setText("\n".join(shown))
+            shown = self._recent[-2:] + [
+                transcript_line_html(event.source.speaker_label, event.text, partial=True)
+            ]
+        self._heard.setVisible(True)
+        self._transcript.setText("".join(shown))
 
     def _append(self, widget: QWidget) -> None:
         """Añade al historial (nunca borra lo anterior; conserva los últimos
@@ -311,9 +352,14 @@ class CopilotOverlay(QWidget):
 
     def begin_answer(self, item: QAItem) -> None:
         self._current_item = item.id
-        self._question.setText(f"❓ {item.question}")
-        self._append(UserMessage(item.question))
-        self._answer = AssistantMessage(item.model or "sugerencia", role="COPILOTO")
+        self._question.setText("")
+        self._append(UserMessage(item.question, role="INTERLOCUTOR PREGUNTA"))
+        self._answer = AssistantMessage(
+            item.model or "",
+            role="TU RESPUESTA · para decir en voz alta",
+            font_px=15.0,
+        )
+        self._answer.setProperty("spoken", True)
         self._append(self._answer)
         self._alt.setEnabled(False)
         self._more.setEnabled(False)
@@ -328,7 +374,11 @@ class CopilotOverlay(QWidget):
         if item.id != self._current_item or self._answer is None:
             return
         if item.answer:
-            self._answer.finalize()
+            # La respuesta final ya viene saneada (sin «Podrías responder…»).
+            if item.answer.strip() != self._answer.text().strip():
+                self._answer.replace_text(item.answer)
+            else:
+                self._answer.finalize()
             self.set_status(f"Sugerencia lista · {item.model}", "capture")
         else:
             self._answer.mark_error()
@@ -341,7 +391,10 @@ class CopilotOverlay(QWidget):
         self._current_item = None
         self._question.setText("")
         if segment.status is SegmentStatus.PROVISIONAL:
-            self._transcript.setText(f"{segment.original} …")
+            self._heard.setVisible(True)
+            self._transcript.setText(
+                transcript_line_html("Original", segment.original, partial=True)
+            )
             return
         if segment.status is SegmentStatus.DONE:
             widget = AssistantMessage("traducción", role="COPILOTO")

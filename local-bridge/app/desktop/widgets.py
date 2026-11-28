@@ -246,13 +246,15 @@ class MessageHeader(QFrame):
 
 
 class UserMessage(QFrame):
-    def __init__(self, text: str, parent: QWidget | None = None) -> None:
+    def __init__(
+        self, text: str, parent: QWidget | None = None, *, role: str = "TÚ"
+    ) -> None:
         super().__init__(parent)
         self.setObjectName("userMessage")
         layout = QVBoxLayout(self)
         layout.setContentsMargins(10, 8, 10, 8)
         layout.setSpacing(2)
-        layout.addWidget(MessageHeader("TÚ"))
+        layout.addWidget(MessageHeader(role))
         # Las consultas pueden traer LaTeX (p. ej. el resultado del OCR
         # con fórmulas): se muestra en matemática Unicode legible.
         content = QLabel(to_human_math(text))
@@ -378,6 +380,12 @@ class AssistantMessage(QFrame):
 
     def text(self) -> str:
         return self._final_text or "".join(self._parts)
+
+    def replace_text(self, text: str) -> str:
+        """Sustituye el contenido (p. ej. respuesta saneada) y la finaliza."""
+        self._parts = [text]
+        self._finalized = False
+        return self.finalize()
 
     def mark_error(self) -> None:
         self.setProperty("error", True)

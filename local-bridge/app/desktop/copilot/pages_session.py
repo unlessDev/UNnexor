@@ -37,7 +37,15 @@ from ...copilot.transcription import TranscriptEvent
 from ...copilot.translation import SegmentStatus, TranslationSegment
 from ..styles import AMBER, MUTED, RED
 from ..widgets import AssistantMessage
-from .common import escape, export_pdf, hint, language_combo, select_data, title
+from .common import (
+    escape,
+    export_pdf,
+    hint,
+    language_combo,
+    select_data,
+    title,
+    transcript_line_html,
+)
 from .controller import CopilotController
 from .tasks import run_async
 
@@ -285,8 +293,9 @@ class ConversationPage(QWidget):
         left_layout.addWidget(QLabel("Transcripción"))
         self.transcript = QTextBrowser()
         left_layout.addWidget(self.transcript, 1)
+        self.transcript.setStyleSheet("font-size: 14px;")
         self.partial = QLabel("")
-        self.partial.setStyleSheet(f"color: {MUTED}; font-style: italic;")
+        self.partial.setTextFormat(Qt.TextFormat.RichText)
         self.partial.setWordWrap(True)
         left_layout.addWidget(self.partial)
         splitter.addWidget(left)
@@ -486,16 +495,30 @@ class ConversationPage(QWidget):
         if self._c.mode != "conversation":
             return
         if not event.final:
-            self.partial.setText(f"{event.source.speaker_label}: {event.text} …")
+            self.partial.setText(
+                transcript_line_html(
+                    event.source.speaker_label, event.text, partial=True
+                )
+            )
             return
         self.partial.setText("")
         if not event.text:
             return
-        flag = " ⚠️" if event.low_confidence else ""
-        self.transcript.append(
-            f"<b>{escape(event.source.speaker_label)}:</b> {escape(event.text)}{flag}"
+        bar = self.transcript.verticalScrollBar()
+        at_bottom = bar is None or bar.maximum() - bar.value() <= 24
+        cursor = self.transcript.textCursor()
+        cursor.movePosition(QTextCursor.MoveOperation.End)
+        cursor.insertHtml(
+            transcript_line_html(
+                event.source.speaker_label,
+                event.text,
+                low_confidence=event.low_confidence,
+            )
         )
-        self.transcript.moveCursor(QTextCursor.MoveOperation.End)
+        cursor.insertBlock()
+        # Autodesplazamiento solo si el usuario no subió a leer.
+        if at_bottom and bar is not None:
+            bar.setValue(bar.maximum())
 
     # ------------------------------------------------------------- Q&A
     def _on_item(self, item: QAItem) -> None:

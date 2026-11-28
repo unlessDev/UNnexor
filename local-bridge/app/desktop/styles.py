@@ -68,6 +68,11 @@ QLabel {
     background: #151820;
     border-left: 3px solid #3ddc97;
 }
+#assistantMessage[spoken="true"] {
+    background: #14201b;
+    border: 1px solid #2b5a45;
+    border-left: 4px solid #3ddc97;
+}
 #assistantMessage[error="true"] {
     border-left: 3px solid #ff6b6b;
 }
