@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from PySide6.QtCore import QThread, Signal
+from PySide6.QtCore import QSize, QThread, Signal
 from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
@@ -38,6 +38,7 @@ from ..providers.access import AccessTier
 from ..providers.base import ProviderError
 from ..providers.presets import PRESETS
 from .styles import ACCENT, BORDER, GREEN, MUTED, PANEL, RED, TEXT
+from .ui_kit import fit_to_screen
 
 # Agrupación por acceso documentado (campo ``access`` de presets.py): un
 # proveedor nuevo aparece en su grupo sin tocar la interfaz.
@@ -195,7 +196,7 @@ class ProvidersDialog(QDialog):
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self.setWindowTitle("Proveedores de IA — UNnexor")
-        self.setMinimumSize(600, 620)
+        fit_to_screen(self, QSize(860, 760), QSize(600, 520), anchor=parent)
         self.setStyleSheet(
             f"QDialog {{ background: #12141a; color: {TEXT}; }}\n"
             "QLabel { background: transparent; }\n"

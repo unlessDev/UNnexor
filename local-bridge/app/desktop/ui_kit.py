@@ -179,6 +179,7 @@ class ChoiceCard(QFrame):
         *,
         tier: str = "",
         tier_text: str = "",
+        subtitle: str = "",
         parent: Optional[QWidget] = None,
     ) -> None:
         super().__init__(parent)
@@ -198,6 +199,9 @@ class ChoiceCard(QFrame):
         top.addWidget(self._check)
         top.addWidget(self._title, 1)
         layout.addLayout(top)
+        if subtitle:
+            sub = wrap_label(f"<b>{subtitle}</b>")
+            layout.addWidget(sub)
         self.chip: Optional[TierChip] = None
         if tier:
             self.chip = TierChip(tier, tier_text)
@@ -284,7 +288,9 @@ class DownloadProgress(QWidget):
             self.bar.setValue(1)
             self.bar.setFormat("100 %")
         self.detail.setText(snapshot.describe())
-        self.detail.setProperty("role", "error" if snapshot.phase == FAILED else "muted")
+        self.detail.setProperty(
+            "role", "error" if snapshot.phase == FAILED else "muted"
+        )
         style = self.detail.style()
         if style is not None:
             style.unpolish(self.detail)

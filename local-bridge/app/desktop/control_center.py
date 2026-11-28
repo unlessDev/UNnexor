@@ -53,7 +53,7 @@ PAGES = [("home", "Inicio", "home"), ("models", "Modelos de IA", "models")]
 
 
 class HomePage(QWidget):
-    def __init__(self, center: "ControlCenter") -> None:
+    def __init__(self, center: ControlCenter) -> None:
         super().__init__()
         self._center = center
         window = center.bridge
@@ -106,22 +106,54 @@ class HomePage(QWidget):
         grid = QGridLayout()
         grid.setSpacing(10)
         actions = [
-            ("sparkles", "Recomendar configuración", "Analiza tu equipo y lo deja listo",
-             window.open_recommendations),
-            ("models", "Elegir o descargar modelo", "Catálogo con compatibilidad",
-             lambda: center.open_page("models")),
-            ("copilot", "Copiloto en tiempo real", "Conversación, traducción, desafíos",
-             window.open_copilot),
-            ("capture", "Capturar pantalla", "Visión u OCR sobre una región",
-             window._start_capture),
-            ("link", "Emparejar la extensión", "Vincula Chrome o Edge",
-             window._open_pairing),
-            ("settings", "Ajustes", "Comportamiento, ventana y privacidad",
-             lambda: window._open_settings(center)),
-            ("providers", "Proveedores de API", "Modelos remotos opcionales",
-             window._open_providers),
-            ("diagnostics", "Exportar diagnóstico", "ZIP sin datos personales",
-             window._export_diagnostics),
+            (
+                "sparkles",
+                "Recomendar configuración",
+                "Analiza tu equipo y lo deja listo",
+                window.open_recommendations,
+            ),
+            (
+                "models",
+                "Elegir o descargar modelo",
+                "Catálogo con compatibilidad",
+                lambda: center.open_page("models"),
+            ),
+            (
+                "copilot",
+                "Copiloto en tiempo real",
+                "Conversación, traducción, desafíos",
+                window.open_copilot,
+            ),
+            (
+                "capture",
+                "Capturar pantalla",
+                "Visión u OCR sobre una región",
+                window._start_capture,
+            ),
+            (
+                "link",
+                "Emparejar la extensión",
+                "Vincula Chrome o Edge",
+                window._open_pairing,
+            ),
+            (
+                "settings",
+                "Ajustes",
+                "Comportamiento, ventana y privacidad",
+                lambda: window._open_settings(center),
+            ),
+            (
+                "providers",
+                "Proveedores de API",
+                "Modelos remotos opcionales",
+                window._open_providers,
+            ),
+            (
+                "diagnostics",
+                "Exportar diagnóstico",
+                "ZIP sin datos personales",
+                window._export_diagnostics,
+            ),
         ]
         for index, (icon, label, hint, slot) in enumerate(actions):
             button = QPushButton(icons.menu_icon(icon), f"  {label}")
@@ -225,7 +257,9 @@ class ControlCenter(QMainWindow):
         self.activateWindow()
 
     def refresh(self) -> None:
-        self.home.set_connection(self.bridge.connection_state(), self.bridge.connection_detail())
+        self.home.set_connection(
+            self.bridge.connection_state(), self.bridge.connection_detail()
+        )
         self.home.set_model(self.bridge.active_model_label())
 
     def _on_model_selected(self, name: str) -> None:
@@ -260,4 +294,3 @@ class ControlCenter(QMainWindow):
 
 
 __all__ = ["ControlCenter", "HomePage"]
-

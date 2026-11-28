@@ -177,9 +177,11 @@ class _AnalysisWorker(QThread):
             for profile in PROFILES:
                 stt = stt_recommend(
                     hw,
-                    preference={"low": "speed", "medium": "balanced", "high": "quality"}[
-                        profile
-                    ],
+                    preference={
+                        "low": "speed",
+                        "medium": "balanced",
+                        "high": "quality",
+                    }[profile],
                     installed=stt_installed,
                     cuda_available=cuda,
                     measured_call_s=measured_stt,
@@ -268,7 +270,14 @@ class Plan:
 
     @property
     def download_bytes(self) -> int:
-        return sum(c.job.expected_bytes for c in self.downloads if c.job is not None)
+        return sum(job.expected_bytes for job in self.unique_jobs())
+
+    def unique_jobs(self) -> list[DownloadJob]:
+        jobs: dict[str, DownloadJob] = {}
+        for change in self.downloads:
+            if change.job is not None:
+                jobs.setdefault(change.job.key, change.job)
+        return list(jobs.values())
 
     def is_empty(self) -> bool:
         return not self.immediate and not self.downloads
@@ -359,8 +368,10 @@ class RecommendationDialog(QDialog):
         self._result: dict[str, Any] | None = None
         self._worker: _AnalysisWorker | None = None
         self._rec_cards: list[RecommendationCard] = []
-        self._pending: dict[str, Change] = {}  # clave de descarga -> cambio
-        self._failed: dict[str, Change] = {}
+        # clave de descarga -> cambios que dependen de ella (un mismo modelo
+        # puede servir a varias funciones: se descarga una sola vez).
+        self._pending: dict[str, list[Change]] = {}
+        self._failed: dict[str, list[Change]] = {}
         self._progress_rows: dict[str, DownloadProgress] = {}
         self._profile = "medium"
 
@@ -398,7 +409,8 @@ class RecommendationDialog(QDialog):
                 label,
                 PROFILE_HELP[key],
                 tier=TIER_SIN_EVALUAR,
-                tier_text=f"{PROFILE_CONSUMPTION[key]} · sin analizar",
+                tier_text="sin analizar",
+                subtitle=PROFILE_CONSUMPTION[key],
             )
             choice.clicked.connect(lambda k=key: self._select_profile(k))
             self._profile_cards[key] = choice
@@ -430,7 +442,10 @@ class RecommendationDialog(QDialog):
         root.addWidget(scrollable(content), 1)
 
         footer = QWidget()
-        footer.setStyleSheet("background: #0f1116; border-top: 1px solid #262b36;")
+        footer.setObjectName("footerBar")
+        footer.setStyleSheet(
+            "QWidget#footerBar { background: #0f1116; border-top: 1px solid #262b36; }"
+        )
         buttons = QHBoxLayout(footer)
         buttons.setContentsMargins(22, 10, 22, 10)
         self._status = wrap_label("", "muted")
@@ -504,8 +519,7 @@ class RecommendationDialog(QDialog):
         for key, tier in (result.get("profile_tiers") or {}).items():
             if key in self._profile_cards:
                 self._profile_cards[key].set_tier(
-                    tier,
-                    f"{PROFILE_CONSUMPTION[key]} · {RANK_LABEL.get(tier, 'sin evaluar')}",
+                    tier, RANK_LABEL.get(tier, "sin evaluar")
                 )
         for old in self._rec_cards:
             old.deleteLater()
@@ -518,7 +532,7 @@ class RecommendationDialog(QDialog):
         plan = self._plan()
         self._apply.setEnabled(not plan.is_empty())
         extra = (
-            f" Al aplicar se descargarán {len(plan.downloads)} componentes "
+            f" Al aplicar se descargarán {len(plan.unique_jobs())} componentes "
             f"(~{format_bytes(plan.download_bytes)})."
             if plan.downloads
             else ""
@@ -628,9 +642,8 @@ class RecommendationDialog(QDialog):
                 ("\n\n" if text else "")
                 + "Se DESCARGARÁ e instalará (fuente oficial de Ollama / Hugging Face):\n· "
                 + "\n· ".join(
-                    f"{c.job.title} (~{format_bytes(c.job.expected_bytes)})"
-                    for c in plan.downloads
-                    if c.job is not None
+                    f"{job.name} (~{format_bytes(job.expected_bytes)})"
+                    for job in plan.unique_jobs()
                 )
                 + f"\nTotal aproximado: {format_bytes(plan.download_bytes)} de disco"
                 + (f" (tienes {free} GB libres)" if free else "")
@@ -642,7 +655,9 @@ class RecommendationDialog(QDialog):
             text += "\n\nNo se aplica (requiere una acción manual):\n· " + "\n· ".join(
                 plan.manual
             )
-        text += "\n\nSe guardará una copia para poder restaurar la configuración actual."
+        text += (
+            "\n\nSe guardará una copia para poder restaurar la configuración actual."
+        )
         text += "\n\n¿Autorizas estos cambios" + (
             " y descargas?" if plan.downloads else "?"
         )
@@ -661,7 +676,9 @@ class RecommendationDialog(QDialog):
         if plan.downloads:
             self._start_downloads(plan.downloads)
         else:
-            self._status.setText("Configuración aplicada. Puedes restaurar la anterior.")
+            self._status.setText(
+                "Configuración aplicada. Puedes restaurar la anterior."
+            )
 
     def _write_backup(self) -> None:
         settings = self._copilot_settings()
@@ -699,14 +716,17 @@ class RecommendationDialog(QDialog):
             job = change.job
             if job is None:
                 continue
-            self._pending[job.key] = change
+            first = job.key not in self._pending
+            self._pending.setdefault(job.key, []).append(change)
             self._failed.pop(job.key, None)
+            if not first:
+                continue
             row = self._progress_rows.get(job.key)
             if row is None:
                 box = card()
                 layout = QVBoxLayout(box)
                 layout.setContentsMargins(14, 10, 14, 10)
-                layout.addWidget(wrap_label(f"<b>{job.title}</b> · {change.summary}"))
+                layout.addWidget(wrap_label(f"<b>{job.name}</b>"))
                 row = DownloadProgress()
                 layout.addWidget(row)
                 self._install_box.addWidget(box)
@@ -721,16 +741,17 @@ class RecommendationDialog(QDialog):
             row.apply(snapshot)
 
     def _on_job_finished(self, snapshot: PullSnapshot) -> None:
-        change = self._pending.pop(snapshot.model, None)
+        changes = self._pending.pop(snapshot.model, None)
         row = self._progress_rows.get(snapshot.model)
-        if row is not None and change is not None:
+        if row is not None and changes is not None:
             row.apply(snapshot)
-        if change is None:
+        if changes is None:
             return
         if snapshot.phase == COMPLETED:
-            self._apply_change(change)
+            for change in changes:
+                self._apply_change(change)
         else:
-            self._failed[snapshot.model] = change
+            self._failed[snapshot.model] = changes
         self._update_install_status()
 
     def _update_install_status(self) -> None:
@@ -754,7 +775,7 @@ class RecommendationDialog(QDialog):
             )
 
     def retry_failed(self) -> None:
-        changes = list(self._failed.values())
+        changes = [c for group in self._failed.values() for c in group]
         self._failed.clear()
         if changes:
             self._start_downloads(changes)

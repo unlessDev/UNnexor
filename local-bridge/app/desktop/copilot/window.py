@@ -28,6 +28,7 @@ from ...copilot.challenges import ChallengeResult
 from ...copilot.transcription import TranscriptEvent
 from ...copilot.translation import TranslationSegment
 from ..topmost import PinPreference, set_topmost
+from ..ui_kit import fit_to_screen
 from .common import COPILOT_QSS
 from .controller import CopilotController
 from .hotkeys import HotkeyManager, find_conflicts
@@ -68,7 +69,7 @@ class CopilotWindow(QMainWindow):
     ) -> None:
         super().__init__()
         self.setWindowTitle("UNnexor · Copiloto en tiempo real")
-        self.resize(1080, 760)
+        fit_to_screen(self, QSize(1180, 820), QSize(860, 560))
         self.setStyleSheet(COPILOT_QSS)
         self.controller = controller or CopilotController(cfg)
         c = self.controller

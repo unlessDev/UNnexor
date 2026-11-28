@@ -103,7 +103,9 @@ class PullSnapshot:
         if self.phase == FAILED and self.error:
             return f"Error: {self.error}"
         if self.total:
-            parts.append(f"{format_bytes(self.completed)} de {format_bytes(self.total)}")
+            parts.append(
+                f"{format_bytes(self.completed)} de {format_bytes(self.total)}"
+            )
         elif self.completed:
             parts.append(f"{format_bytes(self.completed)} descargados")
         if self.percent is not None and self.phase not in (CANCELLED,):
@@ -111,7 +113,9 @@ class PullSnapshot:
         if self.speed_bps and self.phase == DOWNLOADING:
             parts.append(f"{format_bytes(self.speed_bps)}/s")
         if self.layers_total > 1 and self.phase == DOWNLOADING:
-            parts.append(f"capa {min(self.layers_done + 1, self.layers_total)}/{self.layers_total}")
+            parts.append(
+                f"capa {min(self.layers_done + 1, self.layers_total)}/{self.layers_total}"
+            )
         return " · ".join(parts)
 
 

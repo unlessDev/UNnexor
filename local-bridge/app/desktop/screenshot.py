@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from PySide6.QtCore import QObject, QPoint, QRect, Qt, QTimer, Signal
+from PySide6.QtCore import QObject, QPoint, QRect, QSize, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QGuiApplication, QPainter, QPen, QPixmap, QScreen
 from PySide6.QtWidgets import (
     QComboBox,
@@ -33,6 +33,7 @@ from PySide6.QtWidgets import (
 )
 
 from .styles import ACCENT, BORDER, MUTED, PANEL, TEXT
+from .ui_kit import fit_to_screen
 
 
 # --------------------------------------------------------------------- #
@@ -252,7 +253,7 @@ class ScreenshotPreviewDialog(QDialog):
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle("Vista previa de la captura — UNnexor")
-        self.setMinimumSize(520, 560)
+        fit_to_screen(self, QSize(680, 680), QSize(480, 480), anchor=parent)
         self.setStyleSheet(
             f"QDialog {{ background: #12141a; color: {TEXT}; }}"
             f"QLabel {{ background: transparent; color: {TEXT}; }}"

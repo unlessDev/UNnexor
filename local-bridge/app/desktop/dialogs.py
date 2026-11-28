@@ -40,7 +40,7 @@ from PySide6.QtWidgets import (
 
 from ..config import Config
 from ..ollama_client import OllamaClient
-from ..ollama_pull import CANCELLED, COMPLETED, FAILED, PullSnapshot, format_bytes
+from ..ollama_pull import CANCELLED, COMPLETED, FAILED, PullSnapshot
 from ..settings_store import ALLOWED_KEYS
 from .downloads import KIND_OLLAMA, DownloadJob, DownloadManager
 from .styles import ACCENT, BORDER, MUTED, PANEL, TEXT
@@ -148,9 +148,7 @@ class ModelRow(QFrame):
         title_row.addWidget(self.chip)
         if active:
             in_use = QLabel("● EN USO")
-            in_use.setStyleSheet(
-                f"color: {ACCENT}; font-weight: 800; font-size: 11px;"
-            )
+            in_use.setStyleSheet(f"color: {ACCENT}; font-weight: 800; font-size: 11px;")
             title_row.addWidget(in_use)
         title_row.addStretch(1)
         grid.addLayout(title_row, 0, 0)
@@ -184,7 +182,12 @@ class ModelRow(QFrame):
         # Compatibilidad con código existente (row.progress.setVisible…).
         self.progress = self.progress_view.bar
         self.status = wrap_label("", "muted")
-        for widget in (self.button, self.cancel_button, self.progress_view, self.status):
+        for widget in (
+            self.button,
+            self.cancel_button,
+            self.progress_view,
+            self.status,
+        ):
             actions.addWidget(widget)
         actions.addStretch(1)
         holder = QWidget()
@@ -214,7 +217,9 @@ class ModelRow(QFrame):
             self.button.setVisible(True)
             self.button.setText("Reintentar descarga")
             self.status.setText(snapshot.describe())
-            self.status.setProperty("role", "error" if snapshot.phase == FAILED else "muted")
+            self.status.setProperty(
+                "role", "error" if snapshot.phase == FAILED else "muted"
+            )
             return
         if not self.progress_view.isVisible():
             self.start_progress()
@@ -271,31 +276,11 @@ class ModelsPanel(QWidget):
         layout.setContentsMargins(20, 16, 20, 14)
         layout.setSpacing(10)
 
+        # Fijos arriba: título y filtros. Todo lo demás se desplaza, así en
+        # ventanas pequeñas la lista conserva el espacio útil.
         title = QLabel("Modelos de IA")
         title.setProperty("role", "title")
         layout.addWidget(title)
-        layout.addWidget(
-            wrap_label(
-                "Elige el modelo que responde tus consultas o descarga uno nuevo. "
-                "La clasificación compara lo que pide cada modelo con la memoria "
-                "real de tu equipo. No se descarga nada sin tu confirmación.",
-                "muted",
-            )
-        )
-
-        current = card()
-        current_layout = QHBoxLayout(current)
-        current_layout.setContentsMargins(14, 10, 14, 10)
-        self._current_label = wrap_label("")
-        self._current_label.setStyleSheet("font-size: 14px;")
-        current_layout.addWidget(self._current_label, 1)
-        self._current_chip = TierChip("sin_evaluar")
-        current_layout.addWidget(self._current_chip)
-        layout.addWidget(current)
-        self._set_current_label(current_model, None)
-
-        self._status = wrap_label("Detectando hardware y catálogo de Ollama…", "muted")
-        layout.addWidget(self._status)
 
         filters = QHBoxLayout()
         self._search = QLineEdit()
@@ -316,28 +301,52 @@ class ModelsPanel(QWidget):
         filters.addWidget(self._filter_combo)
         filters.addWidget(self._refresh_btn)
         layout.addLayout(filters)
-        self._library = wrap_label("", "muted")
-        layout.addWidget(self._library)
 
         self._scroll = QScrollArea()
         self._scroll.setWidgetResizable(True)
         self._scroll.setFrameShape(QFrame.Shape.NoFrame)
         self._scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self._container = QWidget()
-        self._vbox = QVBoxLayout(self._container)
-        self._vbox.setContentsMargins(0, 0, 6, 0)
+        content = QVBoxLayout(self._container)
+        content.setContentsMargins(0, 0, 6, 0)
+        content.setSpacing(8)
+        content.addWidget(
+            wrap_label(
+                "Elige el modelo que responde tus consultas o descarga uno nuevo. "
+                "La clasificación compara lo que pide cada modelo con la memoria "
+                "real de tu equipo. No se descarga nada sin tu confirmación.",
+                "muted",
+            )
+        )
+        current = card()
+        current_layout = QHBoxLayout(current)
+        current_layout.setContentsMargins(14, 10, 14, 10)
+        self._current_label = wrap_label("")
+        self._current_label.setStyleSheet("font-size: 14px;")
+        current_layout.addWidget(self._current_label, 1)
+        self._current_chip = TierChip("sin_evaluar")
+        current_layout.addWidget(self._current_chip)
+        content.addWidget(current)
+        self._set_current_label(current_model, None)
+        self._status = wrap_label("Detectando hardware y catálogo de Ollama…", "muted")
+        content.addWidget(self._status)
+        self._library = wrap_label("", "muted")
+        content.addWidget(self._library)
+        rows = QWidget()
+        self._vbox = QVBoxLayout(rows)
+        self._vbox.setContentsMargins(0, 0, 0, 0)
         self._vbox.setSpacing(8)
         self._vbox.addStretch(1)
-        self._scroll.setWidget(self._container)
-        layout.addWidget(self._scroll, 1)
-
+        content.addWidget(rows, 1)
         self._legend = wrap_label(
             "🟢 ÓPTIMO: cabe con margen · 🟡 COMPATIBLE: funciona con margen justo · "
             "🟠 EXIGENTE: lento o al límite de memoria · 🔴 NO COMPATIBLE: "
             "descarga deshabilitada. Las descargas continúan aunque cierres esta ventana.",
             "muted",
         )
-        layout.addWidget(self._legend)
+        content.addWidget(self._legend)
+        self._scroll.setWidget(self._container)
+        layout.addWidget(self._scroll, 1)
 
         self._hardware_worker = HardwareWorker(ollama, configured_model=current_model)
         self._hardware_worker.ready.connect(self._populate)
@@ -419,7 +428,7 @@ class ModelsPanel(QWidget):
     @staticmethod
     def _hw_summary(hw: dict) -> str:
         parts = [
-            f"Tu equipo — CPU: {hw.get('cpu_name', '?')} · "
+            f"Tu equipo — CPU: {' '.join(str(hw.get('cpu_name', '?')).split())} · "
             f"RAM: {hw.get('ram_total_mb', 0) // 1024} GB "
             f"({hw.get('ram_available_mb', 0) // 1024} GB libres)"
         ]
@@ -515,6 +524,10 @@ class ModelsPanel(QWidget):
         explanation = " — ".join(assessment["reasons"][:2]) or assessment["explanation"]
         active = entry["name"] == self._current
         impossible = assessment["tier"] == "imposible"
+        embedding_only = "embedding" in caps and "completion" not in caps
+        action = "En uso" if active else "Seleccionar"
+        if embedding_only and not active:
+            action = "Solo búsqueda"
         row = ModelRow(
             name=entry["name"],
             meta=meta,
@@ -522,12 +535,17 @@ class ModelsPanel(QWidget):
             tier=assessment["tier"],
             color=assessment["color"],
             emoji=assessment["emoji"],
-            action="En uso" if active else "Seleccionar",
-            enabled=not impossible and not active,
+            action=action,
+            enabled=not impossible and not active and not embedding_only,
             tooltip=(
                 "Este modelo no puede ejecutarse en tu equipo por seguridad."
                 if impossible
-                else ""
+                else (
+                    "Modelo de embeddings: lo usa la búsqueda en los documentos "
+                    "del perfil, no puede responder consultas."
+                    if embedding_only
+                    else ""
+                )
             ),
             performance=performance_hint(assessment),
             active=active,
@@ -674,11 +692,16 @@ class ModelsPanel(QWidget):
         if row is not None:
             row.apply_snapshot(snapshot)
         if snapshot.phase == COMPLETED:
-            self._status.setText(f"«{name}» instalado y verificado. Ya puedes seleccionarlo.")
+            self._status.setText(
+                f"«{name}» instalado y verificado. Ya puedes seleccionarlo."
+            )
         elif snapshot.phase == FAILED:
             self._status.setText(f"⚠ {name}: {snapshot.error}")
 
     def shutdown(self) -> None:
+        if getattr(self, "_shut", False):
+            return
+        self._shut = True
         if self._hardware_worker.isRunning():
             self._hardware_worker.wait(3000)
         if self._downloads is not None:
@@ -714,10 +737,13 @@ class ModelSelectorDialog(QDialog):
         self.panel = ModelsPanel(ollama, current_model, self, downloads=downloads)
         self.panel.modelSelected.connect(self._select)
         layout.addWidget(self.panel, 1)
-        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
-        buttons.rejected.connect(self.reject)
-        buttons.setContentsMargins(20, 0, 20, 0)
-        layout.addWidget(buttons)
+        close_row = QHBoxLayout()
+        close_row.setContentsMargins(20, 0, 20, 0)
+        close_row.addStretch(1)
+        close = QPushButton("Cerrar")
+        close.clicked.connect(self.reject)
+        close_row.addWidget(close)
+        layout.addLayout(close_row)
 
     # Atajos usados por pruebas y scripts existentes.
     @property
@@ -751,7 +777,7 @@ class SettingsDialog(QDialog):
     def __init__(self, cfg: Config, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self.setWindowTitle("Ajustes — UNnexor")
-        self.setMinimumSize(520, 500)
+        fit_to_screen(self, QSize(760, 720), QSize(520, 480), anchor=parent)
         self.setStyleSheet(
             f"QDialog {{ background: #12141a; color: {TEXT}; }}"
             f"QLabel {{ color: {TEXT}; background: transparent; }}"

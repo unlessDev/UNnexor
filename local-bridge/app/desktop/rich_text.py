@@ -128,7 +128,9 @@ def split_segments(text: str) -> list[Segment]:
         lang = match.group("lang").strip().lower()
         if end_match is None:
             body = text[match.end() :]
-            segments.append(Segment(CODE, body, lang=lang, raw=text[match.start() :], closed=False))
+            segments.append(
+                Segment(CODE, body, lang=lang, raw=text[match.start() :], closed=False)
+            )
             break
         body = text[match.end() : end_match.start()]
         if body.endswith("\n"):
@@ -204,7 +206,7 @@ def highlight_code(code: str, lang: str = "") -> tuple[str, str]:
 
 
 # ----------------------------------------------------------------- fórmulas
-_math_cache: "OrderedDict[tuple, object]" = OrderedDict()
+_math_cache: OrderedDict[tuple, object] = OrderedDict()
 MATH_CACHE_SIZE = 256
 _ziamath_ready: Optional[bool] = None
 
@@ -226,7 +228,9 @@ def _ziamath():
         return None
 
 
-def render_math(latex: str, *, display: bool, color: str, size_px: float, scale: float = 2.0):
+def render_math(
+    latex: str, *, display: bool, color: str, size_px: float, scale: float = 2.0
+):
     """Compone ``latex`` y devuelve ``QImage`` (con DPR=scale) o ``None``."""
     key = (latex, display, color, round(size_px, 1), scale)
     cached = _math_cache.get(key)
@@ -321,9 +325,7 @@ class RichRenderer:
                 )
                 if image is None:
                     fallback = html.escape(to_human_math(seg.raw or seg.text))
-                    rendered = (
-                        f'<i title="{html.escape(seg.text)}">{fallback}</i>'
-                    )
+                    rendered = f'<i title="{html.escape(seg.text)}">{fallback}</i>'
                 else:
                     name = f"unxmath:{len(images)}"
                     images[name] = image
@@ -335,7 +337,9 @@ class RichRenderer:
                         f' style="vertical-align: middle" alt="{html.escape(seg.text)}">'
                     )
                 if display:
-                    blocks[index] = f'<p align="center" style="margin: 8px 0">{rendered}</p>'
+                    blocks[index] = (
+                        f'<p align="center" style="margin: 8px 0">{rendered}</p>'
+                    )
                     parts.append(f"\n\n{token}\n\n")
                 else:
                     inline[index] = rendered
@@ -401,8 +405,6 @@ def _extract_body(document_html: str) -> str:
     return document_html[start:end] if end > start else document_html[start:]
 
 
-
-
 # ------------------------------------------------------------------- widget
 from PySide6.QtCore import QUrl, Signal  # noqa: E402
 from PySide6.QtGui import QDesktopServices, QGuiApplication, QTextDocument  # noqa: E402
@@ -435,10 +437,11 @@ class RichTextBrowser(QTextBrowser):
     def code_blocks(self) -> list[str]:
         return list(self._codes)
 
-    def loadResource(self, kind: int, url: QUrl):  # noqa: N802 (API de Qt)
+    def loadResource(self, kind: int, url: QUrl | str):
         if kind == QTextDocument.ResourceType.ImageResource.value:
             # Solo fórmulas propias: nunca leer archivos ni URL arbitrarias.
-            return self._images.get(url.toString())
+            key = url.toString() if isinstance(url, QUrl) else str(url)
+            return self._images.get(key)
         return None
 
     def _on_anchor(self, url: QUrl) -> None:

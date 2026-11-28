@@ -56,7 +56,12 @@ class MigrationReport:
 
     @property
     def ok(self) -> bool:
-        return self.status in ("not_needed", "skipped_override", "already_done", "completed")
+        return self.status in (
+            "not_needed",
+            "skipped_override",
+            "already_done",
+            "completed",
+        )
 
     def summary(self) -> str:
         if self.status == "not_needed":
@@ -71,7 +76,9 @@ class MigrationReport:
             f"y se conservaron. Origen conservado: {self.legacy}."
         )
         if self.errors:
-            text += f" {len(self.errors)} errores; se reintentará en el próximo arranque."
+            text += (
+                f" {len(self.errors)} errores; se reintentará en el próximo arranque."
+            )
         return text
 
 
@@ -101,7 +108,9 @@ def _copy_verified(source: Path, dest: Path) -> int:
         shutil.copy2(source, tmp)
         expected = source.stat().st_size
         if tmp.stat().st_size != expected:
-            raise OSError(f"tamaño distinto tras copiar ({tmp.stat().st_size} != {expected})")
+            raise OSError(
+                f"tamaño distinto tras copiar ({tmp.stat().st_size} != {expected})"
+            )
         os.replace(tmp, dest)
         return expected
     finally:
@@ -122,9 +131,9 @@ def migrate_legacy_data(
 
     Idempotente y segura ante fallos; nunca lanza excepciones.
     """
-    if respect_overrides and legacy is None and target is None:
-        if paths.env_override("DATA_DIR"):
-            return MigrationReport("skipped_override")
+    overridden = bool(paths.env_override("DATA_DIR"))
+    if respect_overrides and legacy is None and target is None and overridden:
+        return MigrationReport("skipped_override")
     legacy = legacy or paths.legacy_data_root()
     target = target or paths.app_data_root()
     report = MigrationReport("not_needed", legacy=str(legacy), target=str(target))

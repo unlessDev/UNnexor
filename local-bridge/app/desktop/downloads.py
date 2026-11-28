@@ -67,7 +67,7 @@ def _model_present(installed: List[dict], name: str) -> bool:
     wanted = name if ":" in name else f"{name}:latest"
     for entry in installed:
         current = str(entry.get("name") or entry.get("model") or "")
-        if current == name or current == wanted:
+        if current in (name, wanted):
             return True
     return False
 
@@ -170,7 +170,7 @@ class DownloadManager(QObject):
     jobFinished = Signal(object)  # PullSnapshot final
     idle = Signal()  # cola vacía
 
-    _instance: Optional["DownloadManager"] = None
+    _instance: Optional[DownloadManager] = None
 
     def __init__(self, ollama: OllamaClient, parent: Optional[QObject] = None) -> None:
         super().__init__(parent)
@@ -181,7 +181,7 @@ class DownloadManager(QObject):
 
     # ------------------------------------------------------------ singleton
     @classmethod
-    def instance(cls, ollama: Optional[OllamaClient] = None) -> "DownloadManager":
+    def instance(cls, ollama: Optional[OllamaClient] = None) -> DownloadManager:
         if cls._instance is None:
             if ollama is None:
                 raise RuntimeError("DownloadManager sin inicializar")

@@ -22,36 +22,9 @@ FONT_FAMILIES = [
     "Courier New",
 ]
 
-APP_QSS = """
-* {
-    font-family: "Cascadia Mono", "Consolas", "DejaVu Sans Mono", monospace;
-    outline: none;
-}
-QMainWindow, #rootCentral {
-    background: #12141a;
-    border: 1px solid #262b36;
-}
-QLabel {
-    background: transparent;
-    color: #d6dae2;
-}
-#titleBar {
-    background: #171a21;
-    border-bottom: 1px solid #262b36;
-}
-#titleLabel {
-    color: #e8eaf2;
-    font-weight: 700;
-    font-size: 12px;
-    letter-spacing: 1px;
-}
-#modelLabel {
-    color: #8a93a5;
-    font-size: 11px;
-}
-#connDot {
-    font-size: 11px;
-}
+# Mensajes del chat: compartidos por el panel principal y el flotante del
+# copiloto (antes el flotante no los recibía y sus mensajes salían sin estilo).
+MESSAGE_QSS = """
 #chatArea, #chatArea > QWidget > QWidget {
     background: transparent;
     border: none;
@@ -86,7 +59,7 @@ QLabel {
 }
 #msgRole {
     color: #8b7cff;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 700;
     letter-spacing: 1px;
 }
@@ -97,14 +70,50 @@ QLabel {
 }
 #msgContent {
     color: #d6dae2;
-    font-size: 12px;
+    font-size: 13px;
 }
 #assistantText {
     background: transparent;
     color: #d6dae2;
     border: none;
-    font-size: 12px;
+    font-size: 14px;
 }
+"""
+
+APP_QSS = (
+    """
+* {
+    font-family: "Cascadia Mono", "Consolas", "DejaVu Sans Mono", monospace;
+    outline: none;
+}
+QMainWindow, #rootCentral {
+    background: #12141a;
+    border: 1px solid #262b36;
+}
+QLabel {
+    background: transparent;
+    color: #d6dae2;
+}
+#titleBar {
+    background: #171a21;
+    border-bottom: 1px solid #262b36;
+}
+#titleLabel {
+    color: #e8eaf2;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 1px;
+}
+#modelLabel {
+    color: #8a93a5;
+    font-size: 11px;
+}
+#connDot {
+    font-size: 11px;
+}
+"""
+    + MESSAGE_QSS
+    + """
 QToolButton {
     background: transparent;
     border: none;
@@ -174,3 +183,4 @@ QToolTip {
     border: 1px solid #262b36; padding: 4px;
 }
 """
+)

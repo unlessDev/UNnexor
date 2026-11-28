@@ -26,11 +26,11 @@ from ...copilot.assistant import QAItem
 from ...copilot.transcription import TranscriptEvent
 from ...copilot.translation import SegmentStatus, TranslationSegment
 from ..frameless import enable_frameless_resize
-from ..styles import ACCENT, AMBER, BORDER, GREEN, MUTED, PANEL, RED, TEXT
-from .common import transcript_line_html
+from ..styles import ACCENT, AMBER, BORDER, GREEN, MESSAGE_QSS, MUTED, PANEL, RED, TEXT
 from ..topmost import IS_WINDOWS, set_topmost
 from ..widgets import AssistantMessage, ChatScroller, UserMessage, make_chat_area
 from ..window_manager import apply_noactivate
+from .common import transcript_line_html
 
 MAX_HISTORY = 80  # widgets conservados (≈ 40 preguntas con su respuesta)
 
@@ -48,7 +48,8 @@ OVERLAY_QSS = f"""
 QPushButton {{ background: #1d212b; color: {TEXT}; border: 1px solid {BORDER};
               border-radius: 5px; padding: 3px 8px; font-size: 11px; }}
 QPushButton:hover {{ border-color: {ACCENT}; }}
-"""
+QLabel {{ background: transparent; color: {TEXT}; }}
+""" + MESSAGE_QSS
 
 
 class CopilotOverlay(QWidget):
@@ -174,7 +175,17 @@ class CopilotOverlay(QWidget):
         self._transcript.setTextInteractionFlags(
             Qt.TextInteractionFlag.TextSelectableByMouse
         )
-        heard_layout.addWidget(self._transcript)
+        from PySide6.QtWidgets import QScrollArea
+
+        self._heard_scroll = QScrollArea()
+        self._heard_scroll.setWidgetResizable(True)
+        self._heard_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self._heard_scroll.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
+        self._heard_scroll.setStyleSheet("background: transparent;")
+        self._heard_scroll.setWidget(self._transcript)
+        heard_layout.addWidget(self._heard_scroll)
         self._heard = heard
         heard.setVisible(False)
         body.addWidget(heard)
@@ -333,10 +344,27 @@ class CopilotOverlay(QWidget):
             shown = list(self._recent)
         else:
             shown = self._recent[-2:] + [
-                transcript_line_html(event.source.speaker_label, event.text, partial=True)
+                transcript_line_html(
+                    event.source.speaker_label, event.text, partial=True
+                )
             ]
         self._heard.setVisible(True)
         self._transcript.setText("".join(shown))
+        self._fit_heard()
+
+    def _fit_heard(self) -> None:
+        """La transcripción ocupa como mucho ~40 % del panel; lo último, visible."""
+        limit = max(90, int(self.height() * 0.4))
+        wanted = self._transcript.heightForWidth(self._heard_scroll.viewport().width())
+        self._heard_scroll.setFixedHeight(max(40, min(limit, wanted + 4)))
+        bar = self._heard_scroll.verticalScrollBar()
+        if bar is not None:
+            bar.setValue(bar.maximum())
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        if self._heard.isVisible():
+            self._fit_heard()
 
     def _append(self, widget: QWidget) -> None:
         """Añade al historial (nunca borra lo anterior; conserva los últimos

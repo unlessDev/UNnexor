@@ -58,6 +58,7 @@ def clean_spoken_answer(text: str) -> str:
             break
     return cleaned or text.strip()
 
+
 LANGUAGE_NAMES = {
     "es": "español",
     "en": "inglés",
